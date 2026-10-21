@@ -1,0 +1,21 @@
+# Gradle / Android
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Signature : JAMAIS dans le dépôt
+*.jks
+*.keystore
+*.p12
+keystore.properties
+*.keystore.base64
+signing/
+
+# SDK Glyph (non redistribuable)
+*.aar
