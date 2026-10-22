@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
@@ -23,6 +25,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import fr.niakimbo.verso.BuildConfig
+import fr.niakimbo.verso.matrix.MatrixController
+import fr.niakimbo.verso.matrix.MatrixHistory
 import fr.niakimbo.verso.update.UpdateState
 
 private val NothingRed = Color(0xFFD71921)
@@ -33,20 +37,24 @@ fun VersoScreen(
     state: UpdateState,
     onUpdate: (UpdateState.Available) -> Unit,
     onRetry: (UpdateState.Error) -> Unit,
+    matrix: MatrixController,
+    matrixHistory: MatrixHistory,
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
             .safeDrawingPadding()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        Spacer(Modifier.height(16.dp))
         Text(
             text = "Verso",
             color = Color.White,
-            fontSize = 48.sp,
+            fontSize = 40.sp,
             fontWeight = FontWeight.Bold,
         )
         Text(
@@ -54,8 +62,10 @@ fun VersoScreen(
             color = Dim,
             fontSize = 14.sp,
         )
-        Spacer(Modifier.height(40.dp))
+        Spacer(Modifier.height(16.dp))
         UpdateSection(state, onUpdate, onRetry)
+        Spacer(Modifier.height(32.dp))
+        MatrixTestSection(matrix, matrixHistory)
     }
 }
 

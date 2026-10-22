@@ -20,12 +20,16 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val app = application as VersoApp
+        app.matrix.connect()
         setContent {
             val state by updates.state.collectAsStateWithLifecycle()
             VersoScreen(
                 state = state,
                 onUpdate = ::onUpdateClicked,
                 onRetry = { current -> retry(current) },
+                matrix = app.matrix,
+                matrixHistory = app.matrixHistory,
             )
         }
     }
