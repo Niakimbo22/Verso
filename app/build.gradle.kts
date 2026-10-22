@@ -20,6 +20,12 @@ val hasReleaseSigning = signingKeystore != null &&
     signingAlias != null &&
     file(signingKeystore).exists()
 
+// SDK Glyph : présent seulement si l'AAR est dans app/libs (voir app/libs/README.md).
+// Avec l'AAR, on compile la vraie implémentation (src/glyph) ; sans, une version
+// factice (src/glyphStub) pour que le build passe toujours.
+val glyphAar = file("libs/glyph-matrix-sdk-2.0.aar")
+val hasGlyphSdk = glyphAar.exists()
+
 android {
     namespace = "fr.niakimbo.verso"
     compileSdk = 35
@@ -30,6 +36,13 @@ android {
         targetSdk = 35
         versionCode = if (ciRunNumber != null) 1000 + ciRunNumber else 900000
         versionName = if (ciRunNumber != null) "0.1.$ciRunNumber" else "0.1.0-local"
+        buildConfigField("boolean", "HAS_GLYPH_SDK", hasGlyphSdk.toString())
+    }
+
+    sourceSets {
+        getByName("main") {
+            java.srcDir(if (hasGlyphSdk) "src/glyph/java" else "src/glyphStub/java")
+        }
     }
 
     signingConfigs {
@@ -85,8 +98,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
     // SDK Glyph : ajouté uniquement si l'AAR est présent (voir app/libs/README.md).
-    val glyphAar = file("libs/glyph-matrix-sdk-2.0.aar")
-    if (glyphAar.exists()) {
+    if (hasGlyphSdk) {
         implementation(files(glyphAar))
     }
 }

@@ -77,12 +77,12 @@ Le même format servira à l'éditeur, aux modèles dynamiques et à Trame.
 
 - Kotlin + Jetpack Compose, minSdk 34 (le SDK Glyph demande Android 14 ou plus).
 - applicationId : `fr.niakimbo.verso`
-- Dépôt GitHub privé : `Niakimbo22/verso`
+- Dépôt GitHub public : `Niakimbo22/Verso` (minutes CI illimitées ; aucun secret ni AAR commité)
 
 ## 7. Build et mises à jour
 
 - Même flux que Trame : push sur `main` → GitHub Actions build l'APK debug → publication en GitHub Release → mise à jour automatique sur le téléphone. **Aucune installation d'APK à la main.**
-- L'AAR du SDK n'est pas dans le dépôt : la CI le récupère depuis un secret GitHub (fichier encodé en base64) ou un emplacement privé. À mettre en place dès le départ.
+- L'AAR du SDK n'est pas dans le dépôt : la CI le recolle depuis deux secrets GitHub (`GLYPH_SDK_AAR_BASE64_1` et `_2`, le base64 dépassant la limite de 48 Ko d'un secret). Sans eux, le build compile un contrôleur factice.
 - Prévoir dès le début un keystore debug stable et un versionCode qui ne redescend jamais, pour éviter le bug de désinstallation rencontré sur Trame.
 
 ## 8. Étapes de développement V1

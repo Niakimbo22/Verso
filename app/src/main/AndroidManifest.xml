@@ -4,13 +4,27 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- SDK Glyph : accès au service de la Glyph Matrix -->
+    <uses-permission android:name="com.nothing.ketchum.permission.ENABLE" />
+
+    <!-- Android 11+ : rend visible le service système Glyph pour bindService -->
+    <queries>
+        <package android:name="com.nothing.thirdparty" />
+    </queries>
+
     <application
+        android:name=".VersoApp"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.Verso">
+
+        <!-- Clé SDK Nothing : "test" tant qu'on utilise le mode debug Glyph (ADB) -->
+        <meta-data
+            android:name="NothingKey"
+            android:value="test" />
 
         <activity
             android:name=".MainActivity"
