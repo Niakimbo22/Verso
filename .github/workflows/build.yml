@@ -14,7 +14,8 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Version fixée : ubuntu-latest migre vers Ubuntu 26 en octobre 2026.
+    runs-on: ubuntu-24.04
     env:
       VERSION: 0.1.${{ github.run_number }}
     steps:
@@ -42,12 +43,19 @@ jobs:
           fi
           mkdir -p app/libs
           AAR=app/libs/glyph-matrix-sdk-2.0.aar
-          printf '%s' "$DATA" | tr -d ' \r\n' | base64 -d > "$AAR" || true
-          if ! unzip -tq "$AAR" > /dev/null 2>&1; then
-            echo "::error::AAR Glyph invalide après décodage : vérifie que GLYPH_SDK_AAR_BASE64_1 et _2 ont été collés en entier."
+          # Ne garde que les caractères base64 (retire espaces, retours ligne, BOM, guillemets…).
+          P1=$(printf '%s' "$AAR_PART_1" | tr -cd 'A-Za-z0-9+/=')
+          P2=$(printf '%s' "$AAR_PART_2" | tr -cd 'A-Za-z0-9+/=')
+          CLEAN=$(printf '%s' "$DATA" | tr -cd 'A-Za-z0-9+/=')
+          printf '%s' "$CLEAN" | base64 -d > "$AAR" 2>/dev/null || true
+          SHA=$(sha256sum "$AAR" | cut -d' ' -f1)
+          # Empreinte de glyph-matrix-sdk-2.0.aar (GlyphMatrix-Developer-Kit, branche main).
+          EXPECTED=be00ee9cd7115f6b11984c6e31fe98e298fb726940d1555063610685ef3bbf29
+          if [ "$SHA" != "$EXPECTED" ]; then
+            echo "::error::AAR Glyph invalide. Longueurs : _1=${#P1}, _2=${#P2} (attendu 39172 chacun), total=${#CLEAN} (attendu 78344), fichier=$(stat -c%s "$AAR") octets (attendu 58757), sha256=${SHA:0:16}."
             exit 1
           fi
-          echo "AAR Glyph installé ($(stat -c%s "$AAR") octets, sha256 $(sha256sum "$AAR" | cut -c1-16))."
+          echo "AAR Glyph installé ($(stat -c%s "$AAR") octets, empreinte vérifiée)."
 
       - name: Keystore de signature (optionnel)
         id: signing
