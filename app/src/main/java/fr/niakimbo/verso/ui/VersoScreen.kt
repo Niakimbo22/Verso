@@ -17,9 +17,15 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -27,6 +33,8 @@ import androidx.compose.ui.unit.sp
 import fr.niakimbo.verso.BuildConfig
 import fr.niakimbo.verso.matrix.MatrixController
 import fr.niakimbo.verso.matrix.MatrixHistory
+import fr.niakimbo.verso.modele.ModelePlayer
+import fr.niakimbo.verso.modele.ModeleRepository
 import fr.niakimbo.verso.update.UpdateState
 
 private val NothingRed = Color(0xFFD71921)
@@ -39,7 +47,14 @@ fun VersoScreen(
     onRetry: (UpdateState.Error) -> Unit,
     matrix: MatrixController,
     matrixHistory: MatrixHistory,
+    player: ModelePlayer,
+    repository: ModeleRepository,
 ) {
+    val bibliotheque by produceState<ModeleRepository.Bibliotheque?>(null, repository) {
+        value = repository.bibliotheque()
+    }
+    var diagnosticOuvert by rememberSaveable { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -64,8 +79,24 @@ fun VersoScreen(
         )
         Spacer(Modifier.height(16.dp))
         UpdateSection(state, onUpdate, onRetry)
-        Spacer(Modifier.height(32.dp))
-        MatrixTestSection(matrix, matrixHistory)
+        Spacer(Modifier.height(28.dp))
+        BibliothequeSection(bibliotheque?.modeles, matrix, player)
+
+        Spacer(Modifier.height(36.dp))
+        val erreurs = bibliotheque?.erreurs.orEmpty()
+        TextButton(onClick = { diagnosticOuvert = !diagnosticOuvert }) {
+            Text(
+                (if (diagnosticOuvert) "▾ " else "▸ ") + "DIAGNOSTIC" + if (erreurs.isNotEmpty()) " (${erreurs.size} ⚠)" else "",
+                color = Dim,
+                fontSize = 12.sp,
+                fontFamily = FontFamily.Monospace,
+                letterSpacing = 2.sp,
+            )
+        }
+        if (diagnosticOuvert) {
+            Spacer(Modifier.height(8.dp))
+            MatrixTestSection(matrix, player, matrixHistory, erreurs)
+        }
     }
 }
 

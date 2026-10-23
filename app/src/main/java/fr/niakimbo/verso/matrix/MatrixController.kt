@@ -38,8 +38,11 @@ interface MatrixController {
     /** Se connecte au service Glyph. Sans effet si déjà connecté ou en cours. */
     fun connect()
 
-    /** Affiche une image sur la matrice. */
-    fun show(frame: MatrixFrame)
+    /**
+     * Affiche une image sur la matrice.
+     * [journal] = false pour les images d'une animation : seules les erreurs sont journalisées.
+     */
+    fun show(frame: MatrixFrame, journal: Boolean = true)
 
     /** Éteint la matrice (rend la main au système). */
     fun clear()
