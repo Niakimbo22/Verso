@@ -8,7 +8,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -36,7 +35,7 @@ class ModelePlayer(
         // Si la matrice (re)devient prête, on renvoie le modèle statique en cours :
         // il a pu être choisi avant la fin de la connexion. Une animation, elle, se renvoie toute seule.
         scope.launch {
-            controller.state.distinctUntilChanged().collect { state ->
+            controller.state.collect { state ->
                 val modele = _actif.value
                 if (state == MatrixState.Ready && modele != null && !modele.estAnime) {
                     controller.show(modele.apercu, journal = false)

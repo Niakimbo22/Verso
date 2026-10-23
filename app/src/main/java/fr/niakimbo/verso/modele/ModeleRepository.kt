@@ -5,7 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Bibliothèque des modèles intégrés, lus depuis `assets/modeles/*.json`.
+ * Bibliothèque des modèles intégrés, lus depuis les fichiers JSON de `assets/modeles/`.
  *
  * L'ordre d'affichage suit le nom de fichier (`01-horloge.json`, `02-coeur.json`…).
  * Un fichier invalide est ignoré et son erreur remontée dans [Bibliotheque.erreurs],
