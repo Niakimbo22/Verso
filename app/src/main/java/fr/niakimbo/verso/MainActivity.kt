@@ -30,6 +30,8 @@ class MainActivity : ComponentActivity() {
                 onRetry = { current -> retry(current) },
                 matrix = app.matrix,
                 matrixHistory = app.matrixHistory,
+                player = app.player,
+                repository = app.modeles,
             )
         }
     }

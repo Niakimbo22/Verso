@@ -24,9 +24,9 @@ class FakeMatrixController : MatrixController {
         log.warn("Build sans SDK Glyph : rien ne s'affichera sur la matrice.")
     }
 
-    override fun show(frame: MatrixFrame) {
+    override fun show(frame: MatrixFrame, journal: Boolean) {
         _lastFrame.value = frame
-        log.info("[factice] Image de ${frame.litCount} LEDs (aperçu seulement)")
+        if (journal) log.info("[factice] Image de ${frame.litCount} LEDs (aperçu seulement)")
     }
 
     override fun clear() {

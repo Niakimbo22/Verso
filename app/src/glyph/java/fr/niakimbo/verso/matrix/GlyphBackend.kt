@@ -76,16 +76,16 @@ private class GlyphMatrixController(
         }
     }
 
-    override fun show(frame: MatrixFrame) {
+    override fun show(frame: MatrixFrame, journal: Boolean) {
         worker.execute {
             _lastFrame.value = frame
             if (_state.value != MatrixState.Ready) {
-                log.warn("Image non envoyée : matrice pas prête (${describe(_state.value)})")
+                if (journal) log.warn("Image non envoyée : matrice pas prête (${describe(_state.value)})")
                 return@execute
             }
             try {
                 manager.setAppMatrixFrame(frame.toGlyphColors())
-                log.info("Image envoyée : ${frame.litCount} LEDs allumées")
+                if (journal) log.info("Image envoyée : ${frame.litCount} LEDs allumées")
             } catch (e: GlyphException) {
                 fail("Le SDK a refusé l'image", e)
             } catch (t: Throwable) {

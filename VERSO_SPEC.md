@@ -56,6 +56,10 @@ Fichier JSON (une base Room est possible si ça devient plus simple) :
   ]
 }
 ```
+Chaque image s'écrit au choix avec `pixels` (169 valeurs 0-255, tableau ou texte) ou avec `dessin` (13 lignes de 13 caractères : `.` éteint, `1`…`9` luminosité croissante, `X` plein), plus lisible à la main. L'export se fait toujours en `pixels`.
+
+Les modèles intégrés sont dans `app/src/main/assets/modeles/` (ordre = nom de fichier) et se régénèrent avec `outils/gen_modeles.py`. Un fichier invalide est ignoré et signalé dans Diagnostic.
+
 Le même format servira à l'éditeur, aux modèles dynamiques et à Trame.
 
 ## 4. Feuille de route après la V1 (dans cet ordre)
@@ -89,7 +93,7 @@ Le même format servira à l'éditeur, aux modèles dynamiques et à Trame.
 
 1. Squelette Compose + CI + récupération de l'AAR dans la CI.
 2. `MatrixController` + test : afficher un pixel, puis une image, sur le vrai téléphone. Vérifier la question des 48 h du mode debug.
-3. Format des modèles + bibliothèque intégrée + écran liste avec aperçus.
+3. Format des modèles + bibliothèque intégrée + écran liste avec aperçus. Les animations tournent dans l'app tant qu'elle est ouverte (`ModelePlayer`) ; l'écran de test devient « Diagnostic » (repliable).
 4. Foreground service + animations + restauration au redémarrage.
 5. Widget écran d'accueil.
 6. Favoris + finitions UI.
