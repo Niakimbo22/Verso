@@ -161,19 +161,73 @@ for f in range(N):
     frames.append((g, 90))
 write(5, "onde", "Onde", frames)
 
-# 6. Pluie : gouttes à traînée, vitesses et départs décalés
-drops = [(1, 0, 1), (3, 5, 1), (5, 9, 2), (6, 2, 1), (8, 7, 2), (10, 4, 1), (11, 11, 1), (4, 12, 2), (9, 1, 1), (2, 15, 1), (7, 13, 1)]
-L = 18  # longueur du cycle : S + traînée + un peu d'air
+# 6. Pluie : averse « naturelle » sur un long cycle qui boucle sans couture.
+#    - gouttes placées au hasard (graine fixe → toujours le même fichier généré)
+#    - 3 vitesses (bruine lente et pâle, pluie normale, grosses gouttes rapides)
+#    - intensité qui monte et redescend au cours du cycle (bruine → averse → bruine)
+#    - éclaboussure quand une goutte touche le bord bas du disque
+#    Chaque goutte est calculée « modulo » la longueur du cycle : la dernière image
+#    enchaîne parfaitement sur la première.
+import random
+
+rng = random.Random(22)
+L = 260          # 260 images × 70 ms ≈ 18 s avant de revoir la même chose
+DUREE = 70
+bas = {x: max(y for y in range(S) if on(x, y)) for x in range(S)}
+haut = {x: min(y for y in range(S) if on(x, y)) for x in range(S)}
+
+# (vitesse en px/image, traînée, luminosité de tête)
+TYPES = {
+    "bruine": (0.5, (5, 2), None),
+    "pluie": (1.0, (9, 5, 2), None),
+    "grosse": (1.5, (9, 7, 4, 2), None),
+}
+
+def intensite(f):
+    # 0.25 (bruine) → 1 (averse) → 0.25, une fois par cycle
+    return 0.25 + 0.75 * (0.5 - 0.5 * math.cos(2 * math.pi * f / L))
+
+drops = []
+for f in range(L):
+    # nombre moyen de nouvelles gouttes par image selon l'intensité
+    n = intensite(f) * 0.9
+    while n > 0:
+        if rng.random() < min(n, 1.0):
+            x = rng.choice([c for c in range(1, S - 1)])
+            r = rng.random()
+            kind = "bruine" if r < 0.35 * (1.2 - intensite(f)) else ("grosse" if r > 0.85 else "pluie")
+            drops.append((f, x, kind))
+        n -= 1
+
+def goutte_y(t, x, kind):
+    v, trail, _ = TYPES[kind]
+    return haut[x] - 1 + int(t * v)
+
 frames = []
 for f in range(L):
     g = grid()
-    for (x, off, speed) in drops:
-        head = (off + f * speed) % L - 3
-        for k, v in enumerate((9, 5, 2)):
-            y = head - k
-            if 0 <= y < S and on(x, y):
-                g[y][x] = max(g[y][x], v)
-    frames.append((g, 80))
+    for (start, x, kind) in drops:
+        v, trail, _ = TYPES[kind]
+        t = (f - start) % L
+        y0 = goutte_y(t, x, kind)
+        fin = bas[x]
+        if y0 <= fin:
+            for k, val in enumerate(trail):
+                y = y0 - k
+                if haut[x] <= y <= fin and on(x, y):
+                    g[y][x] = max(g[y][x], val)
+        elif kind != "bruine":
+            # éclaboussure : 2 images après l'impact, petites gouttes de part et d'autre
+            apres = y0 - fin
+            if apres <= 2:
+                force = 4 if apres == 1 else 2
+                for dx in (-1, 1):
+                    xx = x + dx
+                    yy = bas[xx] if 0 <= xx < S else None
+                    if yy is not None and on(xx, yy - (1 if apres == 1 else 0)):
+                        y_s = yy - (1 if apres == 1 else 0)
+                        g[y_s][xx] = max(g[y_s][xx], force)
+    frames.append((g, DUREE))
 write(6, "pluie", "Pluie", frames)
 
 # 7. Logo NC
