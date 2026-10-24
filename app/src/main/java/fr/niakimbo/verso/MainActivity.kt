@@ -10,7 +10,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import fr.niakimbo.verso.toy.ChoixToy
 import fr.niakimbo.verso.ui.VersoScreen
+import kotlinx.coroutines.launch
 import fr.niakimbo.verso.update.UpdateState
 import fr.niakimbo.verso.update.UpdateViewModel
 
@@ -24,6 +27,7 @@ class MainActivity : ComponentActivity() {
         app.matrix.connect()
         setContent {
             val state by updates.state.collectAsStateWithLifecycle()
+            val toyLie by app.toyLie.collectAsStateWithLifecycle()
             VersoScreen(
                 state = state,
                 onUpdate = ::onUpdateClicked,
@@ -32,8 +36,25 @@ class MainActivity : ComponentActivity() {
                 matrixHistory = app.matrixHistory,
                 player = app.player,
                 repository = app.modeles,
+                store = app.store,
+                journalToy = app.journalToy,
+                toyLie = toyLie,
+                onChoisirToy = { app.journalToy.ajouter(ChoixToy.ouvrir(this)) },
             )
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val app = application as VersoApp
+        app.player.setAppVisible(true)
+        // Relance le modèle mémorisé (ex. après que le système a fermé le processus).
+        lifecycleScope.launch { app.player.reprendre() }
+    }
+
+    override fun onStop() {
+        (application as VersoApp).player.setAppVisible(false)
+        super.onStop()
     }
 
     override fun onResume() {

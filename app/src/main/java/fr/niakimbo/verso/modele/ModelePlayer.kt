@@ -1,5 +1,7 @@
 package fr.niakimbo.verso.modele
 
+import android.content.Context
+import android.os.PowerManager
 import fr.niakimbo.verso.matrix.MatrixController
 import fr.niakimbo.verso.matrix.MatrixFrame
 import fr.niakimbo.verso.matrix.MatrixState
@@ -12,79 +14,195 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
- * Joue un [Modele] sur la matrice : une image fixe, ou une animation en boucle.
+ * Joue le modèle actif sur la matrice : image fixe, animation en boucle, ou modèle dynamique (horloge).
  *
- * Étape 3 : l'animation tourne dans le processus de l'app (donc tant que Verso est ouvert).
- * Étape 4 : le foreground service réutilisera ce même lecteur pour qu'elle continue en arrière-plan.
+ * Le modèle choisi est mémorisé ([ModeleStore]) : le Glyph Toy le relit quand le système le lance,
+ * app fermée ou après un redémarrage.
+ *
+ * La boucle (animation / horloge) ne tourne que si quelqu'un peut la voir :
+ * l'app est à l'écran, ou Verso est le Glyph Toy lié par le système.
  *
  * Tout ce qui s'affiche passe par ici, pour qu'une animation ne vienne jamais écraser
  * une image demandée ensuite (choix d'un autre modèle, image de test, extinction).
  */
 class ModelePlayer(
+    context: Context,
     private val controller: MatrixController,
+    private val repository: ModeleRepository,
+    private val store: ModeleStore,
     private val scope: CoroutineScope,
 ) {
     private val _actif = MutableStateFlow<Modele?>(null)
 
-    /** Modèle en cours d'affichage (null = matrice éteinte ou image de test). */
+    /** Modèle en cours (null = matrice éteinte ou image de test). */
     val actif: StateFlow<Modele?> = _actif
 
-    private var animation: Job? = null
+    private var boucle: Job? = null
+    private var dernierFrame: MatrixFrame? = null
+
+    private var appVisible = false
+    private var toyLie = false
+
+    private val wakeLock: PowerManager.WakeLock =
+        (context.getSystemService(Context.POWER_SERVICE) as PowerManager)
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "verso:animation")
+            .apply { setReferenceCounted(false) }
 
     init {
-        // Si la matrice (re)devient prête, on renvoie le modèle statique en cours :
-        // il a pu être choisi avant la fin de la connexion. Une animation, elle, se renvoie toute seule.
+        // Si la matrice (re)devient prête, on renvoie tout de suite l'image en cours :
+        // elle a pu être demandée avant la fin de la connexion.
         scope.launch {
             controller.state.collect { state ->
-                val modele = _actif.value
-                if (state == MatrixState.Ready && modele != null && !modele.estAnime) {
-                    controller.show(modele.apercu, journal = false)
+                if (state == MatrixState.Ready) {
+                    synchronized(this@ModelePlayer) { dernierFrame }?.let { controller.show(it, journal = false) }
+                    store.delaiExtinction?.let(controller::setDelaiExtinction)
                 }
             }
         }
     }
 
-    @Synchronized
+    /** Choix de l'utilisateur (app, plus tard widget) : affiche et mémorise. */
     fun jouer(modele: Modele) {
-        arreterAnimation()
-        _actif.value = modele
-        if (!modele.estAnime) {
-            controller.show(modele.apercu)
+        store.modeleActif = modele.id
+        demarrer(modele)
+    }
+
+    /** Relit le modèle mémorisé et le relance (Glyph Toy lié, retour dans l'app). */
+    suspend fun reprendre() {
+        val id = store.modeleActif ?: return
+        val modele = repository.bibliotheque().parId(id) ?: run {
+            controller.log.warn("Modèle mémorisé « $id » introuvable")
             return
         }
-        controller.log.info("Animation « ${modele.nom} » : ${modele.images.size} images")
-        animation = scope.launch {
-            while (isActive) {
-                for (image in modele.images) {
-                    // Sous le même verrou que jouer()/eteindre() : une animation annulée
-                    // ne peut plus glisser une image après celle qui l'a remplacée.
-                    synchronized(this@ModelePlayer) {
-                        if (!isActive) return@launch
-                        controller.show(image.frame, journal = false)
-                    }
-                    delay(image.dureeMs)
-                }
+        synchronized(this) {
+            if (_actif.value?.id == modele.id && (boucle?.isActive == true || !modele.estVivant)) {
+                // Déjà en place : on renvoie juste l'image courante (utile après un réveil).
+                dernierFrame?.let { controller.show(it, journal = false) }
+                return
             }
         }
+        demarrer(modele)
     }
 
-    /** Affiche une image isolée (écran Diagnostic) en coupant le modèle en cours. */
+    /** Affiche une image isolée (Diagnostic) en coupant le modèle en cours, sans la mémoriser. */
     @Synchronized
     fun afficherImage(frame: MatrixFrame) {
-        arreterAnimation()
+        arreterBoucle()
         _actif.value = null
+        dernierFrame = frame
         controller.show(frame)
     }
 
     @Synchronized
     fun eteindre() {
-        arreterAnimation()
+        store.modeleActif = null
+        arreterBoucle()
         _actif.value = null
+        dernierFrame = null
         controller.clear()
     }
 
-    private fun arreterAnimation() {
-        animation?.cancel()
-        animation = null
+    /**
+     * Signal « minute » du Glyph Toy (EVENT_AOD) : on redessine l'horloge et on renvoie
+     * l'image courante, au cas où le système l'aurait effacée.
+     */
+    @Synchronized
+    fun signalMinute() {
+        val modele = _actif.value
+        val frame = if (modele?.dynamique == Modele.Dynamique.HORLOGE) Horloge.frame() else dernierFrame
+        if (frame != null) {
+            dernierFrame = frame
+            controller.show(frame, journal = false)
+        }
+        if (modele != null && modele.estVivant && boucle?.isActive != true && doitTourner()) {
+            lancerBoucle(modele)
+        }
+    }
+
+    @Synchronized
+    fun setAppVisible(visible: Boolean) {
+        appVisible = visible
+        actualiserBoucle()
+    }
+
+    @Synchronized
+    fun setToyLie(lie: Boolean) {
+        toyLie = lie
+        actualiserBoucle()
+    }
+
+    @Synchronized
+    private fun demarrer(modele: Modele) {
+        arreterBoucle()
+        _actif.value = modele
+        val premiere = imageInitiale(modele)
+        dernierFrame = premiere
+        controller.show(premiere)
+        if (modele.estVivant) {
+            controller.log.info(
+                if (modele.dynamique != null) "Modèle dynamique « ${modele.nom} »"
+                else "Animation « ${modele.nom} » : ${modele.images.size} images",
+            )
+            if (doitTourner()) lancerBoucle(modele)
+        }
+    }
+
+    private fun imageInitiale(modele: Modele): MatrixFrame = when (modele.dynamique) {
+        Modele.Dynamique.HORLOGE -> Horloge.frame()
+        null -> modele.apercu
+    }
+
+    private fun doitTourner() = appVisible || toyLie
+
+    private fun actualiserBoucle() {
+        val modele = _actif.value ?: return
+        if (!modele.estVivant) return
+        if (doitTourner() && boucle?.isActive != true) lancerBoucle(modele)
+        if (!doitTourner()) arreterBoucle()
+    }
+
+    private fun lancerBoucle(modele: Modele) {
+        arreterBoucle()
+        boucle = scope.launch {
+            if (modele.dynamique == Modele.Dynamique.HORLOGE) {
+                while (isActive) {
+                    delay(Horloge.msAvantProchaineMinute())
+                    envoyer(Horloge.frame()) ?: return@launch
+                }
+            } else {
+                while (isActive) {
+                    for (image in modele.images) {
+                        envoyer(image.frame) ?: return@launch
+                        if (store.animationsEveillees) wakeLock.acquire(WAKE_LOCK_MS) else relacherEveil()
+                        delay(image.dureeMs)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Envoie une image de la boucle, sous le même verrou que jouer()/eteindre() : une boucle
+     * annulée ne peut plus glisser une image après celle qui l'a remplacée. Null = boucle annulée.
+     */
+    private fun CoroutineScope.envoyer(frame: MatrixFrame): Unit? = synchronized(this@ModelePlayer) {
+        if (!isActive) return null
+        dernierFrame = frame
+        controller.show(frame, journal = false)
+    }
+
+    private fun arreterBoucle() {
+        boucle?.cancel()
+        boucle = null
+        relacherEveil()
+    }
+
+    private fun relacherEveil() {
+        if (wakeLock.isHeld) wakeLock.release()
+    }
+
+    private companion object {
+        /** Renouvelé à chaque image : se relâche tout seul 1 min après l'arrêt de l'animation. */
+        const val WAKE_LOCK_MS = 60_000L
     }
 }

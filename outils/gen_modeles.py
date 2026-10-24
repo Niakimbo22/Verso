@@ -36,12 +36,14 @@ def check(name, g):
             if g[y][x] and not on(x, y):
                 raise SystemExit(f"{name}: pixel hors matrice en ({x},{y})")
 
-def write(idx, mid, nom, frames):
+def write(idx, mid, nom, frames, dynamique=None):
     for i, (g, _) in enumerate(frames):
         check(f"{mid}#{i}", g)
     typ = "anime" if len(frames) > 1 else "statique"
-    data = {"id": mid, "nom": nom, "type": typ,
-            "frames": [{"dessin": to_dessin(g), "dureeMs": d} for g, d in frames]}
+    data = {"id": mid, "nom": nom, "type": typ}
+    if dynamique:
+        data["dynamique"] = dynamique
+    data |= {"frames": [{"dessin": to_dessin(g), "dureeMs": d} for g, d in frames]}
     with open(os.path.join(OUT, f"{idx:02d}-{mid}.json"), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
         f.write("\n")
@@ -68,7 +70,8 @@ for a in range(12):
 line(g, C, C, C, C - 4)       # grande aiguille sur 12
 line(g, C, C, C + 3, C)       # petite aiguille sur 3
 g[C][C] = 9
-write(1, "horloge", "Horloge", [(g, 1000)])
+# Modèle dynamique : l'app dessine l'heure réelle (Horloge.kt) ; cette image ne sert que d'aperçu de secours.
+write(1, "horloge", "Horloge", [(g, 1000)], dynamique="horloge")
 
 # 2. Cœur qui bat (double battement)
 petit = art(

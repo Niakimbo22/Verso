@@ -21,8 +21,11 @@ Remplace les apps du Play Store (bugs, features payantes, réglages compliqués)
 - SDK officiel : https://github.com/Nothing-Developer-Programme/GlyphMatrix-Developer-Kit
 - Le fichier `glyph-matrix-sdk-2.0.aar` **n'est pas redistribuable** : il ne va pas dans le dépôt (voir §7).
 - `GlyphMatrixManager.getInstance()` est un singleton pour tout le processus : une seule connexion partagée, et aucun composant ne doit appeler `unInit()` dans son coin.
-- Affichage piloté par l'app : `setAppMatrixFrame`.
-- **À vérifier en premier** : le mode debug Glyph expire au bout de 48 h. Il faut tester si Verso reste utilisable au quotidien sans le réactiver, et sinon prévoir la demande d'une clé API à Nothing.
+- Deux canaux d'affichage :
+  - **App** (`setAppMatrixFrame`) : ne tient que tant que l'app est au premier plan, et **n'importe quel Glyph Toy passe devant**.
+  - **Glyph Toy** (`setMatrixFrame`) : prioritaire, reste affiché app fermée. Sur le (4a) Pro, seuls les Toys « Always-on » existent (*Réglages › Glyph Interface › Flip to Glyph › Always-on Glyph Toy*), un seul à la fois, et le système envoie `EVENT_AOD` environ une fois par minute.
+- Clé SDK : `NothingKey = test` suffit pour un usage perso (vérifié : pas besoin du mode debug ADB). Une vraie clé (GDKsupport@nothing.tech) ne servirait qu'à publier.
+- Méthode non documentée du SDK : `setGlyphMatrixTimeout(boolean)`, testable depuis le Diagnostic.
 
 ## 3. V1 — Switch rapide + widget
 
@@ -39,10 +42,13 @@ Remplace les apps du Play Store (bugs, features payantes, réglages compliqués)
 - Tap → passe au favori suivant.
 - Appui long ou petit bouton → ouvre la liste des favoris pour en choisir un directement.
 
-### 3.3 Service d'affichage
-- Un **foreground service** garde la main sur la matrice et joue les animations.
-- Le dernier modèle choisi est restauré automatiquement au redémarrage du téléphone.
-- Toute la logique d'affichage passe par une seule classe, par exemple `MatrixController`.
+### 3.3 Glyph Toy « Verso » (affichage permanent)
+- Verso déclare un **Glyph Toy AOD** (`VersoToyService`). Une fois choisi dans les réglages Glyph (bouton dans l'app), il affiche le modèle actif **app fermée**, et le système le relance tout seul après un redémarrage.
+- Le modèle actif est mémorisé (`ModeleStore`) ; le Toy le relit à chaque liaison.
+- Le `MatrixController` est unique et bascule de canal : Toy quand le système a lié le service, app sinon.
+- Le `ModelePlayer` joue les animations / l'horloge tant que l'app est à l'écran ou que le Toy est lié, et redessine à chaque `EVENT_AOD`.
+- Journal du Toy gardé sur le téléphone (liaisons, AOD, écran allumé/éteint, nombre d'images envoyées) pour savoir ce qui se passe app fermée.
+- ~~Foreground service~~ : abandonné, il ne passe pas devant un Toy.
 
 ### 3.4 Format d'un modèle
 Fichier JSON (une base Room est possible si ça devient plus simple) :
@@ -65,7 +71,7 @@ Le même format servira à l'éditeur, aux modèles dynamiques et à Trame.
 ## 4. Feuille de route après la V1 (dans cet ordre)
 
 1. **Éditeur pixel 13×13** : dessin au doigt, aperçu en direct sur la matrice, plusieurs images avec un réglage du timing, import et export en JSON.
-2. **Modèles dynamiques** : horloge, minuteur, visualiseur musique, notifications.
+2. **Modèles dynamiques** : horloge (déjà là, champ `"dynamique": "horloge"`), minuteur, visualiseur musique, notifications.
 3. **Modèles automatiques** : changement de modèle selon des règles (heure, musique en cours, notification d'une app précise).
 4. **Connexion Trame** : afficher la créature Trame au dos du téléphone. Pas urgent.
 5. **Intégration NCOS.**
@@ -94,6 +100,6 @@ Le même format servira à l'éditeur, aux modèles dynamiques et à Trame.
 1. Squelette Compose + CI + récupération de l'AAR dans la CI.
 2. `MatrixController` + test : afficher un pixel, puis une image, sur le vrai téléphone. Vérifier la question des 48 h du mode debug.
 3. Format des modèles + bibliothèque intégrée + écran liste avec aperçus. Les animations tournent dans l'app tant qu'elle est ouverte (`ModelePlayer`) ; l'écran de test devient « Diagnostic » (repliable).
-4. Foreground service + animations + restauration au redémarrage.
+4. Glyph Toy AOD : affichage app fermée, horloge réelle, animations, restauration au redémarrage (le système relance le Toy). Tester si les animations tournent écran éteint (journal du Toy + expérience « wake lock »).
 5. Widget écran d'accueil.
 6. Favoris + finitions UI.

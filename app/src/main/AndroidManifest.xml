@@ -7,6 +7,9 @@
     <!-- SDK Glyph : accès au service de la Glyph Matrix -->
     <uses-permission android:name="com.nothing.ketchum.permission.ENABLE" />
 
+    <!-- Expérience du Diagnostic : garder les animations éveillées écran éteint -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
     <!-- Android 11+ : rend visible le service système Glyph pour bindService -->
     <queries>
         <package android:name="com.nothing.thirdparty" />
@@ -21,7 +24,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Verso">
 
-        <!-- Clé SDK Nothing : "test" tant qu'on utilise le mode debug Glyph (ADB) -->
+        <!-- Clé SDK Nothing : "test" suffit pour un usage perso (une vraie clé ne sert qu'à publier) -->
         <meta-data
             android:name="NothingKey"
             android:value="test" />
@@ -38,5 +41,34 @@
         <receiver
             android:name=".update.InstallResultReceiver"
             android:exported="false" />
+
+        <!--
+            Glyph Toy « Verso » : à choisir dans
+            Réglages › Glyph Interface › Flip to Glyph › Always-on Glyph Toy.
+            Un Toy passe devant l'affichage des apps : le modèle reste affiché app fermée.
+        -->
+        <service
+            android:name=".toy.VersoToyService"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="com.nothing.ketchum.permission.BIND_GLYPH_TOY">
+            <intent-filter>
+                <action android:name="com.nothing.glyph.TOY" />
+            </intent-filter>
+
+            <meta-data
+                android:name="com.nothing.glyph.toy.name"
+                android:resource="@string/toy_nom" />
+            <meta-data
+                android:name="com.nothing.glyph.toy.image"
+                android:resource="@drawable/toy_preview" />
+            <meta-data
+                android:name="com.nothing.glyph.toy.summary"
+                android:resource="@string/toy_resume" />
+            <!-- Le Phone (4a) Pro n'accepte que les Toys « Always-on » -->
+            <meta-data
+                android:name="com.nothing.glyph.toy.aod_support"
+                android:value="1" />
+        </service>
     </application>
 </manifest>

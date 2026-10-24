@@ -35,6 +35,8 @@ import fr.niakimbo.verso.matrix.MatrixController
 import fr.niakimbo.verso.matrix.MatrixHistory
 import fr.niakimbo.verso.modele.ModelePlayer
 import fr.niakimbo.verso.modele.ModeleRepository
+import fr.niakimbo.verso.modele.ModeleStore
+import fr.niakimbo.verso.toy.JournalToy
 import fr.niakimbo.verso.update.UpdateState
 
 private val NothingRed = Color(0xFFD71921)
@@ -49,6 +51,10 @@ fun VersoScreen(
     matrixHistory: MatrixHistory,
     player: ModelePlayer,
     repository: ModeleRepository,
+    store: ModeleStore,
+    journalToy: JournalToy,
+    toyLie: Boolean,
+    onChoisirToy: () -> Unit,
 ) {
     val bibliotheque by produceState<ModeleRepository.Bibliotheque?>(null, repository) {
         value = repository.bibliotheque()
@@ -80,7 +86,7 @@ fun VersoScreen(
         Spacer(Modifier.height(16.dp))
         UpdateSection(state, onUpdate, onRetry)
         Spacer(Modifier.height(28.dp))
-        BibliothequeSection(bibliotheque?.modeles, matrix, player)
+        BibliothequeSection(bibliotheque?.modeles, matrix, player, toyLie, onChoisirToy)
 
         Spacer(Modifier.height(36.dp))
         val erreurs = bibliotheque?.erreurs.orEmpty()
@@ -95,6 +101,8 @@ fun VersoScreen(
         }
         if (diagnosticOuvert) {
             Spacer(Modifier.height(8.dp))
+            DiagnosticToy(matrix, journalToy, store)
+            Spacer(Modifier.height(24.dp))
             MatrixTestSection(matrix, player, matrixHistory, erreurs)
         }
     }
