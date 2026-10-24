@@ -12,6 +12,7 @@ import org.json.JSONObject
  *   "id": "coeur",
  *   "nom": "Cœur",
  *   "type": "anime",
+ *   "dynamique": "horloge",          (optionnel : modèle calculé en direct)
  *   "frames": [
  *     { "pixels": [0, 0, 255, …], "dureeMs": 120 },
  *     { "dessin": [".....X.....", …], "dureeMs": 120 }
@@ -43,7 +44,8 @@ object ModeleJson {
                     throw IllegalArgumentException("image ${i + 1} : ${e.message}", e)
                 }
             }
-            return Modele(id = id, nom = nom, type = type, images = images)
+            val dynamique = json.optString("dynamique", "").takeIf { it.isNotBlank() }?.let(Modele.Dynamique::fromJson)
+            return Modele(id = id, nom = nom, type = type, images = images, dynamique = dynamique)
         } catch (e: Exception) {
             throw IllegalArgumentException("Modèle « $id » : ${e.message}", e)
         }
@@ -94,6 +96,7 @@ object ModeleJson {
         put("id", modele.id)
         put("nom", modele.nom)
         put("type", modele.type.json)
+        modele.dynamique?.let { put("dynamique", it.json) }
         put("frames", JSONArray().apply {
             modele.images.forEach { image ->
                 put(JSONObject().apply {

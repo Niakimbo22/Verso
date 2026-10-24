@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 
 /** Compilé seulement quand l'AAR du SDK Glyph est présent (voir app/build.gradle.kts). */
 internal object GlyphBackend {
@@ -42,8 +43,14 @@ private class GlyphMatrixController(
     private val _state = MutableStateFlow<MatrixState>(MatrixState.Unavailable("Pas encore connecté"))
     override val state: StateFlow<MatrixState> = _state
 
+    private val _canal = MutableStateFlow(Canal.APP)
+    override val canal: StateFlow<Canal> = _canal
+
     private val _lastFrame = MutableStateFlow<MatrixFrame?>(null)
     override val lastFrame: StateFlow<MatrixFrame?> = _lastFrame
+
+    private val compteur = AtomicLong()
+    override val imagesEnvoyees: Long get() = compteur.get()
 
     override val log = MatrixLog()
 
@@ -84,8 +91,12 @@ private class GlyphMatrixController(
                 return@execute
             }
             try {
-                manager.setAppMatrixFrame(frame.toGlyphColors())
-                if (journal) log.info("Image envoyée : ${frame.litCount} LEDs allumées")
+                val couleurs = frame.toGlyphColors()
+                // Canal Toy : setMatrixFrame (prioritaire, tient app fermée).
+                // Canal app : setAppMatrixFrame (recommandé par Nothing hors Toy).
+                if (_canal.value == Canal.TOY) manager.setMatrixFrame(couleurs) else manager.setAppMatrixFrame(couleurs)
+                compteur.incrementAndGet()
+                if (journal) log.info("Image envoyée (${_canal.value}) : ${frame.litCount} LEDs allumées")
             } catch (e: GlyphException) {
                 fail("Le SDK a refusé l'image", e)
             } catch (t: Throwable) {
@@ -101,6 +112,16 @@ private class GlyphMatrixController(
                 log.warn("Extinction ignorée : matrice pas prête (${describe(_state.value)})")
                 return@execute
             }
+            if (_canal.value == Canal.TOY) {
+                // Un Toy ne « rend » pas la matrice : il affiche une image noire.
+                try {
+                    manager.setMatrixFrame(IntArray(MatrixFrame.SIZE))
+                    log.info("Matrice éteinte (Toy : image noire)")
+                } catch (e: Throwable) {
+                    fail("Impossible d'éteindre la matrice (Toy)", e)
+                }
+                return@execute
+            }
             try {
                 manager.closeAppMatrix()
                 log.info("Matrice éteinte (closeAppMatrix)")
@@ -112,6 +133,32 @@ private class GlyphMatrixController(
                 } catch (e: Throwable) {
                     fail("Impossible d'éteindre la matrice", e)
                 }
+            }
+        }
+    }
+
+    override fun setCanal(canal: Canal) {
+        worker.execute {
+            if (_canal.value == canal) return@execute
+            _canal.value = canal
+            log.info(
+                if (canal == Canal.TOY) "Canal Toy : Verso est le Glyph Toy actif (setMatrixFrame)"
+                else "Canal app : Verso n'est plus lié comme Toy (setAppMatrixFrame)",
+            )
+        }
+    }
+
+    override fun setDelaiExtinction(actif: Boolean) {
+        worker.execute {
+            if (_state.value != MatrixState.Ready) {
+                log.warn("setGlyphMatrixTimeout($actif) ignoré : matrice pas prête")
+                return@execute
+            }
+            try {
+                manager.setGlyphMatrixTimeout(actif)
+                log.ok("setGlyphMatrixTimeout($actif) accepté")
+            } catch (t: Throwable) {
+                log.error("setGlyphMatrixTimeout($actif) refusé", t)
             }
         }
     }

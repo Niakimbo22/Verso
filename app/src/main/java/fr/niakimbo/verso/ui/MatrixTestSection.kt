@@ -186,7 +186,7 @@ private fun LogPanel(entries: List<MatrixLog.Entry>, log: MatrixLog) {
 }
 
 @Composable
-private fun PanelBox(content: @Composable () -> Unit) {
+internal fun PanelBox(content: @Composable () -> Unit) {
     Column(
         Modifier
             .fillMaxWidth()
@@ -197,7 +197,7 @@ private fun PanelBox(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun MonoLine(text: String, color: Color = Color(0xFFDDDDDD)) {
+internal fun MonoLine(text: String, color: Color = Color(0xFFDDDDDD)) {
     Text(text, color = color, fontSize = 11.sp, fontFamily = FontFamily.Monospace, lineHeight = 15.sp)
 }
 
@@ -214,6 +214,6 @@ internal fun SectionTitle(text: String) {
 }
 
 @Composable
-private fun Hint(text: String) {
+internal fun Hint(text: String) {
     Text(text, color = Dim, fontSize = 11.sp, modifier = Modifier.padding(vertical = 2.dp))
 }

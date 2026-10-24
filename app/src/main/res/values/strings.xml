@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Verso</string>
+    <string name="toy_nom">Verso</string>
+    <string name="toy_resume">Affiche le modèle choisi dans l\'app Verso</string>
 </resources>

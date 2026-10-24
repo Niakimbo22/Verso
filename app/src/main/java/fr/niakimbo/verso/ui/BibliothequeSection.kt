@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -34,6 +35,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import fr.niakimbo.verso.matrix.MatrixController
+import fr.niakimbo.verso.matrix.MatrixFrame
+import fr.niakimbo.verso.modele.Horloge
+import fr.niakimbo.verso.toy.ChoixToy
 import fr.niakimbo.verso.modele.Modele
 import fr.niakimbo.verso.modele.ModelePlayer
 import kotlinx.coroutines.delay
@@ -54,6 +58,8 @@ fun BibliothequeSection(
     modeles: List<Modele>?,
     controller: MatrixController,
     player: ModelePlayer,
+    toyLie: Boolean,
+    onChoisirToy: () -> Unit,
 ) {
     val actif by player.actif.collectAsStateWithLifecycle()
     val affiche by controller.lastFrame.collectAsStateWithLifecycle()
@@ -85,6 +91,9 @@ fun BibliothequeSection(
             ),
         ) { Text("Éteindre la matrice") }
 
+        Spacer(Modifier.height(20.dp))
+        StatutToy(toyLie, onChoisirToy)
+
         Spacer(Modifier.height(28.dp))
         SectionTitle("MODÈLES")
         Spacer(Modifier.height(12.dp))
@@ -112,6 +121,54 @@ fun BibliothequeSection(
     }
 }
 
+/** Indique si Verso est le Glyph Toy (affichage permanent) et propose de le choisir sinon. */
+@Composable
+private fun StatutToy(toyLie: Boolean, onChoisirToy: () -> Unit) {
+    val shape = RoundedCornerShape(16.dp)
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(Panel, shape)
+            .border(1.dp, if (toyLie) Border else Red, shape)
+            .padding(14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(10.dp).background(if (toyLie) Color(0xFF3DDC84) else Red, CircleShape))
+            Spacer(Modifier.width(10.dp))
+            Text(
+                if (toyLie) "Verso est ton Glyph Toy" else "Verso n'est pas ton Glyph Toy",
+                color = Color.White,
+                fontSize = 14.sp,
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            if (toyLie) {
+                "Le modèle choisi reste affiché app fermée."
+            } else {
+                "L'affichage s'arrête dès que tu quittes l'app. Choisis Verso dans :\n${ChoixToy.CHEMIN}"
+            },
+            color = Dim,
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+        )
+        if (!toyLie) {
+            Spacer(Modifier.height(10.dp))
+            Button(
+                onClick = onChoisirToy,
+                colors = ButtonDefaults.buttonColors(containerColor = Red, contentColor = Color.White),
+            ) { Text("Choisir Verso comme Glyph Toy") }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "Si la matrice reste vide après le changement : éteins puis rallume Glyph Interface.",
+                color = Dim,
+                fontSize = 11.sp,
+                lineHeight = 15.sp,
+            )
+        }
+    }
+}
+
 @Composable
 private fun CarteModele(modele: Modele, actif: Boolean, onTap: () -> Unit, modifier: Modifier) {
     val shape = RoundedCornerShape(16.dp)
@@ -126,7 +183,7 @@ private fun CarteModele(modele: Modele, actif: Boolean, onTap: () -> Unit, modif
     ) {
         Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
             DotMatrix(apercuAnime(modele), Modifier.fillMaxWidth().aspectRatio(1f))
-            if (modele.estAnime) {
+            if (modele.estVivant) {
                 Text(
                     "▶",
                     color = Dim,
@@ -147,9 +204,18 @@ private fun CarteModele(modele: Modele, actif: Boolean, onTap: () -> Unit, modif
     }
 }
 
-/** Fait tourner l'animation dans l'aperçu de la carte (uniquement à l'écran, pas sur la matrice). */
+/** Fait tourner l'animation (ou l'horloge) dans l'aperçu de la carte (uniquement à l'écran). */
 @Composable
-private fun apercuAnime(modele: Modele) = if (!modele.estAnime) {
+private fun apercuAnime(modele: Modele): MatrixFrame = if (modele.dynamique == Modele.Dynamique.HORLOGE) {
+    var frame by remember { mutableStateOf(Horloge.frame()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(Horloge.msAvantProchaineMinute())
+            frame = Horloge.frame()
+        }
+    }
+    frame
+} else if (!modele.estAnime) {
     modele.apercu
 } else {
     var index by remember(modele.id) { mutableStateOf(0) }

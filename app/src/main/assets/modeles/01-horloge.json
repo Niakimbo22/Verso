@@ -2,6 +2,7 @@
   "id": "horloge",
   "nom": "Horloge",
   "type": "statique",
+  "dynamique": "horloge",
   "frames": [
     {
       "dessin": [
