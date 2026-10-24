@@ -30,4 +30,11 @@ class VersoApp : Application() {
 
     /** Vrai tant que le système a lié le Glyph Toy de Verso (Verso choisi comme Toy). */
     val toyLie = MutableStateFlow(false)
+
+    override fun onCreate() {
+        super.onCreate()
+        // Chaque (re)démarrage du processus est noté : on voit qui a réveillé Verso
+        // (ouverture de l'app, liaison du Toy, démarrage du téléphone).
+        journalToy.ajouter("Processus Verso démarré")
+    }
 }

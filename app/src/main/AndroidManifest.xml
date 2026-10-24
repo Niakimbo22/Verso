@@ -10,6 +10,9 @@
     <!-- Expérience du Diagnostic : garder les animations éveillées écran éteint -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <!-- Relancer le modèle après un redémarrage du téléphone -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <!-- Android 11+ : rend visible le service système Glyph pour bindService -->
     <queries>
         <package android:name="com.nothing.thirdparty" />
@@ -41,6 +44,15 @@
         <receiver
             android:name=".update.InstallResultReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name=".toy.DemarrageReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <!--
             Glyph Toy « Verso » : à choisir dans
