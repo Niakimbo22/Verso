@@ -2,7 +2,9 @@ package fr.niakimbo.verso.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -40,7 +43,12 @@ import fr.niakimbo.verso.modele.Horloge
 import fr.niakimbo.verso.toy.ChoixToy
 import fr.niakimbo.verso.modele.Modele
 import fr.niakimbo.verso.modele.ModelePlayer
+import fr.niakimbo.verso.reglage.Catalogue
+import fr.niakimbo.verso.reglage.EntreeCatalogue
+import fr.niakimbo.verso.reglage.ReglagesStore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 private val Red = Color(0xFFD71921)
 private val Dim = Color(0xFF8A8A8A)
@@ -55,7 +63,9 @@ private const val COLONNES = 3
  */
 @Composable
 fun BibliothequeSection(
-    modeles: List<Modele>?,
+    entrees: List<EntreeCatalogue>?,
+    catalogue: Catalogue,
+    reglages: ReglagesStore,
     controller: MatrixController,
     player: ModelePlayer,
     etatToy: EtatToy,
@@ -63,6 +73,8 @@ fun BibliothequeSection(
 ) {
     val actif by player.actif.collectAsStateWithLifecycle()
     val affiche by controller.lastFrame.collectAsStateWithLifecycle()
+    val revision by reglages.revision.collectAsStateWithLifecycle()
+    var fiche by remember { mutableStateOf<EntreeCatalogue?>(null) }
 
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         DotMatrix(
@@ -98,17 +110,29 @@ fun BibliothequeSection(
         SectionTitle("MODÈLES")
         Spacer(Modifier.height(12.dp))
 
+        Text(
+            "Tap = afficher · appui long ou ⚙ = versions et réglages",
+            color = Dim,
+            fontSize = 11.sp,
+        )
+        Spacer(Modifier.height(12.dp))
+
         when {
-            modeles == null -> Text("Chargement…", color = Dim, fontSize = 14.sp)
-            modeles.isEmpty() -> Text("Aucun modèle trouvé (voir Diagnostic).", color = Dim, fontSize = 14.sp)
+            entrees == null -> Text("Chargement…", color = Dim, fontSize = 14.sp)
+            entrees.isEmpty() -> Text("Aucun modèle trouvé (voir Diagnostic).", color = Dim, fontSize = 14.sp)
             else -> Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                modeles.chunked(COLONNES).forEach { ligne ->
+                entrees.chunked(COLONNES).forEach { ligne ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        ligne.forEach { modele ->
+                        ligne.forEach { entree ->
+                            val modele by produceState<Modele?>(null, entree, revision) {
+                                value = withContext(Dispatchers.Default) { catalogue.resoudre(entree) }
+                            }
                             CarteModele(
+                                nom = entree.nom,
                                 modele = modele,
-                                actif = modele.id == actif?.id,
-                                onTap = { player.jouer(modele) },
+                                actif = entree.id == actif?.id,
+                                onTap = { modele?.let(player::jouer) },
+                                onReglages = { fiche = entree },
                                 modifier = Modifier.weight(1f),
                             )
                         }
@@ -118,6 +142,16 @@ fun BibliothequeSection(
                 }
             }
         }
+    }
+
+    fiche?.let { entree ->
+        FicheModele(
+            entree = entree,
+            catalogue = catalogue,
+            reglages = reglages,
+            player = player,
+            onFermer = { fiche = null },
+        )
     }
 }
 
@@ -208,61 +242,76 @@ private fun StatutToy(etat: EtatToy, onChoisirToy: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun CarteModele(modele: Modele, actif: Boolean, onTap: () -> Unit, modifier: Modifier) {
+private fun CarteModele(
+    nom: String,
+    modele: Modele?,
+    actif: Boolean,
+    onTap: () -> Unit,
+    onReglages: () -> Unit,
+    modifier: Modifier,
+) {
     val shape = RoundedCornerShape(16.dp)
     Column(
         modifier
             .clip(shape)
             .background(Panel)
             .border(if (actif) 2.dp else 1.dp, if (actif) Red else Border, shape)
-            .clickable(onClick = onTap)
+            .combinedClickable(onClick = onTap, onLongClick = onReglages)
             .padding(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
-            DotMatrix(apercuAnime(modele), Modifier.fillMaxWidth().aspectRatio(1f))
-            if (modele.estVivant) {
-                Text(
-                    "▶",
-                    color = Dim,
-                    fontSize = 10.sp,
-                    modifier = Modifier.align(Alignment.TopEnd),
-                )
+            DotMatrix(modele?.let { apercuAnime(it) }, Modifier.fillMaxWidth().aspectRatio(1f))
+            if (modele?.estVivant == true) {
+                Text("▶", color = Dim, fontSize = 10.sp, modifier = Modifier.align(Alignment.TopEnd))
             }
         }
-        Spacer(Modifier.height(8.dp))
-        Text(
-            modele.nom,
-            color = if (actif) Color.White else Color(0xFFDDDDDD),
-            fontSize = 12.sp,
-            fontFamily = FontFamily.Monospace,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Spacer(Modifier.height(6.dp))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                nom,
+                color = if (actif) Color.White else Color(0xFFDDDDDD),
+                fontSize = 12.sp,
+                fontFamily = FontFamily.Monospace,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                "⚙",
+                color = Dim,
+                fontSize = 15.sp,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .clickable(onClick = onReglages)
+                    .padding(horizontal = 4.dp),
+            )
+        }
     }
 }
 
-/** Fait tourner l'animation (ou l'horloge) dans l'aperçu de la carte (uniquement à l'écran). */
+/** Fait tourner l'animation (ou l'horloge) dans un aperçu (uniquement à l'écran, pas sur la matrice). */
 @Composable
-private fun apercuAnime(modele: Modele): MatrixFrame = if (modele.dynamique == Modele.Dynamique.HORLOGE) {
-    var frame by remember { mutableStateOf(Horloge.frame()) }
-    LaunchedEffect(Unit) {
+internal fun apercuAnime(modele: Modele): MatrixFrame = if (modele.dynamique != null) {
+    var frame by remember(modele) { mutableStateOf(modele.frameDynamique()) }
+    LaunchedEffect(modele) {
         while (true) {
             delay(Horloge.msAvantProchaineMinute())
-            frame = Horloge.frame()
+            frame = modele.frameDynamique()
         }
     }
     frame
 } else if (!modele.estAnime) {
     modele.apercu
 } else {
-    var index by remember(modele.id) { mutableStateOf(0) }
-    LaunchedEffect(modele.id) {
+    var index by remember(modele) { mutableStateOf(0) }
+    LaunchedEffect(modele) {
         while (true) {
-            delay(modele.images[index].dureeMs)
+            delay(modele.images[index % modele.images.size].dureeMs)
             index = (index + 1) % modele.images.size
         }
     }
-    modele.images[index].frame
+    modele.images[index % modele.images.size].frame
 }

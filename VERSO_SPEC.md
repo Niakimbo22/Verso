@@ -37,6 +37,13 @@ Remplace les apps du Play Store (bugs, features payantes, réglages compliqués)
 - Un bouton « Éteindre la matrice ».
 - Favoris, avec un ordre réglable.
 
+### 3.1 bis Versions et réglages de chaque modèle
+- Appui long sur une carte (ou bouton ⚙) → fiche du modèle : aperçu en direct, choix de la **version** (V1, V2… : quand un modèle est amélioré, l'ancienne version reste disponible) et **réglages**.
+- Réglages communs à tous les modèles : luminosité, vitesse de l'animation, rotation, miroir, inverser.
+- Réglages propres aux modèles calculés dans l'app (`generateur/`) : pluie (V1 et V2 : densité, averses, vent, longueur et types de gouttes, éclaboussures, orage), cœur (rythme, double battement, style), onde, chargement, horloge (aiguilles ou chiffres, cadran, 12/24 h).
+- Chaque réglage a un titre, sa valeur lisible et une phrase qui explique ce qu'il change.
+- Tout est enregistré tout de suite (`ReglagesStore`) et appliqué en direct sur la matrice, Glyph Toy compris.
+
 ### 3.2 Widget écran d'accueil
 - Montre le modèle actif avec son aperçu dot-matrix.
 - Tap → passe au favori suivant.

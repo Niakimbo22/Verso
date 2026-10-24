@@ -34,7 +34,8 @@ import fr.niakimbo.verso.BuildConfig
 import fr.niakimbo.verso.matrix.MatrixController
 import fr.niakimbo.verso.matrix.MatrixHistory
 import fr.niakimbo.verso.modele.ModelePlayer
-import fr.niakimbo.verso.modele.ModeleRepository
+import fr.niakimbo.verso.reglage.Catalogue
+import fr.niakimbo.verso.reglage.ReglagesStore
 import fr.niakimbo.verso.modele.ModeleStore
 import fr.niakimbo.verso.toy.JournalToy
 import fr.niakimbo.verso.update.UpdateState
@@ -50,14 +51,15 @@ fun VersoScreen(
     matrix: MatrixController,
     matrixHistory: MatrixHistory,
     player: ModelePlayer,
-    repository: ModeleRepository,
+    catalogue: Catalogue,
+    reglages: ReglagesStore,
     store: ModeleStore,
     journalToy: JournalToy,
     etatToy: EtatToy,
     onChoisirToy: () -> Unit,
 ) {
-    val bibliotheque by produceState<ModeleRepository.Bibliotheque?>(null, repository) {
-        value = repository.bibliotheque()
+    val bibliotheque by produceState<Catalogue.Contenu?>(null, catalogue) {
+        value = catalogue.contenu()
     }
     var diagnosticOuvert by rememberSaveable { mutableStateOf(false) }
 
@@ -86,7 +88,7 @@ fun VersoScreen(
         Spacer(Modifier.height(16.dp))
         UpdateSection(state, onUpdate, onRetry)
         Spacer(Modifier.height(28.dp))
-        BibliothequeSection(bibliotheque?.modeles, matrix, player, etatToy, onChoisirToy)
+        BibliothequeSection(bibliotheque?.entrees, catalogue, reglages, matrix, player, etatToy, onChoisirToy)
 
         Spacer(Modifier.height(36.dp))
         val erreurs = bibliotheque?.erreurs.orEmpty()

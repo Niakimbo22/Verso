@@ -2,6 +2,7 @@ package fr.niakimbo.verso.modele
 
 import android.content.Context
 import android.os.PowerManager
+import fr.niakimbo.verso.reglage.Catalogue
 import fr.niakimbo.verso.matrix.MatrixController
 import fr.niakimbo.verso.matrix.MatrixFrame
 import fr.niakimbo.verso.matrix.MatrixState
@@ -28,7 +29,7 @@ import kotlinx.coroutines.launch
 class ModelePlayer(
     context: Context,
     private val controller: MatrixController,
-    private val repository: ModeleRepository,
+    private val catalogue: Catalogue,
     private val store: ModeleStore,
     private val scope: CoroutineScope,
 ) {
@@ -70,7 +71,7 @@ class ModelePlayer(
     /** Relit le modèle mémorisé et le relance (Glyph Toy lié, retour dans l'app). */
     suspend fun reprendre() {
         val id = store.modeleActif ?: return
-        val modele = repository.bibliotheque().parId(id) ?: run {
+        val modele = catalogue.resoudre(id) ?: run {
             controller.log.warn("Modèle mémorisé « $id » introuvable")
             return
         }
@@ -81,6 +82,16 @@ class ModelePlayer(
                 return
             }
         }
+        demarrer(modele)
+    }
+
+    /**
+     * Les réglages ou la version d'un modèle ont changé : s'il est affiché, on le relance
+     * avec ses nouveaux réglages (sur la matrice, et donc aussi dans le Glyph Toy).
+     */
+    suspend fun rafraichir(id: String) {
+        if (_actif.value?.id != id) return
+        val modele = catalogue.resoudre(id) ?: return
         demarrer(modele)
     }
 
@@ -109,7 +120,7 @@ class ModelePlayer(
     @Synchronized
     fun signalMinute() {
         val modele = _actif.value
-        val frame = if (modele?.dynamique == Modele.Dynamique.HORLOGE) Horloge.frame() else dernierFrame
+        val frame = if (modele?.dynamique != null) modele.frameDynamique() else dernierFrame
         if (frame != null) {
             dernierFrame = frame
             controller.show(frame, journal = false)
@@ -147,10 +158,8 @@ class ModelePlayer(
         }
     }
 
-    private fun imageInitiale(modele: Modele): MatrixFrame = when (modele.dynamique) {
-        Modele.Dynamique.HORLOGE -> Horloge.frame()
-        null -> modele.apercu
-    }
+    private fun imageInitiale(modele: Modele): MatrixFrame =
+        if (modele.dynamique != null) modele.frameDynamique() else modele.apercu
 
     private fun doitTourner() = appVisible || toyLie
 
@@ -164,10 +173,10 @@ class ModelePlayer(
     private fun lancerBoucle(modele: Modele) {
         arreterBoucle()
         boucle = scope.launch {
-            if (modele.dynamique == Modele.Dynamique.HORLOGE) {
+            if (modele.dynamique != null) {
                 while (isActive) {
                     delay(Horloge.msAvantProchaineMinute())
-                    envoyer(Horloge.frame()) ?: return@launch
+                    envoyer(modele.frameDynamique()) ?: return@launch
                 }
             } else {
                 while (isActive) {
