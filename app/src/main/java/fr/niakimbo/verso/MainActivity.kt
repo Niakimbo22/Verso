@@ -36,7 +36,8 @@ class MainActivity : ComponentActivity() {
                 matrix = app.matrix,
                 matrixHistory = app.matrixHistory,
                 player = app.player,
-                repository = app.modeles,
+                catalogue = app.catalogue,
+                reglages = app.reglages,
                 store = app.store,
                 journalToy = app.journalToy,
                 // toyLie change à chaque liaison/déliaison : les dates relues ici sont à jour.

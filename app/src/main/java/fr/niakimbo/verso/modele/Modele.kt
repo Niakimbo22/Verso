@@ -1,6 +1,7 @@
 package fr.niakimbo.verso.modele
 
 import fr.niakimbo.verso.matrix.MatrixFrame
+import java.time.LocalTime
 
 /**
  * Un modèle affichable sur la matrice (VERSO_SPEC §3.4).
@@ -14,7 +15,19 @@ data class Modele(
     val images: List<Image>,
     /** Modèle calculé en direct (ex. horloge) ; [images] sert alors d'aperçu de secours. */
     val dynamique: Dynamique? = null,
+    /**
+     * Dessin à l'heure donnée pour un modèle dynamique, réglages déjà appliqués.
+     * Null = dessin par défaut du type [dynamique].
+     */
+    val rendu: ((LocalTime) -> MatrixFrame)? = null,
 ) {
+    /** Image d'un modèle dynamique à l'instant [heure]. */
+    fun frameDynamique(heure: LocalTime = LocalTime.now()): MatrixFrame =
+        rendu?.invoke(heure) ?: when (dynamique) {
+            Dynamique.HORLOGE -> Horloge.frame(heure)
+            null -> apercu
+        }
+
     init {
         require(id.isNotBlank()) { "Un modèle doit avoir un id" }
         require(images.isNotEmpty()) { "Le modèle « $id » n'a aucune image" }

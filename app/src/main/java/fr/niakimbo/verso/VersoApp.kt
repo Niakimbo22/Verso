@@ -7,6 +7,8 @@ import fr.niakimbo.verso.matrix.MatrixHistory
 import fr.niakimbo.verso.modele.ModelePlayer
 import fr.niakimbo.verso.modele.ModeleRepository
 import fr.niakimbo.verso.modele.ModeleStore
+import fr.niakimbo.verso.reglage.Catalogue
+import fr.niakimbo.verso.reglage.ReglagesStore
 import fr.niakimbo.verso.toy.JournalToy
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -25,7 +27,9 @@ class VersoApp : Application() {
     val matrix: MatrixController by lazy { GlyphBackend.create(this, matrixHistory) }
     val modeles: ModeleRepository by lazy { ModeleRepository(this) }
     val store: ModeleStore by lazy { ModeleStore(this) }
-    val player: ModelePlayer by lazy { ModelePlayer(this, matrix, modeles, store, appScope) }
+    val reglages: ReglagesStore by lazy { ReglagesStore(this) }
+    val catalogue: Catalogue by lazy { Catalogue(modeles, reglages) }
+    val player: ModelePlayer by lazy { ModelePlayer(this, matrix, catalogue, store, appScope) }
     val journalToy: JournalToy by lazy { JournalToy(this) }
 
     /** Vrai tant que le système a lié le Glyph Toy de Verso (Verso choisi comme Toy). */
