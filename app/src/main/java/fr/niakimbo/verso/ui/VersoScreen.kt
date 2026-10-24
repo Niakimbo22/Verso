@@ -53,7 +53,7 @@ fun VersoScreen(
     repository: ModeleRepository,
     store: ModeleStore,
     journalToy: JournalToy,
-    toyLie: Boolean,
+    etatToy: EtatToy,
     onChoisirToy: () -> Unit,
 ) {
     val bibliotheque by produceState<ModeleRepository.Bibliotheque?>(null, repository) {
@@ -86,7 +86,7 @@ fun VersoScreen(
         Spacer(Modifier.height(16.dp))
         UpdateSection(state, onUpdate, onRetry)
         Spacer(Modifier.height(28.dp))
-        BibliothequeSection(bibliotheque?.modeles, matrix, player, toyLie, onChoisirToy)
+        BibliothequeSection(bibliotheque?.modeles, matrix, player, etatToy, onChoisirToy)
 
         Spacer(Modifier.height(36.dp))
         val erreurs = bibliotheque?.erreurs.orEmpty()

@@ -27,7 +27,19 @@ class ModeleStore(context: Context) {
         get() = if (prefs.contains(CLE_DELAI)) prefs.getBoolean(CLE_DELAI, true) else null
         set(value) = prefs.edit().apply { if (value == null) remove(CLE_DELAI) else putBoolean(CLE_DELAI, value) }.apply()
 
+    /** Dernière fois que le système a lié le Glyph Toy de Verso (ms epoch, 0 = jamais). */
+    var derniereLiaison: Long
+        get() = prefs.getLong(CLE_LIAISON, 0L)
+        set(value) = prefs.edit().putLong(CLE_LIAISON, value).apply()
+
+    /** Dernière fois que le système l'a délié (choix d'un autre Toy, ou fin de session). */
+    var dernierDeliement: Long
+        get() = prefs.getLong(CLE_DELIEMENT, 0L)
+        set(value) = prefs.edit().putLong(CLE_DELIEMENT, value).apply()
+
     private companion object {
+        const val CLE_LIAISON = "toy_derniere_liaison"
+        const val CLE_DELIEMENT = "toy_dernier_deliement"
         const val CLE_ACTIF = "modele_actif"
         const val CLE_EVEIL = "experience_eveil"
         const val CLE_DELAI = "experience_delai_extinction"

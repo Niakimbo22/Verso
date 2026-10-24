@@ -58,7 +58,7 @@ fun BibliothequeSection(
     modeles: List<Modele>?,
     controller: MatrixController,
     player: ModelePlayer,
-    toyLie: Boolean,
+    etatToy: EtatToy,
     onChoisirToy: () -> Unit,
 ) {
     val actif by player.actif.collectAsStateWithLifecycle()
@@ -92,7 +92,7 @@ fun BibliothequeSection(
         ) { Text("Éteindre la matrice") }
 
         Spacer(Modifier.height(20.dp))
-        StatutToy(toyLie, onChoisirToy)
+        StatutToy(etatToy, onChoisirToy)
 
         Spacer(Modifier.height(28.dp))
         SectionTitle("MODÈLES")
@@ -121,50 +121,89 @@ fun BibliothequeSection(
     }
 }
 
-/** Indique si Verso est le Glyph Toy (affichage permanent) et propose de le choisir sinon. */
+/** Où en est le Glyph Toy de Verso, vu depuis l'app. */
+sealed interface EtatToy {
+    /** Lié par le système en ce moment : affichage permanent. */
+    data object Lie : EtatToy
+
+    /** Lié la dernière fois, jamais délié depuis, mais pas relancé (ex. après un redémarrage). */
+    data class ChoisiNonLance(val depuis: Long) : EtatToy
+
+    /** Le système l'a délié : un autre Toy a sans doute été choisi. */
+    data class Delie(val depuis: Long) : EtatToy
+
+    /** Jamais lié par le système. */
+    data object Jamais : EtatToy
+
+    companion object {
+        fun calculer(lie: Boolean, derniereLiaison: Long, dernierDeliement: Long): EtatToy = when {
+            lie -> Lie
+            derniereLiaison == 0L -> Jamais
+            dernierDeliement < derniereLiaison -> ChoisiNonLance(derniereLiaison)
+            else -> Delie(dernierDeliement)
+        }
+    }
+}
+
+private val Vert = Color(0xFF3DDC84)
+private val Ambre = Color(0xFFFFB300)
+private val FormatDate = java.time.format.DateTimeFormatter.ofPattern("dd/MM à HH:mm")
+
+private fun date(ms: Long): String =
+    java.time.Instant.ofEpochMilli(ms).atZone(java.time.ZoneId.systemDefault()).format(FormatDate)
+
+/** Indique si Verso est le Glyph Toy (affichage permanent) et aide à le (re)lancer sinon. */
 @Composable
-private fun StatutToy(toyLie: Boolean, onChoisirToy: () -> Unit) {
+private fun StatutToy(etat: EtatToy, onChoisirToy: () -> Unit) {
+    val (couleur, titre, texte) = when (etat) {
+        EtatToy.Lie -> Triple(Vert, "Verso est ton Glyph Toy", "Le modèle choisi reste affiché app fermée.")
+        is EtatToy.ChoisiNonLance -> Triple(
+            Ambre,
+            "Verso est choisi, mais le système ne l'a pas lancé",
+            "Dernier lancement : ${date(etat.depuis)}. Verrouille puis déverrouille le téléphone ; " +
+                "si rien ne change, éteins puis rallume Glyph Interface.",
+        )
+        is EtatToy.Delie -> Triple(
+            Ambre,
+            "Le système a arrêté le Toy Verso",
+            "Le ${date(etat.depuis)}. Un autre Glyph Toy a peut-être été choisi. Pour revenir :\n${ChoixToy.CHEMIN}",
+        )
+        EtatToy.Jamais -> Triple(
+            Red,
+            "Verso n'est pas ton Glyph Toy",
+            "L'affichage s'arrête dès que tu quittes l'app. Choisis Verso dans :\n${ChoixToy.CHEMIN}",
+        )
+    }
     val shape = RoundedCornerShape(16.dp)
     Column(
         Modifier
             .fillMaxWidth()
             .background(Panel, shape)
-            .border(1.dp, if (toyLie) Border else Red, shape)
+            .border(1.dp, if (etat == EtatToy.Lie) Border else couleur, shape)
             .padding(14.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(10.dp).background(if (toyLie) Color(0xFF3DDC84) else Red, CircleShape))
+            Box(Modifier.size(10.dp).background(couleur, CircleShape))
             Spacer(Modifier.width(10.dp))
-            Text(
-                if (toyLie) "Verso est ton Glyph Toy" else "Verso n'est pas ton Glyph Toy",
-                color = Color.White,
-                fontSize = 14.sp,
-            )
+            Text(titre, color = Color.White, fontSize = 14.sp)
         }
         Spacer(Modifier.height(6.dp))
-        Text(
-            if (toyLie) {
-                "Le modèle choisi reste affiché app fermée."
-            } else {
-                "L'affichage s'arrête dès que tu quittes l'app. Choisis Verso dans :\n${ChoixToy.CHEMIN}"
-            },
-            color = Dim,
-            fontSize = 12.sp,
-            lineHeight = 16.sp,
-        )
-        if (!toyLie) {
+        Text(texte, color = Dim, fontSize = 12.sp, lineHeight = 16.sp)
+        if (etat != EtatToy.Lie) {
             Spacer(Modifier.height(10.dp))
             Button(
                 onClick = onChoisirToy,
                 colors = ButtonDefaults.buttonColors(containerColor = Red, contentColor = Color.White),
-            ) { Text("Choisir Verso comme Glyph Toy") }
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "Si la matrice reste vide après le changement : éteins puis rallume Glyph Interface.",
-                color = Dim,
-                fontSize = 11.sp,
-                lineHeight = 15.sp,
-            )
+            ) { Text(if (etat == EtatToy.Jamais) "Choisir Verso comme Glyph Toy" else "Ouvrir le choix du Glyph Toy") }
+            if (etat == EtatToy.Jamais) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Si la matrice reste vide après le changement : éteins puis rallume Glyph Interface.",
+                    color = Dim,
+                    fontSize = 11.sp,
+                    lineHeight = 15.sp,
+                )
+            }
         }
     }
 }

@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -29,6 +30,7 @@ import fr.niakimbo.verso.matrix.Canal
 import fr.niakimbo.verso.matrix.MatrixController
 import fr.niakimbo.verso.modele.ModeleStore
 import fr.niakimbo.verso.toy.JournalToy
+import fr.niakimbo.verso.toy.ReglagesGlyph
 
 private val Dim = Color(0xFF8A8A8A)
 private val Red = Color(0xFFD71921)
@@ -52,6 +54,15 @@ fun DiagnosticToy(controller: MatrixController, journal: JournalToy, store: Mode
             if (canal == Canal.TOY) Color(0xFF3DDC84) else Color(0xFFDDDDDD),
         )
         MonoLine("Images envoyées : ${controller.imagesEnvoyees}")
+        Spacer(Modifier.height(8.dp))
+        val context = LocalContext.current
+        OutlinedButton(
+            onClick = {
+                journal.ajouter("Recherche des réglages Glyph…")
+                ReglagesGlyph.chercher(context).forEach(journal::ajouter)
+            },
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+        ) { Text("Chercher les réglages Glyph", fontSize = 12.sp) }
     }
 
     Spacer(Modifier.height(16.dp))
