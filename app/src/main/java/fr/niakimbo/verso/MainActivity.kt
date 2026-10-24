@@ -36,6 +36,7 @@ class MainActivity : ComponentActivity() {
                 matrix = app.matrix,
                 matrixHistory = app.matrixHistory,
                 player = app.player,
+                favoris = app.favoris,
                 catalogue = app.catalogue,
                 reglages = app.reglages,
                 store = app.store,

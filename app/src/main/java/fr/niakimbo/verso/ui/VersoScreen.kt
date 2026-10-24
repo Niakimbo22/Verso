@@ -38,6 +38,8 @@ import fr.niakimbo.verso.reglage.Catalogue
 import fr.niakimbo.verso.reglage.ReglagesStore
 import fr.niakimbo.verso.modele.ModeleStore
 import fr.niakimbo.verso.toy.JournalToy
+import fr.niakimbo.verso.generateur.Compteur
+import fr.niakimbo.verso.modele.FavorisStore
 import fr.niakimbo.verso.update.UpdateState
 
 private val NothingRed = Color(0xFFD71921)
@@ -51,6 +53,7 @@ fun VersoScreen(
     matrix: MatrixController,
     matrixHistory: MatrixHistory,
     player: ModelePlayer,
+    favoris: FavorisStore,
     catalogue: Catalogue,
     reglages: ReglagesStore,
     store: ModeleStore,
@@ -88,7 +91,7 @@ fun VersoScreen(
         Spacer(Modifier.height(16.dp))
         UpdateSection(state, onUpdate, onRetry)
         Spacer(Modifier.height(28.dp))
-        BibliothequeSection(bibliotheque?.entrees, catalogue, reglages, matrix, player, etatToy, onChoisirToy)
+        BibliothequeSection(bibliotheque?.entrees?.filter { !it.cache }, catalogue, reglages, matrix, player, favoris, etatToy, onChoisirToy)
 
         Spacer(Modifier.height(36.dp))
         val erreurs = bibliotheque?.erreurs.orEmpty()
@@ -105,7 +108,9 @@ fun VersoScreen(
             Spacer(Modifier.height(8.dp))
             DiagnosticToy(matrix, journalToy, store)
             Spacer(Modifier.height(24.dp))
-            MatrixTestSection(matrix, player, matrixHistory, erreurs)
+            MatrixTestSection(matrix, player, matrixHistory, erreurs, onCompteur = {
+                bibliotheque?.parId(Compteur.ID)?.let { player.jouer(catalogue.resoudre(it)) }
+            })
         }
     }
 }

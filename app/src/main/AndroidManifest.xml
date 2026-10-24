@@ -10,6 +10,9 @@
     <!-- Expérience du Diagnostic : garder les animations éveillées écran éteint -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <!-- Widget : remettre l'horloge à l'heure à la minute pile (sans réveiller le téléphone) -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
     <!-- Relancer le modèle après un redémarrage du téléphone -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
@@ -82,5 +85,75 @@
                 android:name="com.nothing.glyph.toy.aod_support"
                 android:value="1" />
         </service>
+
+        <receiver
+            android:name=".widget.WidgetCarre"
+            android:exported="false"
+            android:label="@string/widget_carre">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_carre" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.WidgetRond"
+            android:exported="false"
+            android:label="@string/widget_rond">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_rond" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.WidgetBarre"
+            android:exported="false"
+            android:label="@string/widget_barre">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_barre" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.WidgetMini"
+            android:exported="false"
+            android:label="@string/widget_mini">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_mini" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.WidgetActions"
+            android:exported="false" />
+
+        <activity
+            android:name=".widget.ConfigWidgetActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:taskAffinity="">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".widget.ChoixRapideActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="fr.niakimbo.verso.choix"
+            android:theme="@style/Theme.Verso.Fenetre" />
     </application>
 </manifest>

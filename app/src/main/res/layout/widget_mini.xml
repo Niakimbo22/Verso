@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_fond_sombre"
+    android:padding="4dp">
+
+    <FrameLayout
+        android:id="@+id/matrice"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@string/widget_suivant">
+
+        <ImageView
+            android:id="@+id/disque"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:adjustViewBounds="true"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter"
+            android:src="@drawable/widget_disque"
+            android:tint="#FF1E1E1E" />
+
+        <ViewFlipper
+            android:id="@+id/flipper"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:autoStart="true"
+            android:flipInterval="1000"
+            android:measureAllChildren="false" />
+
+        <ImageView
+            android:id="@+id/masque"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter"
+            android:src="@drawable/widget_masque_rond_moyen"
+            android:tint="#FF000000" />
+    </FrameLayout>
+</FrameLayout>

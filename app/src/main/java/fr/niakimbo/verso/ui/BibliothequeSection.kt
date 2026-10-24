@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import fr.niakimbo.verso.matrix.MatrixController
 import fr.niakimbo.verso.matrix.MatrixFrame
+import fr.niakimbo.verso.modele.FavorisStore
 import fr.niakimbo.verso.modele.Horloge
 import fr.niakimbo.verso.toy.ChoixToy
 import fr.niakimbo.verso.modele.Modele
@@ -68,12 +69,14 @@ fun BibliothequeSection(
     reglages: ReglagesStore,
     controller: MatrixController,
     player: ModelePlayer,
+    favoris: FavorisStore,
     etatToy: EtatToy,
     onChoisirToy: () -> Unit,
 ) {
     val actif by player.actif.collectAsStateWithLifecycle()
     val affiche by controller.lastFrame.collectAsStateWithLifecycle()
     val revision by reglages.revision.collectAsStateWithLifecycle()
+    val favorisIds by favoris.ids.collectAsStateWithLifecycle()
     var fiche by remember { mutableStateOf<EntreeCatalogue?>(null) }
 
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -111,7 +114,7 @@ fun BibliothequeSection(
         Spacer(Modifier.height(12.dp))
 
         Text(
-            "Tap = afficher · appui long ou ⚙ = versions et réglages",
+            "Tap = afficher · ☆ = favori (le widget les fait défiler) · appui long ou ⚙ = réglages",
             color = Dim,
             fontSize = 11.sp,
         )
@@ -131,6 +134,8 @@ fun BibliothequeSection(
                                 nom = entree.nom,
                                 modele = modele,
                                 actif = entree.id == actif?.id,
+                                favori = entree.id in favorisIds,
+                                onFavori = { favoris.basculer(entree.id) },
                                 onTap = { modele?.let(player::jouer) },
                                 onReglages = { fiche = entree },
                                 modifier = Modifier.weight(1f),
@@ -248,6 +253,8 @@ private fun CarteModele(
     nom: String,
     modele: Modele?,
     actif: Boolean,
+    favori: Boolean,
+    onFavori: () -> Unit,
     onTap: () -> Unit,
     onReglages: () -> Unit,
     modifier: Modifier,
@@ -278,6 +285,15 @@ private fun CarteModele(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
+            )
+            Text(
+                if (favori) "★" else "☆",
+                color = if (favori) Red else Dim,
+                fontSize = 15.sp,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .clickable(onClick = onFavori)
+                    .padding(horizontal = 4.dp),
             )
             Text(
                 "⚙",

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_fond_sombre"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="6dp">
+
+    <FrameLayout
+        android:id="@+id/matrice"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:contentDescription="@string/widget_suivant">
+
+        <ImageView
+            android:id="@+id/disque"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:adjustViewBounds="true"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter"
+            android:src="@drawable/widget_disque"
+            android:tint="#FF1E1E1E" />
+
+        <ViewFlipper
+            android:id="@+id/flipper"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:autoStart="true"
+            android:flipInterval="1000"
+            android:measureAllChildren="false" />
+
+        <ImageView
+            android:id="@+id/masque"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:adjustViewBounds="true"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter"
+            android:src="@drawable/widget_masque_rond_moyen"
+            android:tint="#FF000000" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/nom"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:fontFamily="monospace"
+        android:letterSpacing="0.1"
+        android:maxLines="1"
+        android:paddingHorizontal="12dp"
+        android:textColor="#FFFFFFFF"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/btn_prec"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:contentDescription="@string/widget_precedent"
+        android:fontFamily="monospace"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="2dp"
+        android:text="‹"
+        android:textColor="#FF8A8A8A"
+        android:textSize="22sp" />
+
+    <TextView
+        android:id="@+id/btn_suiv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:contentDescription="@string/widget_suivant"
+        android:fontFamily="monospace"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="2dp"
+        android:text="›"
+        android:textColor="#FF8A8A8A"
+        android:textSize="22sp" />
+
+    <TextView
+        android:id="@+id/btn_liste"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:contentDescription="@string/widget_liste"
+        android:fontFamily="monospace"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="2dp"
+        android:text="☰"
+        android:textColor="#FF8A8A8A"
+        android:textSize="18sp" />
+</LinearLayout>
