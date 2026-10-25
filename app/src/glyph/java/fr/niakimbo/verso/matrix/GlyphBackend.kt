@@ -10,7 +10,11 @@ import com.nothing.ketchum.GlyphMatrixManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
@@ -24,8 +28,14 @@ internal object GlyphBackend {
  *
  * Tous les appels au SDK passent par un seul thread ([worker]) : pas d'appel IPC sur le
  * thread principal, et pas de course entre connexion, affichage et extinction.
- * Le GlyphMatrixManager est un singleton du processus : on l'initialise une fois et on
- * ne fait jamais unInit() (VERSO_SPEC §2).
+ * Le GlyphMatrixManager est un singleton du processus, partagé par l'app et le Toy. Seul
+ * [relancer] fait unInit(), juste avant un nouvel init() : jamais de matrice laissée sans connexion.
+ *
+ * Deux protections contre la matrice « figée » (constaté le 25/10, v0.1.28) :
+ * - les images ne s'empilent jamais : seule la dernière commande (image ou extinction) attend
+ *   son tour, une animation ne peut donc pas prendre de retard sur le SDK ;
+ * - un chien de garde surveille le thread du SDK : si un appel reste bloqué plus de
+ *   [BLOCAGE_MS], on abandonne ce thread, on en crée un neuf et on se reconnecte.
  */
 private class GlyphMatrixController(
     context: Context,
@@ -34,10 +44,17 @@ private class GlyphMatrixController(
     override val backendName = "SDK Glyph (${Glyph.DEVICE_25111p})"
 
     private val app = context.applicationContext
-    private val worker = Executors.newSingleThreadScheduledExecutor { Thread(it, "verso-matrix") }
+
+    @Volatile
+    private var worker: ScheduledExecutorService = nouveauWorker()
     private val manager: GlyphMatrixManager by lazy { GlyphMatrixManager.getInstance(app) }
 
+    @Volatile
     private var serviceConnected = false
+
+    /** init() déjà appelé au moins une fois (sinon pas d'unInit() à faire avant une relance). */
+    @Volatile
+    private var initialise = false
     private var connectTimeout: ScheduledFuture<*>? = null
 
     private val _state = MutableStateFlow<MatrixState>(MatrixState.Unavailable("Pas encore connecté"))
@@ -54,9 +71,33 @@ private class GlyphMatrixController(
 
     override val log = MatrixLog()
 
+    /** Dernière commande d'affichage pas encore envoyée (les précédentes sont dépassées). */
+    private sealed interface Commande {
+        class Image(val frame: MatrixFrame, val journal: Boolean) : Commande
+        data object Eteindre : Commande
+    }
+
+    private val commande = AtomicReference<Commande?>(null)
+    private val envoiPrevu = AtomicBoolean(false)
+
+    /** Tâche du SDK en cours (pour le chien de garde). */
+    private class Tache(val nom: String, val debut: Long)
+
+    @Volatile
+    private var enCours: Tache? = null
+
+    @Volatile
+    private var derniereRelance = 0L
+
+    private val garde = Executors.newSingleThreadScheduledExecutor { Thread(it, "verso-matrix-garde").apply { isDaemon = true } }
+
+    init {
+        garde.scheduleWithFixedDelay(::surveiller, 2, 2, TimeUnit.SECONDS)
+    }
+
     private val callback = object : GlyphMatrixManager.Callback {
         override fun onServiceConnected(name: ComponentName?) {
-            worker.execute {
+            executer("connexion") {
                 serviceConnected = true
                 connectTimeout?.cancel(false)
                 log.ok("Service Glyph connecté")
@@ -65,7 +106,7 @@ private class GlyphMatrixController(
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
-            worker.execute {
+            executer("déconnexion") {
                 serviceConnected = false
                 _state.value = MatrixState.Unavailable("Service Glyph déconnecté")
                 log.warn("Service Glyph déconnecté : touche « Reconnecter ».")
@@ -73,8 +114,56 @@ private class GlyphMatrixController(
         }
     }
 
+    private fun nouveauWorker(): ScheduledExecutorService =
+        Executors.newSingleThreadScheduledExecutor { Thread(it, "verso-matrix").apply { isDaemon = true } }
+
+    /** Lance [bloc] sur le thread du SDK, sous la surveillance du chien de garde. */
+    private fun executer(nom: String, bloc: () -> Unit) {
+        try {
+            worker.execute {
+                val t = Tache(nom, System.currentTimeMillis())
+                enCours = t
+                try {
+                    bloc()
+                } catch (e: Throwable) {
+                    log.error("Erreur interne ($nom)", e)
+                } finally {
+                    if (enCours === t) enCours = null
+                }
+            }
+        } catch (_: RejectedExecutionException) {
+            // Ancien thread abandonné par le chien de garde : la commande est reprise par le nouveau.
+        }
+    }
+
+    /** Chien de garde : un appel au SDK ne doit jamais bloquer l'affichage. */
+    private fun surveiller() {
+        val t = enCours ?: return
+        val duree = System.currentTimeMillis() - t.debut
+        if (duree < BLOCAGE_MS) return
+        val maintenant = System.currentTimeMillis()
+        if (maintenant - derniereRelance < RELANCE_MIN_MS) return
+        derniereRelance = maintenant
+        enCours = null
+
+        val ancien = worker
+        worker = nouveauWorker()
+        ancien.shutdownNow()
+        serviceConnected = false
+        connectTimeout = null
+        val raison = "Le SDK Glyph ne répond plus (« ${t.nom} » bloqué ${duree / 1000} s)"
+        _state.value = MatrixState.Error("$raison : reconnexion…")
+        history.recordFailure(raison)
+        log.error("$raison : nouveau thread, reconnexion au service Glyph")
+
+        // La commande en attente avait peut-être été postée sur l'ancien thread : on la reprend.
+        envoiPrevu.set(false)
+        executer("reconnexion") { bindService() }
+        if (commande.get() != null) planifierEnvoi()
+    }
+
     override fun connect() {
-        worker.execute {
+        executer("connect") {
             when {
                 _state.value == MatrixState.Ready || _state.value == MatrixState.Connecting -> Unit
                 serviceConnected -> registerDevice()
@@ -83,63 +172,100 @@ private class GlyphMatrixController(
         }
     }
 
-    override fun show(frame: MatrixFrame, journal: Boolean) {
-        worker.execute {
-            _lastFrame.value = frame
-            if (_state.value != MatrixState.Ready) {
-                if (journal) log.warn("Image non envoyée : matrice pas prête (${describe(_state.value)})")
-                return@execute
+    override fun relancer(raison: String) {
+        executer("relance") {
+            log.info("Reconnexion complète au service Glyph ($raison)")
+            connectTimeout?.cancel(false)
+            if (initialise) {
+                try {
+                    manager.unInit()
+                } catch (t: Throwable) {
+                    log.warn("unInit refusé (${t.message}) : on continue")
+                }
             }
-            try {
-                val couleurs = frame.toGlyphColors()
-                // Canal Toy : setMatrixFrame (prioritaire, tient app fermée).
-                // Canal app : setAppMatrixFrame (recommandé par Nothing hors Toy).
-                if (_canal.value == Canal.TOY) manager.setMatrixFrame(couleurs) else manager.setAppMatrixFrame(couleurs)
-                compteur.incrementAndGet()
-                if (journal) log.info("Image envoyée (${_canal.value}) : ${frame.litCount} LEDs allumées")
-            } catch (e: GlyphException) {
-                fail("Le SDK a refusé l'image", e)
-            } catch (t: Throwable) {
-                fail("Erreur à l'envoi de l'image", t)
+            serviceConnected = false
+            bindService()
+        }
+    }
+
+    override fun show(frame: MatrixFrame, journal: Boolean) {
+        _lastFrame.value = frame
+        poster(Commande.Image(frame, journal))
+    }
+
+    override fun clear() {
+        _lastFrame.value = null
+        poster(Commande.Eteindre)
+    }
+
+    private fun poster(c: Commande) {
+        commande.set(c)
+        planifierEnvoi()
+    }
+
+    private fun planifierEnvoi() {
+        if (!envoiPrevu.compareAndSet(false, true)) return
+        executer("envoi") {
+            envoiPrevu.set(false)
+            when (val c = commande.getAndSet(null)) {
+                is Commande.Image -> envoyer(c.frame, c.journal)
+                Commande.Eteindre -> eteindre()
+                null -> Unit
             }
         }
     }
 
-    override fun clear() {
-        worker.execute {
-            _lastFrame.value = null
-            if (_state.value != MatrixState.Ready) {
-                log.warn("Extinction ignorée : matrice pas prête (${describe(_state.value)})")
-                return@execute
-            }
-            if (_canal.value == Canal.TOY) {
-                // Un Toy ne « rend » pas la matrice : il affiche une image noire.
-                try {
-                    manager.setMatrixFrame(IntArray(MatrixFrame.SIZE))
-                    log.info("Matrice éteinte (Toy : image noire)")
-                } catch (e: Throwable) {
-                    fail("Impossible d'éteindre la matrice (Toy)", e)
-                }
-                return@execute
-            }
+    private fun envoyer(frame: MatrixFrame, journal: Boolean) {
+        if (_state.value != MatrixState.Ready) {
+            if (journal) log.warn("Image non envoyée : matrice pas prête (${describe(_state.value)})")
+            return
+        }
+        try {
+            val couleurs = frame.toGlyphColors()
+            // Canal Toy : setMatrixFrame (prioritaire, tient app fermée).
+            // Canal app : setAppMatrixFrame (recommandé par Nothing hors Toy).
+            if (_canal.value == Canal.TOY) manager.setMatrixFrame(couleurs) else manager.setAppMatrixFrame(couleurs)
+            compteur.incrementAndGet()
+            if (journal) log.info("Image envoyée (${_canal.value}) : ${frame.litCount} LEDs allumées")
+        } catch (e: GlyphException) {
+            fail("Le SDK a refusé l'image", e)
+        } catch (t: Throwable) {
+            fail("Erreur à l'envoi de l'image", t)
+        }
+    }
+
+    private fun eteindre() {
+        if (_state.value != MatrixState.Ready) {
+            log.warn("Extinction ignorée : matrice pas prête (${describe(_state.value)})")
+            return
+        }
+        if (_canal.value == Canal.TOY) {
+            // Un Toy ne « rend » pas la matrice : il affiche une image noire.
             try {
-                manager.closeAppMatrix()
-                log.info("Matrice éteinte (closeAppMatrix)")
-            } catch (t: Throwable) {
-                // Système trop ancien pour closeAppMatrix : on envoie une image noire à la place.
-                log.warn("closeAppMatrix indisponible (${t.message}), envoi d'une image noire")
-                try {
-                    manager.setAppMatrixFrame(IntArray(MatrixFrame.SIZE))
-                } catch (e: Throwable) {
-                    fail("Impossible d'éteindre la matrice", e)
-                }
+                manager.setMatrixFrame(IntArray(MatrixFrame.SIZE))
+                log.info("Matrice éteinte (Toy : image noire)")
+            } catch (e: Throwable) {
+                fail("Impossible d'éteindre la matrice (Toy)", e)
+            }
+            return
+        }
+        try {
+            manager.closeAppMatrix()
+            log.info("Matrice éteinte (closeAppMatrix)")
+        } catch (t: Throwable) {
+            // Système trop ancien pour closeAppMatrix : on envoie une image noire à la place.
+            log.warn("closeAppMatrix indisponible (${t.message}), envoi d'une image noire")
+            try {
+                manager.setAppMatrixFrame(IntArray(MatrixFrame.SIZE))
+            } catch (e: Throwable) {
+                fail("Impossible d'éteindre la matrice", e)
             }
         }
     }
 
     override fun setCanal(canal: Canal) {
-        worker.execute {
-            if (_canal.value == canal) return@execute
+        executer("canal") {
+            if (_canal.value == canal) return@executer
             _canal.value = canal
             log.info(
                 if (canal == Canal.TOY) "Canal Toy : Verso est le Glyph Toy actif (setMatrixFrame)"
@@ -149,10 +275,10 @@ private class GlyphMatrixController(
     }
 
     override fun setDelaiExtinction(actif: Boolean) {
-        worker.execute {
+        executer("délai d'extinction") {
             if (_state.value != MatrixState.Ready) {
                 log.warn("setGlyphMatrixTimeout($actif) ignoré : matrice pas prête")
-                return@execute
+                return@executer
             }
             try {
                 manager.setGlyphMatrixTimeout(actif)
@@ -171,16 +297,21 @@ private class GlyphMatrixController(
         log.info("Connexion au service Glyph…")
         try {
             manager.init(callback)
+            initialise = true
         } catch (t: Throwable) {
             fail("Impossible de joindre le service Glyph", t)
             return
         }
         connectTimeout?.cancel(false)
-        connectTimeout = worker.schedule({
-            if (!serviceConnected && _state.value == MatrixState.Connecting) {
-                fail("Le service Glyph ne répond pas (système Nothing trop ancien ?)")
-            }
-        }, CONNECT_TIMEOUT_S, TimeUnit.SECONDS)
+        connectTimeout = try {
+            worker.schedule({
+                if (!serviceConnected && _state.value == MatrixState.Connecting) {
+                    fail("Le service Glyph ne répond pas (système Nothing trop ancien ?)")
+                }
+            }, CONNECT_TIMEOUT_S, TimeUnit.SECONDS)
+        } catch (_: RejectedExecutionException) {
+            null
+        }
     }
 
     private fun registerDevice() {
@@ -216,5 +347,11 @@ private class GlyphMatrixController(
 
     private companion object {
         const val CONNECT_TIMEOUT_S = 6L
+
+        /** Un appel IPC au service Glyph prend quelques ms : au-delà de 4 s, il est bloqué. */
+        const val BLOCAGE_MS = 4_000L
+
+        /** Pas plus d'une relance toutes les 15 s (si le service Glyph lui-même est planté). */
+        const val RELANCE_MIN_MS = 15_000L
     }
 }

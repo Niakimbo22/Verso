@@ -11,6 +11,8 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,7 +20,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -26,10 +28,19 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -45,9 +56,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
 import fr.niakimbo.verso.VersoApp
 import fr.niakimbo.verso.matrix.MatrixFrame
 import fr.niakimbo.verso.modele.Modele
@@ -58,50 +74,54 @@ import kotlinx.coroutines.launch
 /** Une image en cours d'édition : 169 luminosités 0-255 et sa durée. */
 private class ImageEd(val px: IntArray, val duree: Long)
 
-/** Tout le dessin à un instant (sert aussi aux annulations). */
+/** Tout le dessin à un instant (sert aussi à « Annuler »). */
 private data class Doc(val images: List<ImageEd>, val index: Int) {
     val courante get() = images[index]
     fun avecImage(i: Int, img: ImageEd) = copy(images = images.toMutableList().also { it[i] = img })
+    fun transformer(f: (IntArray) -> IntArray) = avecImage(index, ImageEd(f(courante.px), courante.duree))
 }
 
-private enum class Outil(val label: String) {
-    CRAYON("✎ Crayon"), GOMME("⌫ Gomme"), REMPLIR("◉ Remplir"), LIGNE("╱ Ligne"),
-    CERCLE("○ Cercle"), DISQUE("● Disque"), PIPETTE("⌖ Pipette"),
+private enum class Trace(val symbole: String, val nom: String) {
+    CRAYON("✎", "Crayon"), GOMME("⌫", "Gomme"), REMPLIR("◉", "Remplir"),
+    LIGNE("╱", "Ligne"), CERCLE("○", "Cercle"), DISQUE("●", "Disque"),
 }
 
-private val DUREES = listOf(40L, 60L, 80L, 100L, 150L, 200L, 300L, 500L, 1000L, 2000L)
+/** 5 luminosités suffisent à l'œil (niveaux 1, 3, 5, 7, 9 du format « dessin »). */
+private val LUMINOSITES = listOf(1, 3, 5, 7, 9)
+
+/** Vitesse de l'animation : une durée pour toutes les images. */
+private val VITESSES = listOf("Très lente" to 500L, "Lente" to 300L, "Normale" to 150L, "Rapide" to 80L, "Très rapide" to 40L)
+
 private const val HISTORIQUE_MAX = 60
 
-/** Ce qui a été chargé pour démarrer l'éditeur. */
-private class Depart(val doc: Doc, val nom: String, val rayon: String, val rayons: List<String>)
+private class Depart(val doc: Doc, val nom: String, val rayon: String)
 
 /**
- * Éditeur dessin complet (étape 7) : crayon, gomme, 9 luminosités, remplissage, ligne, cercle,
- * symétrie, décaler / tourner, plusieurs images avec leur durée, pelure d'oignon, annuler / rétablir,
- * aperçu en direct sur la vraie matrice.
+ * Éditeur dessin (étape 7, refait le 25/10 en version simple) : un seul écran.
+ * Grande matrice où l'on dessine au doigt, crayon / gomme / remplir, 5 luminosités,
+ * bande d'images pour animer, ▶ et ↶. Le reste (formes, symétrie, tourner, vitesse…) est dans « ⋯ ».
+ * Ce qui est dessiné s'affiche aussi sur la vraie matrice tant que l'éditeur est à l'écran.
  */
 @Composable
 fun EditeurDessin(app: VersoApp, id: String?, copie: String?, onFermer: () -> Unit) {
     val depart by produceState<Depart?>(null) {
-        val contenu = app.catalogue.contenu()
-        val rayons = contenu.entrees.filter { !it.cache }.map { it.categorie }.distinct()
         val existant = id?.let { app.mesModeles.parId(it) } as? MesModelesStore.Perso.Dessin
         value = when {
             existant != null -> Depart(
                 Doc(existant.modele.images.map { ImageEd(it.frame.pixels.copyOf(), it.dureeMs) }, 0),
-                existant.nom, existant.categorie, rayons,
+                existant.nom, existant.categorie,
             )
             copie != null -> {
-                val entree = contenu.parId(copie)
+                val entree = app.catalogue.contenu().parId(copie)
                 val m = entree?.let(app.catalogue::resoudre)
                 val images = when {
                     m == null -> listOf(ImageEd(OutilsDessin.vide(), Modele.DUREE_PAR_DEFAUT_MS))
                     m.dynamique != null -> listOf(ImageEd(m.frameDynamique().pixels.copyOf(), Modele.DUREE_PAR_DEFAUT_MS))
                     else -> m.images.map { ImageEd(it.frame.pixels.copyOf(), it.dureeMs) }
                 }
-                Depart(Doc(images, 0), "${entree?.nom ?: "Dessin"} (copie)", MesModelesStore.RAYON, rayons)
+                Depart(Doc(images, 0), "${entree?.nom ?: "Dessin"} (copie)", MesModelesStore.RAYON)
             }
-            else -> Depart(Doc(listOf(ImageEd(OutilsDessin.vide(), Modele.DUREE_PAR_DEFAUT_MS)), 0), "", MesModelesStore.RAYON, rayons)
+            else -> Depart(Doc(listOf(ImageEd(OutilsDessin.vide(), Modele.DUREE_PAR_DEFAUT_MS)), 0), "", MesModelesStore.RAYON)
         }
     }
 
@@ -115,6 +135,7 @@ fun EditeurDessin(app: VersoApp, id: String?, copie: String?, onFermer: () -> Un
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun Editeur(app: VersoApp, idExistant: String?, depart: Depart, onFermer: () -> Unit) {
     val context = LocalContext.current
@@ -123,12 +144,11 @@ private fun Editeur(app: VersoApp, idExistant: String?, depart: Depart, onFermer
     var doc by remember { mutableStateOf(depart.doc) }
     val passe = remember { ArrayDeque<Doc>() }
     val futur = remember { ArrayDeque<Doc>() }
-    var nbHistorique by remember { mutableIntStateOf(0) } // force la recomposition des boutons ↶ ↷
+    var nbHistorique by remember { mutableIntStateOf(0) } // relit ↶ ↷ après chaque changement
     var modifie by remember { mutableStateOf(false) }
 
     var nom by remember { mutableStateOf(depart.nom) }
-    var rayon by remember { mutableStateOf(depart.rayon) }
-    var outil by remember { mutableStateOf(Outil.CRAYON) }
+    var trace by remember { mutableStateOf(Trace.CRAYON) }
     var niveau by remember { mutableIntStateOf(9) }
     var symH by remember { mutableStateOf(false) }
     var symV by remember { mutableStateOf(false) }
@@ -136,6 +156,9 @@ private fun Editeur(app: VersoApp, idExistant: String?, depart: Depart, onFermer
     var surMatrice by remember { mutableStateOf(true) }
     var lecture by remember { mutableStateOf(false) }
     var indexLecture by remember { mutableIntStateOf(0) }
+    var menu by remember { mutableStateOf(false) }
+    var renommer by remember { mutableStateOf(false) }
+    var enregistrerApresNom by remember { mutableStateOf(false) }
     var quitter by remember { mutableStateOf(false) }
     var enregistrement by remember { mutableStateOf(false) }
 
@@ -147,13 +170,6 @@ private fun Editeur(app: VersoApp, idExistant: String?, depart: Depart, onFermer
         modifie = true
     }
 
-    /** Change l'image courante (sans mémoriser : le geste l'a déjà fait). */
-    fun dessiner(f: (IntArray) -> IntArray) {
-        val img = doc.courante
-        doc = doc.avecImage(doc.index, ImageEd(f(img.px), img.duree))
-    }
-
-    /** Action ponctuelle (bouton) : mémorisée pour pouvoir l'annuler. */
     fun appliquer(f: (Doc) -> Doc) {
         memoriser()
         doc = f(doc)
@@ -175,16 +191,21 @@ private fun Editeur(app: VersoApp, idExistant: String?, depart: Depart, onFermer
 
     fun enregistrer() {
         if (enregistrement) return
+        if (nom.isBlank()) {
+            enregistrerApresNom = true
+            renommer = true
+            return
+        }
         enregistrement = true
         scope.launch {
             val id = idExistant ?: app.mesModeles.nouvelId()
             val images = doc.images.map { Modele.Image(MatrixFrame(it.px), it.duree.coerceAtLeast(Modele.MIN_DUREE_MS)) }
             val modele = Modele(
                 id = id,
-                nom = nom.trim().ifBlank { "Mon dessin" },
+                nom = nom.trim(),
                 type = if (images.size > 1) Modele.Type.ANIME else Modele.Type.STATIQUE,
                 images = images,
-                categorie = rayon.trim().ifBlank { MesModelesStore.RAYON },
+                categorie = depart.rayon,
             )
             app.mesModeles.enregistrer(MesModelesStore.Perso.Dessin(modele))
             Toast.makeText(context, "« ${modele.nom} » enregistré dans Mes modèles", Toast.LENGTH_SHORT).show()
@@ -194,17 +215,19 @@ private fun Editeur(app: VersoApp, idExistant: String?, depart: Depart, onFermer
 
     BackHandler { if (modifie) quitter = true else onFermer() }
 
-    // Aperçu en direct sur la vraie matrice : l'image en cours, ou l'animation pendant la lecture.
-    LaunchedEffect(doc, surMatrice, lecture) {
-        if (surMatrice && !lecture) app.player.afficherImage(MatrixFrame(doc.courante.px))
+    // Aperçu sur la vraie matrice, seulement tant que l'éditeur est à l'écran :
+    // en arrière-plan, la matrice revient au modèle actif (CreateurActivity.onPause).
+    val etat by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
+    val aLEcran = etat.isAtLeast(Lifecycle.State.RESUMED)
+    LaunchedEffect(doc, surMatrice, lecture, aLEcran) {
+        if (surMatrice && aLEcran && !lecture) app.player.afficherImage(MatrixFrame(doc.courante.px))
     }
-    LaunchedEffect(lecture) {
+    LaunchedEffect(lecture, aLEcran) {
         if (!lecture) return@LaunchedEffect
-        indexLecture = 0
         while (true) {
             val images = doc.images
             val img = images[indexLecture % images.size]
-            if (surMatrice) app.player.afficherImage(MatrixFrame(img.px))
+            if (surMatrice && aLEcran) app.player.afficherImage(MatrixFrame(img.px))
             delay(img.duree.coerceAtLeast(Modele.MIN_DUREE_MS))
             indexLecture = (indexLecture + 1) % images.size
         }
@@ -213,24 +236,35 @@ private fun Editeur(app: VersoApp, idExistant: String?, depart: Depart, onFermer
     Column(
         Modifier
             .fillMaxSize()
-            .imePadding()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        BarreHaut(
-            titre = if (idExistant == null) "Nouveau dessin" else "Modifier",
-            action = if (enregistrement) "…" else "Enregistrer",
-            actionActive = true,
-            onRetour = { if (modifie) quitter = true else onFermer() },
-            onAction = ::enregistrer,
-        )
-        Spacer(Modifier.height(12.dp))
+        // ----- Barre du haut : ←, nom (tap = renommer), Enregistrer -----
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "←", color = Color.White, fontSize = 24.sp,
+                modifier = Modifier.clip(CircleShape).clickable { if (modifie) quitter = true else onFermer() }
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
+            )
+            Text(
+                (nom.ifBlank { "Sans nom" }) + "  ✎",
+                color = if (nom.isBlank()) C.Discret else Color.White,
+                fontSize = 18.sp, fontWeight = FontWeight.Bold,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).clickable { renommer = true }.padding(6.dp),
+            )
+            Box(
+                Modifier.clip(RoundedCornerShape(50)).background(C.Rouge).clickable(onClick = ::enregistrer)
+                    .padding(horizontal = 16.dp, vertical = 9.dp),
+            ) { Text(if (enregistrement) "…" else "✓ Enregistrer", color = Color.White, fontSize = 14.sp) }
+        }
+        Spacer(Modifier.height(10.dp))
 
-        // ----- Toile -----
+        // ----- La matrice où l'on dessine -----
         val affichee = if (lecture) doc.images[indexLecture % doc.images.size] else doc.courante
         val precedente = if (pelure && !lecture && doc.index > 0) doc.images[doc.index - 1] else null
-        val outilActuel by rememberUpdatedState(outil)
+        val traceActuel by rememberUpdatedState(trace)
         val niveauActuel by rememberUpdatedState(niveau)
         val symActuelle by rememberUpdatedState(OutilsDessin.Symetrie(symH, symV))
         val enLecture by rememberUpdatedState(lecture)
@@ -248,35 +282,24 @@ private fun Editeur(app: VersoApp, idExistant: String?, depart: Depart, onFermer
                         (o.x / cote).toInt().coerceIn(0, OutilsDessin.N - 1) to (o.y / cote).toInt().coerceIn(0, OutilsDessin.N - 1)
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
-                        if (enLecture) return@awaitEachGesture
+                        if (enLecture) lecture = false
                         down.consume()
-                        val o = outilActuel
+                        val t = traceActuel
                         val sym = symActuelle
-                        val valeur = if (o == Outil.GOMME) 0 else OutilsDessin.luminosite(niveauActuel)
+                        val valeur = if (t == Trace.GOMME) 0 else OutilsDessin.luminosite(niveauActuel)
                         val debut = caseDe(down.position)
                         var dernier = debut
-                        // Image de départ pour les formes (ligne, cercle) : redessinée à chaque mouvement.
+                        // `doc` est un état : on relit toujours sa dernière valeur, même entre deux images d'écran.
                         val base = doc.courante.px
-                        when (o) {
-                            Outil.PIPETTE -> {
-                                val v = base[debut.second * OutilsDessin.N + debut.first]
-                                if (v > 0) niveau = OutilsDessin.niveau(v)
-                                outil = Outil.CRAYON
-                                return@awaitEachGesture
-                            }
-                            Outil.REMPLIR -> {
-                                memoriser()
+                        memoriser()
+                        fun dessiner(f: (IntArray) -> IntArray) { doc = doc.transformer(f) }
+                        when (t) {
+                            Trace.REMPLIR -> {
                                 dessiner { OutilsDessin.remplir(it, debut.first, debut.second, valeur, sym) }
                                 return@awaitEachGesture
                             }
-                            Outil.CRAYON, Outil.GOMME -> {
-                                memoriser()
-                                dessiner { OutilsDessin.poser(it, listOf(debut), valeur, sym) }
-                            }
-                            else -> {
-                                memoriser()
-                                dessiner { OutilsDessin.poser(base, listOf(debut), valeur, sym) }
-                            }
+                            Trace.CRAYON, Trace.GOMME -> dessiner { OutilsDessin.poser(it, listOf(debut), valeur, sym) }
+                            else -> dessiner { OutilsDessin.poser(base, listOf(debut), valeur, sym) }
                         }
                         while (true) {
                             val ev = awaitPointerEvent()
@@ -285,171 +308,232 @@ private fun Editeur(app: VersoApp, idExistant: String?, depart: Depart, onFermer
                             ch.consume()
                             val c = caseDe(ch.position)
                             if (c == dernier) continue
-                            when (o) {
-                                Outil.CRAYON, Outil.GOMME -> {
-                                    val trait = OutilsDessin.ligne(dernier.first, dernier.second, c.first, c.second)
-                                    dessiner { OutilsDessin.poser(it, trait, valeur, sym) }
+                            when (t) {
+                                Trace.CRAYON, Trace.GOMME -> {
+                                    val segment = OutilsDessin.ligne(dernier.first, dernier.second, c.first, c.second)
+                                    dessiner { OutilsDessin.poser(it, segment, valeur, sym) }
                                 }
-                                Outil.LIGNE -> dessiner {
+                                Trace.LIGNE -> dessiner {
                                     OutilsDessin.poser(base, OutilsDessin.ligne(debut.first, debut.second, c.first, c.second), valeur, sym)
                                 }
-                                Outil.CERCLE, Outil.DISQUE -> dessiner {
-                                    OutilsDessin.poser(base, OutilsDessin.cercle(debut.first, debut.second, c.first, c.second, o == Outil.DISQUE), valeur, sym)
+                                Trace.CERCLE, Trace.DISQUE -> dessiner {
+                                    OutilsDessin.poser(base, OutilsDessin.cercle(debut.first, debut.second, c.first, c.second, t == Trace.DISQUE), valeur, sym)
                                 }
-                                else -> Unit
+                                Trace.REMPLIR -> Unit
                             }
                             dernier = c
                         }
                     }
                 },
         )
-        Spacer(Modifier.height(10.dp))
-
-        // ----- Annuler, lecture, options d'affichage -----
-        RangeeTouches {
-            Touche("↶", dispo = passe.isNotEmpty() && nbHistorique >= 0 && !lecture) { annuler() }
-            Touche("↷", dispo = futur.isNotEmpty() && nbHistorique >= 0 && !lecture) { retablir() }
-            Touche(if (lecture) "❚❚ Pause" else "▶ Lire", actif = lecture, dispo = doc.images.size > 1 || lecture) { lecture = !lecture }
-            Touche("Pelure", actif = pelure) { pelure = !pelure }
-            Touche("Sur la matrice", actif = surMatrice) { surMatrice = !surMatrice }
-        }
-        Spacer(Modifier.height(14.dp))
-
-        // ----- Outils -----
-        TitreSection("OUTIL")
         Spacer(Modifier.height(6.dp))
-        RangeeTouches {
-            Outil.entries.forEach { o -> Touche(o.label, actif = outil == o, petit = true) { outil = o } }
+        val indice = when {
+            lecture -> "Lecture… touche la matrice pour arrêter"
+            trace == Trace.LIGNE || trace == Trace.CERCLE || trace == Trace.DISQUE -> "${trace.nom} : pose le doigt, glisse, lâche"
+            symH || symV -> "Symétrie activée"
+            OutilsDessin.plusClair(doc.courante.px) == 0 -> "Dessine au doigt sur la matrice"
+            else -> ""
         }
-        Spacer(Modifier.height(10.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            (1..9).forEach { n ->
-                Niveau(n, actif = niveau == n && outil != Outil.GOMME, modifier = Modifier.weight(1f)) {
-                    niveau = n
-                    if (outil == Outil.GOMME || outil == Outil.PIPETTE) outil = Outil.CRAYON
-                }
+        Text(indice, color = C.Discret, fontSize = 12.sp, modifier = Modifier.height(18.dp))
+        Spacer(Modifier.height(8.dp))
+
+        // ----- Outils principaux + luminosité -----
+        val formeChoisie = trace == Trace.LIGNE || trace == Trace.CERCLE || trace == Trace.DISQUE
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Outil(Trace.CRAYON.symbole, "Crayon", actif = trace == Trace.CRAYON, modifier = Modifier.weight(1f)) { trace = Trace.CRAYON }
+            Outil(Trace.GOMME.symbole, "Gomme", actif = trace == Trace.GOMME, modifier = Modifier.weight(1f)) { trace = Trace.GOMME }
+            Outil(Trace.REMPLIR.symbole, "Remplir", actif = trace == Trace.REMPLIR, modifier = Modifier.weight(1f)) { trace = Trace.REMPLIR }
+            if (formeChoisie) {
+                Outil(trace.symbole, trace.nom, actif = true, modifier = Modifier.weight(1f)) { menu = true }
             }
         }
         Spacer(Modifier.height(10.dp))
-        RangeeTouches {
-            Touche("↔ Symétrie", actif = symH, petit = true) { symH = !symH }
-            Touche("↕ Symétrie", actif = symV, petit = true) { symV = !symV }
-        }
-        Spacer(Modifier.height(14.dp))
-
-        // ----- Transformations de l'image courante -----
-        TitreSection("IMAGE ${doc.index + 1} / ${doc.images.size}")
-        Spacer(Modifier.height(6.dp))
-        fun transformer(f: (IntArray) -> IntArray) = appliquer { d -> d.avecImage(d.index, ImageEd(f(d.courante.px), d.courante.duree)) }
-        RangeeTouches {
-            Touche("←", petit = true) { transformer { OutilsDessin.decaler(it, -1, 0) } }
-            Touche("→", petit = true) { transformer { OutilsDessin.decaler(it, 1, 0) } }
-            Touche("↑", petit = true) { transformer { OutilsDessin.decaler(it, 0, -1) } }
-            Touche("↓", petit = true) { transformer { OutilsDessin.decaler(it, 0, 1) } }
-            Touche("⟲", petit = true) { transformer { OutilsDessin.tourner(it, horaire = false) } }
-            Touche("⟳", petit = true) { transformer { OutilsDessin.tourner(it, horaire = true) } }
-            Touche("⇋ Retourner", petit = true) { transformer { OutilsDessin.retourner(it, horizontal = true) } }
-            Touche("⇵ Retourner", petit = true) { transformer { OutilsDessin.retourner(it, horizontal = false) } }
-        }
-        Spacer(Modifier.height(6.dp))
-        RangeeTouches {
-            Touche("− Plus sombre", petit = true) { transformer { OutilsDessin.nuancer(it, -1) } }
-            Touche("+ Plus clair", petit = true) { transformer { OutilsDessin.nuancer(it, +1) } }
-            Touche("Négatif", petit = true) { transformer(OutilsDessin::inverser) }
-            Touche("Effacer", petit = true) { transformer { OutilsDessin.vide() } }
+        Row(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(C.Panneau).border(1.dp, C.Bord, RoundedCornerShape(14.dp))
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Luminosité", color = C.Discret, fontSize = 12.sp, modifier = Modifier.weight(1f))
+            LUMINOSITES.forEach { n ->
+                val choisi = niveau == n && trace != Trace.GOMME
+                Box(
+                    Modifier.padding(horizontal = 5.dp).size(34.dp).clip(CircleShape)
+                        .border(2.dp, if (choisi) C.Rouge else Color.Transparent, CircleShape)
+                        .clickable {
+                            niveau = n
+                            if (trace == Trace.GOMME) trace = Trace.CRAYON
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(Modifier.size(20.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.25f + 0.75f * n / 9f)))
+                }
+            }
         }
         Spacer(Modifier.height(16.dp))
 
         // ----- Images de l'animation -----
-        TitreSection("IMAGES")
-        Spacer(Modifier.height(6.dp))
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             doc.images.forEachIndexed { i, img ->
-                Vignette(img.px, i + 1, choisie = i == doc.index && !lecture, jouee = lecture && i == indexLecture % doc.images.size) {
-                    if (!lecture) doc = doc.copy(index = i)
+                Vignette(img.px, choisie = i == doc.index && !lecture, jouee = lecture && i == indexLecture % doc.images.size) {
+                    lecture = false
+                    doc = doc.copy(index = i)
                 }
             }
+            // ＋ : nouvelle image, copie de l'actuelle (on n'a plus qu'à changer ce qui bouge).
+            Box(
+                Modifier.size(58.dp).clip(RoundedCornerShape(10.dp)).border(1.dp, C.Bord, RoundedCornerShape(10.dp))
+                    .clickable {
+                        lecture = false
+                        appliquer { d ->
+                            Doc(d.images.toMutableList().apply { add(d.index + 1, ImageEd(d.courante.px.copyOf(), d.courante.duree)) }, d.index + 1)
+                        }
+                    },
+                contentAlignment = Alignment.Center,
+            ) { Text("＋", color = Color.White, fontSize = 22.sp) }
         }
-        Spacer(Modifier.height(8.dp))
-        RangeeTouches {
-            Touche("＋ Nouvelle", petit = true, dispo = !lecture) {
-                appliquer { d ->
-                    val l = d.images.toMutableList().apply { add(d.index + 1, ImageEd(OutilsDessin.vide(), d.courante.duree)) }
-                    Doc(l, d.index + 1)
-                }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            if (doc.images.size == 1) "＋ ajoute une image pour animer ton dessin"
+            else "Image ${doc.index + 1} sur ${doc.images.size} · ＋ copie l'image affichée",
+            color = C.Discret, fontSize = 11.sp, modifier = Modifier.fillMaxWidth(),
+        )
+        Spacer(Modifier.height(14.dp))
+
+        // ----- Lire, annuler, rétablir, plus -----
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Outil(if (lecture) "❚❚" else "▶", if (lecture) "Pause" else "Lire", actif = lecture, dispo = doc.images.size > 1, modifier = Modifier.weight(1f)) {
+                if (!lecture) indexLecture = doc.index
+                lecture = !lecture
             }
-            Touche("⧉ Dupliquer", petit = true, dispo = !lecture) {
-                appliquer { d ->
-                    val l = d.images.toMutableList().apply { add(d.index + 1, ImageEd(d.courante.px.copyOf(), d.courante.duree)) }
-                    Doc(l, d.index + 1)
-                }
-            }
-            Touche("◀", petit = true, dispo = !lecture && doc.index > 0) {
-                appliquer { d ->
-                    val l = d.images.toMutableList().apply { add(d.index - 1, removeAt(d.index)) }
-                    Doc(l, d.index - 1)
-                }
-            }
-            Touche("▶", petit = true, dispo = !lecture && doc.index < doc.images.size - 1) {
-                appliquer { d ->
-                    val l = d.images.toMutableList().apply { add(d.index + 1, removeAt(d.index)) }
-                    Doc(l, d.index + 1)
-                }
-            }
-            Touche("🗑 Supprimer", petit = true, dispo = !lecture && doc.images.size > 1) {
-                appliquer { d ->
-                    val l = d.images.toMutableList().apply { removeAt(d.index) }
-                    Doc(l, d.index.coerceAtMost(l.size - 1))
-                }
-            }
+            Outil("↶", "Annuler", dispo = passe.isNotEmpty() && nbHistorique >= 0, modifier = Modifier.weight(1f)) { annuler() }
+            Outil("↷", "Rétablir", dispo = futur.isNotEmpty() && nbHistorique >= 0, modifier = Modifier.weight(1f)) { retablir() }
+            Outil("⋯", "Plus", modifier = Modifier.weight(1f)) { menu = true }
         }
-        if (doc.images.size > 1) {
-            Spacer(Modifier.height(10.dp))
-            Text(
-                "Durée de l'image ${doc.index + 1} : ${doc.courante.duree} ms",
-                color = Color.White, fontSize = 13.sp, modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(6.dp))
-            RangeeTouches {
-                DUREES.forEach { ms ->
-                    Touche(if (ms >= 1000) "${ms / 1000} s" else "$ms", actif = doc.courante.duree == ms, petit = true) {
-                        appliquer { d -> d.avecImage(d.index, ImageEd(d.courante.px, ms)) }
+        Spacer(Modifier.height(24.dp))
+    }
+
+    // ----- Menu « ⋯ » : tout ce qui sert moins souvent -----
+    if (menu) {
+        ModalBottomSheet(
+            onDismissRequest = { menu = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = Color(0xFF0A0A0A),
+            contentColor = Color.White,
+        ) {
+            Column(
+                Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).navigationBarsPadding(),
+            ) {
+                TitreSection("FORMES")
+                Spacer(Modifier.height(8.dp))
+                LignePuces {
+                    listOf(Trace.LIGNE, Trace.CERCLE, Trace.DISQUE).forEach { f ->
+                        Puce("${f.symbole} ${f.nom}", actif = trace == f) { trace = f; menu = false }
                     }
                 }
+                Spacer(Modifier.height(18.dp))
+                TitreSection("SYMÉTRIE")
+                Spacer(Modifier.height(8.dp))
+                LignePuces {
+                    Puce("↔ Gauche-droite", actif = symH) { symH = !symH }
+                    Puce("↕ Haut-bas", actif = symV) { symV = !symV }
+                }
+                Spacer(Modifier.height(18.dp))
+                TitreSection("IMAGE AFFICHÉE")
+                Spacer(Modifier.height(8.dp))
+                LignePuces {
+                    Puce("←") { appliquer { it.transformer { px -> OutilsDessin.decaler(px, -1, 0) } } }
+                    Puce("→") { appliquer { it.transformer { px -> OutilsDessin.decaler(px, 1, 0) } } }
+                    Puce("↑") { appliquer { it.transformer { px -> OutilsDessin.decaler(px, 0, -1) } } }
+                    Puce("↓") { appliquer { it.transformer { px -> OutilsDessin.decaler(px, 0, 1) } } }
+                    Puce("⟳ Tourner") { appliquer { it.transformer { px -> OutilsDessin.tourner(px, horaire = true) } } }
+                    Puce("⇋ Retourner") { appliquer { it.transformer { px -> OutilsDessin.retourner(px, horizontal = true) } } }
+                }
+                Spacer(Modifier.height(8.dp))
+                LignePuces {
+                    Puce("Effacer") { appliquer { it.transformer { OutilsDessin.vide() } } }
+                    Puce("Négatif") { appliquer { it.transformer(OutilsDessin::inverser) } }
+                    Puce("◀ Avancer", dispo = doc.index > 0) {
+                        appliquer { d -> Doc(d.images.toMutableList().apply { add(d.index - 1, removeAt(d.index)) }, d.index - 1) }
+                    }
+                    Puce("Reculer ▶", dispo = doc.index < doc.images.size - 1) {
+                        appliquer { d -> Doc(d.images.toMutableList().apply { add(d.index + 1, removeAt(d.index)) }, d.index + 1) }
+                    }
+                    Puce("🗑 Supprimer l'image", dispo = doc.images.size > 1) {
+                        appliquer { d ->
+                            val l = d.images.toMutableList().apply { removeAt(d.index) }
+                            Doc(l, d.index.coerceAtMost(l.size - 1))
+                        }
+                    }
+                }
+                if (doc.images.size > 1) {
+                    Spacer(Modifier.height(18.dp))
+                    TitreSection("VITESSE DE L'ANIMATION")
+                    Spacer(Modifier.height(8.dp))
+                    val actuelle = doc.images.map { it.duree }.distinct().singleOrNull()
+                    LignePuces {
+                        VITESSES.forEach { (libelle, ms) ->
+                            Puce(libelle, actif = actuelle == ms) {
+                                appliquer { d -> d.copy(images = d.images.map { ImageEd(it.px, ms) }) }
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    LignePuces {
+                        Puce("Pelure d'oignon", actif = pelure) { pelure = !pelure }
+                    }
+                    Text(
+                        "Pelure d'oignon : l'image d'avant apparaît en rouge pâle, pour dessiner la suite du mouvement.",
+                        color = C.Discret, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp),
+                    )
+                }
+                Spacer(Modifier.height(18.dp))
+                TitreSection("MATRICE")
+                Spacer(Modifier.height(8.dp))
+                LignePuces {
+                    Puce("Voir le dessin au dos du téléphone", actif = surMatrice) { surMatrice = !surMatrice }
+                }
+                Spacer(Modifier.height(24.dp))
             }
-            Spacer(Modifier.height(6.dp))
-            Touche("Mettre ${doc.courante.duree} ms à toutes les images", petit = true) {
-                val ms = doc.courante.duree
-                appliquer { d -> d.copy(images = d.images.map { ImageEd(it.px, ms) }) }
-            }
-            Spacer(Modifier.height(4.dp))
-            val total = doc.images.sumOf { it.duree }
-            Text(
-                "${doc.images.size} images · un tour dure ${"%.1f".format(total / 1000f)} s",
-                color = C.Discret, fontSize = 11.sp, modifier = Modifier.fillMaxWidth(),
-            )
-        } else {
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "Une seule image = modèle fixe. Ajoute des images pour l'animer.",
-                color = C.Discret, fontSize = 11.sp, modifier = Modifier.fillMaxWidth(),
-            )
         }
-        Spacer(Modifier.height(18.dp))
+    }
 
-        TitreSection("NOM")
-        Spacer(Modifier.height(6.dp))
-        NomEtRayon(
-            nom = nom, onNom = { nom = it; modifie = true },
-            rayon = rayon, onRayon = { rayon = it; modifie = true },
-            rayons = depart.rayons,
+    if (renommer) {
+        var texte by remember { mutableStateOf(nom) }
+        AlertDialog(
+            onDismissRequest = { renommer = false; enregistrerApresNom = false },
+            containerColor = C.Panneau,
+            titleContentColor = Color.White,
+            title = { Text("Nom du dessin") },
+            text = {
+                OutlinedTextField(
+                    value = texte,
+                    onValueChange = { texte = it.take(40) },
+                    singleLine = true,
+                    placeholder = { Text("ex. Chat qui cligne") },
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = C.Rouge, unfocusedBorderColor = C.Bord,
+                        focusedTextColor = Color.White, unfocusedTextColor = Color.White, cursorColor = C.Rouge,
+                    ),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    nom = texte.trim()
+                    modifie = true
+                    renommer = false
+                    if (enregistrerApresNom && nom.isNotBlank()) enregistrer()
+                    enregistrerApresNom = false
+                }) { Text(if (enregistrerApresNom) "Enregistrer" else "OK", color = C.Rouge) }
+            },
+            dismissButton = {
+                TextButton(onClick = { renommer = false; enregistrerApresNom = false }) { Text("Annuler", color = Color.White) }
+            },
         )
-        Spacer(Modifier.height(18.dp))
-        Touche(if (enregistrement) "…" else "Enregistrer", actif = true, modifier = Modifier.fillMaxWidth(), onTap = ::enregistrer)
-        Spacer(Modifier.height(24.dp))
     }
 
     if (quitter) {
@@ -463,9 +547,18 @@ private fun Editeur(app: VersoApp, idExistant: String?, depart: Depart, onFermer
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun LignePuces(content: @Composable () -> Unit) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) { content() }
+}
+
 /**
- * Grande matrice éditable : LEDs éteintes en gris, image en blanc, et (pelure d'oignon)
- * l'image précédente en rouge très léger sous les LEDs éteintes.
+ * Grande matrice éditable : LEDs éteintes en gris, dessin en blanc, et (pelure d'oignon)
+ * l'image précédente en rouge pâle sous les LEDs éteintes.
  */
 @Composable
 private fun Toile(px: IntArray, pelure: IntArray?, modifier: Modifier) {
@@ -494,18 +587,17 @@ private fun Toile(px: IntArray, pelure: IntArray?, modifier: Modifier) {
 }
 
 @Composable
-private fun Vignette(px: IntArray, numero: Int, choisie: Boolean, jouee: Boolean, onTap: () -> Unit) {
+private fun Vignette(px: IntArray, choisie: Boolean, jouee: Boolean, onTap: () -> Unit) {
     val forme = RoundedCornerShape(10.dp)
-    Column(
+    Box(
         Modifier
+            .size(58.dp)
             .clip(forme)
             .background(C.Panneau)
             .border(if (choisie || jouee) 2.dp else 1.dp, if (choisie) C.Rouge else if (jouee) Color.White else C.Bord, forme)
             .clickable(onClick = onTap)
             .padding(5.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        DotMatrix(MatrixFrame(px), Modifier.size(48.dp))
-        Text(numero.toString(), color = C.Discret, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
+        DotMatrix(MatrixFrame(px), Modifier.fillMaxSize())
     }
 }

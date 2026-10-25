@@ -31,6 +31,10 @@ class FakeMatrixController : MatrixController {
         log.warn("Build sans SDK Glyph : rien ne s'affichera sur la matrice.")
     }
 
+    override fun relancer(raison: String) {
+        log.info("[factice] Relance ($raison)")
+    }
+
     override fun setCanal(canal: Canal) {
         if (_canal.value != canal) log.info("[factice] Canal : $canal")
         _canal.value = canal

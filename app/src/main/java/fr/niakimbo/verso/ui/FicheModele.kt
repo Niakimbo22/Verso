@@ -302,11 +302,13 @@ private fun ActionsModele(entree: EntreeCatalogue, apercu: Modele?, onFermer: ()
     Titre(if (perso != null) "MA CRÉATION" else "CRÉER À PARTIR DE CE MODÈLE")
     Spacer(Modifier.height(8.dp))
     if (perso != null) {
-        val mode = if (perso is MesModelesStore.Perso.Blocs) CreateurActivity.BLOCS else CreateurActivity.DESSIN
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Option("✎ Modifier", false, Modifier.weight(1f)) {
-                CreateurActivity.ouvrir(context, mode, id = entree.id)
-                onFermer()
+            // Les anciens modèles par blocs (v0.1.26-28) restent jouables, mais ne se modifient plus.
+            if (perso is MesModelesStore.Perso.Dessin) {
+                Option("✎ Modifier", false, Modifier.weight(1f)) {
+                    CreateurActivity.ouvrir(context, id = entree.id)
+                    onFermer()
+                }
             }
             Option("⇪ Partager", false, Modifier.weight(1f)) { scope.launch { partagerJson(context, app, entree.id) } }
         }
@@ -321,8 +323,8 @@ private fun ActionsModele(entree: EntreeCatalogue, apercu: Modele?, onFermer: ()
             color = Dim, fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.fillMaxWidth(),
         )
     } else {
-        Option("✎ Copier dans l'éditeur dessin", false, Modifier.fillMaxWidth()) {
-            CreateurActivity.ouvrir(context, CreateurActivity.DESSIN, copie = entree.id)
+        Option("✎ Dessiner à partir de ce modèle", false, Modifier.fillMaxWidth()) {
+            CreateurActivity.ouvrir(context, copie = entree.id)
             onFermer()
         }
         Spacer(Modifier.height(6.dp))

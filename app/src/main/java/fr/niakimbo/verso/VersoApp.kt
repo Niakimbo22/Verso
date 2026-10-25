@@ -6,6 +6,7 @@ import fr.niakimbo.verso.createur.MesModelesStore
 import fr.niakimbo.verso.matrix.GlyphBackend
 import fr.niakimbo.verso.matrix.MatrixController
 import fr.niakimbo.verso.matrix.MatrixHistory
+import fr.niakimbo.verso.matrix.MatrixState
 import fr.niakimbo.verso.modele.ModelePlayer
 import fr.niakimbo.verso.modele.ModeleRepository
 import fr.niakimbo.verso.modele.FavorisStore
@@ -43,6 +44,27 @@ class VersoApp : Application() {
     val journalToy: JournalToy by lazy { JournalToy(this) }
     val favoris: FavorisStore by lazy { FavorisStore(this) }
     val stylesWidget: StylesWidgetStore by lazy { StylesWidgetStore(this) }
+
+    @Volatile
+    private var derniereRelance = 0L
+
+    /**
+     * Refait la connexion à la matrice (voir MatrixController.relancer). Appelé à chaque liaison du Toy,
+     * à l'ouverture de l'app, à l'allumage de l'écran et par le bouton « Relancer la matrice ».
+     * [delaiMin] évite de relancer en boucle ; dans ce cas, une matrice pas encore prête est juste connectée.
+     */
+    fun relancerMatrice(raison: String, delaiMin: Long = 0L) {
+        val maintenant = System.currentTimeMillis()
+        if (delaiMin > 0) {
+            if (matrix.state.value != MatrixState.Ready) {
+                matrix.connect()
+                return
+            }
+            if (maintenant - derniereRelance < delaiMin) return
+        }
+        derniereRelance = maintenant
+        matrix.relancer(raison)
+    }
 
     /** Essai d'affichage par le canal app après un démarrage (DemarrageReceiver), annulé si le Toy se lie. */
     @Volatile

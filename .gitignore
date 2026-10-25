@@ -19,3 +19,6 @@ signing/
 
 # SDK Glyph (non redistribuable)
 *.aar
+
+# SDK Glyph : non redistribuable, recollé par la CI (VERSO_SPEC §7)
+app/libs/*.aar

@@ -74,7 +74,8 @@ class Catalogue(
         val base = integres ?: chargerIntegres().also { integres = it }
         val persos = mesModeles.tous().map(::entreePerso)
         // Les créations d'abord : sinon elles se perdent derrière les 90 modèles intégrés.
-        val contenu = Contenu(persos + base.entrees, base.erreurs + mesModeles.erreurs)
+        // distinctBy : un même id ne peut jamais apparaître deux fois dans la bibliothèque.
+        val contenu = Contenu((persos + base.entrees).distinctBy { it.id }, base.erreurs + mesModeles.erreurs)
         cache = rev to contenu
         return contenu
     }

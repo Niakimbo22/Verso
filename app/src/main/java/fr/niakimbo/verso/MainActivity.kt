@@ -79,6 +79,7 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         val app = application as VersoApp
         app.player.setAppVisible(true)
+        app.relancerMatrice("ouverture de Verso", delaiMin = 60_000L)
         // Relance le modèle mémorisé (ex. après que le système a fermé le processus).
         lifecycleScope.launch { app.player.reprendre() }
     }

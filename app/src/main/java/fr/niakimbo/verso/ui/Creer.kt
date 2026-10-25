@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
@@ -51,7 +52,7 @@ private val Discret = Color(0xFF8A8A8A)
 private val Panneau = Color(0xFF111111)
 private val Bord = Color(0xFF2A2A2A)
 
-/** Trois boutons au-dessus de la bibliothèque : nouveau dessin, nouveau modèle dynamique, importer. */
+/** Deux boutons au-dessus de la bibliothèque : créer un dessin, importer. */
 @Composable
 fun BarreCreer(onImporte: () -> Unit) {
     val context = LocalContext.current
@@ -87,8 +88,7 @@ fun BarreCreer(onImporte: () -> Unit) {
     }
 
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        BoutonCreer("✎", "Dessin", Modifier.weight(1f)) { CreateurActivity.ouvrir(context, CreateurActivity.DESSIN) }
-        BoutonCreer("◷", "Dynamique", Modifier.weight(1f)) { CreateurActivity.ouvrir(context, CreateurActivity.BLOCS) }
+        BoutonCreer("✎", "Créer un dessin", Modifier.weight(2f), principal = true) { CreateurActivity.ouvrir(context) }
         BoutonCreer("⇩", "Importer", Modifier.weight(1f)) { menuImport = true }
     }
 
@@ -118,20 +118,21 @@ fun BarreCreer(onImporte: () -> Unit) {
 }
 
 @Composable
-private fun BoutonCreer(symbole: String, texte: String, modifier: Modifier, onTap: () -> Unit) {
+private fun BoutonCreer(symbole: String, texte: String, modifier: Modifier, principal: Boolean = false, onTap: () -> Unit) {
     val forme = RoundedCornerShape(14.dp)
     Box(
         modifier
             .clip(forme)
-            .background(Panneau)
-            .border(1.dp, Bord, forme)
+            .background(if (principal) Rouge else Panneau)
+            .border(1.dp, if (principal) Rouge else Bord, forme)
             .clickable(onClick = onTap)
-            .padding(vertical = 10.dp),
+            .padding(vertical = 12.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(symbole, color = Rouge, fontSize = 18.sp)
-            Text("+ $texte", color = Color.White, fontSize = 12.sp, textAlign = TextAlign.Center)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(symbole, color = Color.White, fontSize = 16.sp)
+            Spacer(Modifier.width(8.dp))
+            Text(texte, color = Color.White, fontSize = 14.sp, textAlign = TextAlign.Center)
         }
     }
 }
