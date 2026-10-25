@@ -24,7 +24,8 @@ import kotlinx.coroutines.launch
  *
  * Ce service ne parle jamais au SDK directement : il bascule le [fr.niakimbo.verso.matrix.MatrixController]
  * partagé sur le canal Toy et laisse le [fr.niakimbo.verso.modele.ModelePlayer] afficher le modèle mémorisé.
- * Pas d'unInit() ici (VERSO_SPEC §2), contrairement à l'exemple de Nothing.
+ * Pas d'unInit() ici (VERSO_SPEC §2), contrairement à l'exemple de Nothing. Mais à chaque
+ * liaison, on se réenregistre auprès du service Glyph (register) : sans ça, matrice figée.
  */
 class VersoToyService : Service() {
 
@@ -110,7 +111,10 @@ class VersoToyService : Service() {
         SurveillanceToy.surLiaison(this)
         app.toyLie.value = true
         app.matrix.setCanal(Canal.TOY)
-        app.matrix.connect()
+        // Indispensable : l'enregistrement (register) doit être fait APRÈS la liaison du Toy.
+        // Sinon le SDK accepte les images mais la matrice reste figée (25/10 : v0.1.28 et v0.1.35
+        // figées, v0.1.33 qui se réenregistrait à la liaison fonctionnait). Pas d'unInit (§2).
+        app.matrix.relancer("Toy lié par le système")
         app.player.setToyLie(true)
         app.appScope.launch {
             if (app.store.modeleActif == null) {
