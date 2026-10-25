@@ -57,6 +57,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import fr.niakimbo.verso.VersoApp
+import fr.niakimbo.verso.ui.verre.BoutonVerre
+import fr.niakimbo.verso.ui.verre.PanneauVerre
+import fr.niakimbo.verso.ui.verre.PuceVerre
 import fr.niakimbo.verso.createur.MesModelesStore
 import kotlinx.coroutines.launch
 import fr.niakimbo.verso.matrix.MatrixController
@@ -75,7 +78,7 @@ import kotlinx.coroutines.withContext
 
 private val Red = Color(0xFFD71921)
 private val Dim = Color(0xFF8A8A8A)
-private val Panel = Color(0xFF111111)
+private val Panel = Color(0xFF0E0E0E).copy(alpha = 0.72f)
 private val Border = Color(0xFF2A2A2A)
 
 private const val COLONNES = 3
@@ -84,20 +87,7 @@ private const val FAVORIS = "★"
 private const val MES = MesModelesStore.RAYON
 
 @Composable
-private fun Puce(texte: String, actif: Boolean, onTap: () -> Unit) {
-    val forme = RoundedCornerShape(50)
-    Text(
-        texte,
-        color = if (actif) Color.White else Color(0xFFDDDDDD),
-        fontSize = 13.sp,
-        modifier = Modifier
-            .clip(forme)
-            .background(if (actif) Red else Panel)
-            .border(1.dp, if (actif) Red else Border, forme)
-            .clickable(onClick = onTap)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-    )
-}
+private fun Puce(texte: String, actif: Boolean, onTap: () -> Unit) = PuceVerre(texte, actif, onClick = onTap)
 
 /**
  * Bibliothèque (étape 3) : aperçu de ce qui est sur la matrice, grille des modèles,
@@ -130,17 +120,14 @@ fun BibliothequeSection(
     val entreeDernier = entrees?.firstOrNull { it.id == dernier }
 
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        DotMatrix(
-            affiche,
-            Modifier
-                .size(200.dp)
-                .clip(CircleShape)
-                .background(Color.Black, CircleShape)
-                .border(1.dp, Border, CircleShape)
-                // Tap sur la grande matrice = réglages du modèle affiché.
-                .clickable(enabled = actif != null) { fiche = entrees?.firstOrNull { it.id == actif?.id } }
-                .padding(12.dp),
-        )
+        // La grande matrice, posée sur un disque de verre. Tap = réglages du modèle affiché.
+        PanneauVerre(
+            Modifier.size(224.dp),
+            forme = CircleShape,
+            onClick = { if (actif != null) fiche = entrees?.firstOrNull { it.id == actif?.id } },
+        ) {
+            DotMatrix(affiche, Modifier.size(224.dp).padding(22.dp))
+        }
         Spacer(Modifier.height(10.dp))
         Text(
             text = actif?.nom ?: if (affiche == null) "Matrice éteinte" else "Aperçu",
@@ -152,24 +139,11 @@ fun BibliothequeSection(
         }
         Spacer(Modifier.height(12.dp))
         if (affiche == null && entreeDernier != null) {
-            Button(
-                onClick = {
-                    vibreur.performHapticFeedback(HapticFeedbackType.LongPress)
-                    scope.launch { catalogue.resoudre(entreeDernier.id)?.let(player::jouer) }
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = Red, contentColor = Color.White),
-            ) { Text("Rallumer « ${entreeDernier.nom} »") }
-        } else {
-            Button(
-                onClick = player::eteindre,
-                enabled = affiche != null,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Red,
-                    contentColor = Color.White,
-                    disabledContainerColor = Panel,
-                    disabledContentColor = Dim,
-                ),
-            ) { Text("Éteindre la matrice") }
+            BoutonVerre("Rallumer « ${entreeDernier.nom} »", {
+                scope.launch { catalogue.resoudre(entreeDernier.id)?.let(player::jouer) }
+            }, principal = true)
+        } else if (affiche != null) {
+            BoutonVerre("Éteindre la matrice", player::eteindre, principal = true)
         }
 
         TextButton(onClick = {
@@ -184,20 +158,17 @@ fun BibliothequeSection(
         (etatMatrice as? MatrixState.Error)?.let { erreur ->
             Spacer(Modifier.height(14.dp))
             val forme = RoundedCornerShape(16.dp)
-            Column(
-                Modifier.fillMaxWidth().background(Panel, forme).border(1.dp, Red, forme).padding(14.dp),
-            ) {
+            PanneauVerre(Modifier.fillMaxWidth(), forme = forme, actif = true) {
+            Column(Modifier.padding(14.dp)) {
                 Text("La matrice ne répond pas", color = Color.White, fontSize = 14.sp)
                 Spacer(Modifier.height(4.dp))
                 Text(erreur.message, color = Dim, fontSize = 12.sp, lineHeight = 16.sp)
                 Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = {
-                        if (redemarrage) app.redemarrer("bouton Redémarrer Verso", rouvrir = true)
-                        else app.relancerMatrice("bouton Reconnecter")
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Red, contentColor = Color.White),
-                ) { Text(if (redemarrage) "Redémarrer Verso" else "Reconnecter") }
+                BoutonVerre(if (redemarrage) "Redémarrer Verso" else "Reconnecter", {
+                    if (redemarrage) app.redemarrer("bouton Redémarrer Verso", rouvrir = true)
+                    else app.relancerMatrice("bouton Reconnecter")
+                }, principal = true, taille = 14.sp)
+            }
             }
         }
 
@@ -394,14 +365,8 @@ private fun StatutToy(etat: EtatToy, onChoisirToy: () -> Unit) {
             "L'affichage s'arrête dès que tu quittes l'app. Choisis Verso dans :\n${ChoixToy.CHEMIN}",
         )
     }
-    val shape = RoundedCornerShape(16.dp)
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .background(Panel, shape)
-            .border(1.dp, if (etat == EtatToy.Lie || etat == EtatToy.Relance) Border else couleur, shape)
-            .padding(14.dp),
-    ) {
+    PanneauVerre(Modifier.fillMaxWidth(), forme = RoundedCornerShape(22.dp), actif = etat == EtatToy.Jamais) {
+    Column(Modifier.padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(10.dp).background(couleur, CircleShape))
             Spacer(Modifier.width(10.dp))
@@ -411,10 +376,10 @@ private fun StatutToy(etat: EtatToy, onChoisirToy: () -> Unit) {
         Text(texte, color = Dim, fontSize = 12.sp, lineHeight = 16.sp)
         if (etat != EtatToy.Lie && etat != EtatToy.Relance) {
             Spacer(Modifier.height(10.dp))
-            Button(
-                onClick = onChoisirToy,
-                colors = ButtonDefaults.buttonColors(containerColor = Red, contentColor = Color.White),
-            ) { Text(if (etat == EtatToy.Jamais) "Choisir Verso comme Glyph Toy" else "Ouvrir le choix du Glyph Toy") }
+            BoutonVerre(
+                if (etat == EtatToy.Jamais) "Choisir Verso comme Glyph Toy" else "Ouvrir le choix du Glyph Toy",
+                onChoisirToy, principal = true, taille = 14.sp,
+            )
             if (etat == EtatToy.Jamais) {
                 Spacer(Modifier.height(6.dp))
                 Text(
@@ -425,6 +390,7 @@ private fun StatutToy(etat: EtatToy, onChoisirToy: () -> Unit) {
                 )
             }
         }
+    }
     }
 }
 

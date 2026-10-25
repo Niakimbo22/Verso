@@ -16,6 +16,12 @@
     <!-- Prévenir quand le système arrête le Glyph Toy -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Règles automatiques : type de connexion (Wi-Fi, données, hors ligne) -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Règles automatiques : appareil Bluetooth connecté (demandée seulement si la règle est utilisée) -->
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
     <!-- Relancer le modèle après un redémarrage du téléphone -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
@@ -69,6 +75,16 @@
             <intent-filter>
                 <action android:name="android.intent.action.TIME_SET" />
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Règles automatiques : montre, voiture… connectée ou déconnectée (même app fermée) -->
+        <receiver
+            android:name=".auto.BluetoothRecepteur"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.bluetooth.device.action.ACL_CONNECTED" />
+                <action android:name="android.bluetooth.device.action.ACL_DISCONNECTED" />
             </intent-filter>
         </receiver>
 

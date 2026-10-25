@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import fr.niakimbo.verso.ui.verre.Discret
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -36,12 +37,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 
-internal val Rouge = Color(0xFFD71921)
-internal val Discret = Color(0xFF8A8A8A)
-internal val Panneau = Color(0xFF111111)
-internal val Bord = Color(0xFF2A2A2A)
 internal val Fond = Color.Black
-internal val Forme = RoundedCornerShape(16.dp)
+internal val Forme = RoundedCornerShape(24.dp)
 
 /** Picto 9×9 en points ronds, façon Glyph. */
 @Composable
@@ -53,7 +50,7 @@ internal fun Picto(type: TypeQuand, couleur: Color, modifier: Modifier) {
         type.points.forEachIndexed { y, ligne ->
             ligne.forEachIndexed { x, c ->
                 drawCircle(
-                    if (c == 'X') couleur else Color(0xFF1C1C1C),
+                    if (c == 'X') couleur else Color.White.copy(alpha = 0.08f),
                     r,
                     Offset(cell * (x + 0.5f), cell * (y + 0.5f)),
                 )
@@ -67,10 +64,6 @@ internal fun Picto(type: TypeQuand, couleur: Color, modifier: Modifier) {
 internal fun Etiquette(texte: String, modifier: Modifier = Modifier, couleur: Color = Discret) {
     Text(texte, color = couleur, fontSize = 12.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp, modifier = modifier)
 }
-
-/** Carte sombre arrondie. */
-internal fun Modifier.carte(actif: Boolean = false): Modifier =
-    clip(Forme).background(Panneau).border(if (actif) 2.dp else 1.dp, if (actif) Rouge else Bord, Forme)
 
 /**
  * Liste qu'on réordonne au doigt : appui long sur un élément, puis glisser (même geste que les favoris).
@@ -151,27 +144,5 @@ internal fun <T> ListeReordonnable(
                 }
             }
         }
-    }
-}
-
-/** Petit bouton « pastille » (jours, seuils, choix). */
-@Composable
-internal fun Pastille(texte: String, choisie: Boolean, modifier: Modifier = Modifier, onTap: () -> Unit) {
-    val forme = RoundedCornerShape(50)
-    Box(
-        modifier
-            .clip(forme)
-            .background(if (choisie) Rouge else Panneau)
-            .border(1.dp, if (choisie) Rouge else Bord, forme)
-            .clickable(onClick = onTap),
-        contentAlignment = androidx.compose.ui.Alignment.Center,
-    ) {
-        Text(
-            texte,
-            color = Color.White,
-            fontSize = 13.sp,
-            fontFamily = FontFamily.Monospace,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-        )
     }
 }

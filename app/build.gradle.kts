@@ -97,6 +97,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
+    // Liquid Glass (réfraction, flou, reflet) : https://github.com/Kyant0/AndroidLiquidGlass (Apache 2.0)
+    implementation("io.github.kyant0:backdrop:1.0.1")
+
     testImplementation("junit:junit:4.13.2")
 
     // SDK Glyph : ajouté uniquement si l'AAR est présent (voir app/libs/README.md).

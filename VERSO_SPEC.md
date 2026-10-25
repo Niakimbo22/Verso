@@ -142,39 +142,66 @@ Format JSON d'un modèle par blocs :
 ```
 Valeurs absentes = défauts ci-dessus ; un bloc qui déborde est ramené dans la grille.
 
-### 3.6 Règles automatiques (étape 9, partie 1)
-Le modèle change tout seul selon la situation. Carte **Automatique** sur l'écran principal (état, interrupteur général) → `AutomatiqueActivity` : « En ce moment », la liste des règles, **＋ Nouvelle règle**, et des **idées** ajoutées d'un tap (nuit → Lune, réveil → Soleil, charge → Chargement, batterie faible → Batterie, casque → Égaliseur, Ne pas déranger → Dodo).
+### 3.6 Règles automatiques (étape 9)
+Le modèle change tout seul selon la situation. Carte **Automatique** sur l'écran principal (état, interrupteur général) → `AutomatiqueActivity` :
+- **Liste** : « En ce moment » (modèle affiché animé + règle en cours), mes règles (appui long + glisser = ordre = priorité, interrupteur par règle), **idées** en un tap (défilement horizontal), bouton flottant **＋ Nouvelle règle**.
+- **Éditeur** : en haut une **phrase** qui résume la règle (« Si de 22:00 à 07:00 et en charge, afficher Lune. ») avec l'aperçu animé et « ● ce serait le cas maintenant / ○ pas le cas ». Puis **SI…** (une carte par condition, ses réglages juste dessous, ● vraie maintenant), « Toutes (ET) / Au moins une (OU) » dès 2 conditions, **＋ Ajouter une condition** (catalogue par familles). Puis **ALORS…** : Modèle / Hasard / Défiler / Éteindre. **▸ Plus d'options** : nom, revenir au modèle d'avant.
 
-**Éditeur guidé** : 1 · SI… (6 tuiles avec picto dot-matrix) puis 2 · ALORS AFFICHER… (un modèle de la bibliothèque, ou « Éteindre la matrice »). Réglages simples visibles (heures, seuil de batterie) ; **▸ Plus d'options** replié : nom, jours, fenêtre du réveil, casque précis, « À la fin, revenir au modèle d'avant ».
+Déclencheurs (18, aucun menu caché : chaque réglage est un bouton) :
 
-| Déclencheur | Famille | Comment Verso le sait | Permission |
+| Famille | Déclencheur | Réglages | Source / permission |
 |---|---|---|---|
-| Horaire (de… à…, jours) | pendant | alarme exacte aux débuts / fins de plage (`AlarmeRegles`, réveille le téléphone) | aucune (`USE_EXACT_ALARM` déjà là) |
-| Au réveil | moment | 1er `USER_PRESENT` du jour dans la fenêtre (5h-12h par défaut), rattrapé au démarrage de Verso si déjà déverrouillé | aucune |
-| En charge | pendant | `BATTERY_CHANGED` (branché) | aucune |
-| Batterie faible (10/15/20/30 %) | pendant | `BATTERY_CHANGED`, hors charge | aucune |
-| Casque / écouteurs | pendant | sorties audio (`AudioDeviceCallback` : Bluetooth A2DP/LE, filaire, USB) ; nom précis en option | aucune |
-| Ne pas déranger | pendant | `ACTION_INTERRUPTION_FILTER_CHANGED` | aucune |
+| Temps | Horaire | de… à…, jours | alarme exacte aux bornes |
+| Temps | À une heure (moment) | heure, jours | alarme exacte |
+| Temps | Au réveil (moment) | fenêtre (5h-12h) | 1er `USER_PRESENT` du jour |
+| Temps | Nuit / jour | nuit ou jour, décalage ±1 h, ville | calcul NOAA hors ligne (`Soleil`), ville cherchée une fois avec le géocodeur du téléphone |
+| Temps | Une date | jour + mois, chaque année | minuit |
+| Temps | Avant l'alarme | 15 min… 2 h | `AlarmManager.nextAlarmClock` (app Horloge) |
+| Batterie | En charge | tout / câble / sans fil | `BATTERY_CHANGED` |
+| Batterie | Batterie faible | 10-30 % (hors charge) | idem |
+| Batterie | Batterie pleine | 80-100 % (en charge) | idem |
+| Batterie | Économie | — | `POWER_SAVE_MODE_CHANGED` |
+| Téléphone | Verrouillé / déverrouillé | — | écran allumé / éteint / déverrouillé |
+| Téléphone | Ne pas déranger | — | `INTERRUPTION_FILTER_CHANGED` |
+| Téléphone | Silencieux / vibreur | les deux / l'un | `RINGER_MODE_CHANGED` |
+| Téléphone | Mode avion | — | `AIRPLANE_MODE_CHANGED` |
+| Téléphone | Lampe | — | `CameraManager.TorchCallback` |
+| Connexions | Casque | n'importe lequel / un précis | sorties audio, sans permission |
+| Connexions | Bluetooth (montre, voiture…) | n'importe lequel / un associé | `ACL_CONNECTED/DISCONNECTED` (récepteur du manifeste, liste gardée dans `verso_auto`) ; **permission « Appareils à proximité »** demandée dans l'éditeur |
+| Connexions | Réseau | Wi-Fi / données / hors ligne | `ACCESS_NETWORK_STATE` (sans le nom du Wi-Fi) |
 
-**Comportement** (`Decision`, testé dans `ReglesTest`) :
-- **Priorité** : la règle « pendant » la plus haute dans la liste gagne (ordre par appui long + glisser).
-- Une règle s'applique **quand la gagnante change** (elle commence, une autre passe devant, ou elle est modifiée). Tant que la gagnante ne change pas, rien n'est imposé.
+Actions : **Modèle** ; **Hasard** (un favori au hasard, ou toute la bibliothèque sans favori) ; **Défiler** (les favoris dans l'ordre ★ toutes les 5-60 min, tant que la règle dure, par alarme) ; **Éteindre**.
+
+**Comportement** (`Evaluation` + `Decision`, 20 tests dans `ReglesTest`) :
+- **Priorité** : la règle « pendant » la plus haute dans la liste gagne.
+- Une règle s'applique **quand la gagnante change** (elle commence, une autre passe devant, ou son action est modifiée). Tant que la gagnante ne change pas, rien n'est imposé.
 - **Choix à la main** (app, widget, ☰) : il tient jusqu'au prochain changement automatique (« option A »). Pendant une règle, c'est lui qui revient à la fin.
-- **Fin d'une règle** : retour au modèle d'avant (ou au dernier choix à la main) ; option pour garder le modèle de la règle.
-- **Moment** (réveil) : affiche le modèle une fois par jour ; il devient le modèle à remettre après une règle en cours.
-- La mémoire du moteur (règle en cours, modèle à remettre, dernier réveil) est dans `verso_auto` : après un redémarrage du processus, rien ne se redéclenche si la situation n'a pas changé.
-- Le moteur ne touche jamais la matrice lui-même : `ModelePlayer.appliquerAuto`. App fermée et Toy pas lié, il **mémorise seulement** le modèle (le Toy le reprend à sa liaison) : il n'ouvre jamais la couche app de la matrice app fermée (§3.3).
+- **Fin d'une règle** : retour au modèle d'avant (ou au dernier choix à la main) ; option pour garder.
+- **Moment** (réveil, heure précise) : une fois par jour par règle ; avec « toutes (ET) », les autres conditions doivent être vraies à ce moment. Le modèle devient celui à remettre après une règle en cours.
+- Une alarme exacte (`AlarmeRegles`, réveille le téléphone) tombe au prochain instant où une règle peut changer : bornes de plage, heure précise, lever / coucher ± décalage, minuit, alarme − X min, défilement.
+- La mémoire du moteur (règle en cours, modèle à remettre, moments du jour, défilement) est dans `verso_auto` : après un redémarrage du processus, rien ne se redéclenche si la situation n'a pas changé.
+- Le moteur ne touche jamais la matrice lui-même : `ModelePlayer.appliquerAuto`. App fermée et Toy pas lié, il **mémorise seulement** (le Toy reprend à sa liaison) : il n'ouvre jamais la couche app de la matrice app fermée (§3.3).
 - Chaque changement est noté dans le journal du Toy (« Auto (raison) : « Nuit » → lune »).
 - ⚠️ L'« Horaire du coucher » de Glyph Interface éteint la matrice : une règle de nuit pendant cet horaire ne se voit pas.
 
-Format JSON d'une règle (`RegleStore`, ordre de la liste = priorité) :
+Format JSON d'une règle (`RegleStore`, ordre de la liste = priorité ; l'ancien format `quand` + `modele` de la partie 1 est relu) :
 ```json
-{ "id": "regle-mh3k2x1a", "nom": "Nuit", "modele": "lune", "active": true, "revenir": true,
-  "quand": { "type": "plage", "debut": 1320, "fin": 420, "jours": [1,2,3,4,5,6,7] } }
+{ "id": "regle-mh3k2x1a", "nom": "Dodo en charge", "active": true, "revenir": true, "toutes": true,
+  "si": [ { "type": "plage", "debut": 1380, "fin": 420, "jours": [1,2,3,4,5,6,7] }, { "type": "charge" } ],
+  "alors": { "type": "eteindre" } }
 ```
-`modele` null = éteindre. Types : `plage` (`debut`, `fin` en minutes, `jours` 1 = lundi), `reveil` (`debut`, `fin`), `charge`, `batterie` (`seuil`), `casque` (`appareil` optionnel), `dnd`.
+Types `si` : `plage` (`debut`, `fin` en minutes, `jours` 1 = lundi), `aheure` (`minute`, `jours`), `reveil` (`debut`, `fin`), `soleil` (`nuit`, `decalage`), `date` (`jour`, `mois`), `alarme` (`minutes`), `charge` (`source` cable/sansfil), `batterie` (`seuil`), `pleine` (`seuil`), `economie`, `ecran` (`verrouille`), `dnd`, `sonnerie` (`mode` silencieux/vibreur), `avion`, `lampe`, `casque` (`appareil`), `bluetooth` (`appareil`), `reseau` (`reseau` wifi/donnees/aucun). `alors` : `modele` (+ `modele`), `hasard`, `defiler` (+ `minutes`), `eteindre`.
 
-**Parties suivantes** : 2 · notification d'une app (modèle quelques secondes puis **fondu de luminosité** vers le modèle d'avant) et musique en cours, avec l'« Accès aux notifications » ; 3 · météo réelle (Open-Meteo, ville saisie) et Wi-Fi par nom de réseau (localisation « Toujours » acceptée par Nico).
+**À venir** : notification d'une app (modèle quelques secondes puis fondu de luminosité) et musique en cours (« Accès aux notifications ») ; météo réelle (Open-Meteo) et Wi-Fi par nom (localisation « Toujours », acceptée par Nico).
+
+### 3.7 Liquid Glass (interface)
+Vrai verre façon iOS, avec la bibliothèque **Backdrop** (`io.github.kyant0:backdrop:1.0.1`, Kyant, Apache 2.0) : réfraction des bords (shader AGSL `lens`, avec profondeur), flou, vibrance, reflet (`Highlight`) et ombre. Code dans `ui/verre/Verre.kt` :
+- `EcranVerre` : fond animé (noir, lueurs rouge Nothing / blanche / rouge sombre qui dérivent à 20 images/s et suivent le défilement, grille de points façon matrice) + contenu en verre sur ce fond + éléments flottants (`dessus`) en verre sur le fond **et** le contenu qui défile dessous.
+- `Modifier.verre`, `PanneauVerre`, `BoutonVerre` (principal = teinté rouge), `PuceVerre`, `RondVerre`, effet d'appui qui enfonce le verre (ressort + vibration).
+- Partout sur l'écran principal (disque de la grande matrice, boutons, puces des rayons, statut du Toy, cartes Automatique et Widgets) et dans Automatique (barres et boutons flottants).
+- **Pas** de verre sur les 90 cartes de modèles (trop lourd à 90) : fond noir translucide qui laisse passer les lueurs.
+- Sans fond disponible (fenêtres qui ne sont pas dans un `EcranVerre`), `verre` retombe sur un panneau sombre classique.
+- Compose foundation/ui passent en 1.9.5 (exigé par Backdrop) ; Kotlin reste en 2.1.20.
 
 ## 4. Feuille de route après la V1 (dans cet ordre)
 
@@ -212,4 +239,4 @@ Format JSON d'une règle (`RegleStore`, ordre de la liste = priorité) :
 6. Plein de modèles (90) + bibliothèque par rayons.
 7. Créateur de modèles : éditeur dessin (statique et animé), import/export JSON (§3.5). Refait en version simple le 25/10 ; le créateur par blocs a été retiré (trop compliqué).
 8. Ordre des favoris (glisser-déposer) + finitions : correctif de l'essai « canal app » au démarrage, bouton Rallumer, tap sur la grande matrice = réglages, vibrations, onglet « Mes » dans la fenêtre ☰. **V1 complète.**
-9. Règles automatiques (§3.6), en 3 parties testées une par une : 1 · moteur, menu, déclencheurs sans permission ; 2 · notifications (fondu) et musique ; 3 · météo et Wi-Fi.
+9. Règles automatiques (§3.6) + Liquid Glass (§3.7). Fait : moteur, 18 déclencheurs, ET/OU, actions, éditeur en phrase. À venir : notifications (fondu) et musique ; météo et Wi-Fi par nom.
