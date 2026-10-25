@@ -28,7 +28,15 @@ class EntreeCatalogue(
     val versions: List<VersionModele>,
     /** Modèle de test : absent de la bibliothèque et du widget, lancé depuis le Diagnostic. */
     val cache: Boolean = false,
+    /** Rayon de la bibliothèque. */
+    val categorie: String = AUTRES,
 ) {
+    fun avecCategorie(c: String?) = EntreeCatalogue(id, nom, versions, cache, c ?: AUTRES)
+
+    companion object {
+        const val AUTRES = "Autres"
+    }
+
     val parDefaut: VersionModele get() = versions.last()
     fun version(id: String?): VersionModele = versions.firstOrNull { it.id == id } ?: parDefaut
 }
@@ -53,11 +61,11 @@ class Catalogue(
         val calcules = listOf(HorlogeReglable.entree, Coeur.entree, Onde.entree, Pluie.entree, Chargement.entree, Compteur.entree)
             .associateBy { it.id }
         val entrees = biblio.modeles.map { m ->
-            calcules[m.id] ?: EntreeCatalogue(
+            (calcules[m.id] ?: EntreeCatalogue(
                 id = m.id,
                 nom = m.nom,
                 versions = listOf(VersionModele("v1", "V1", "Dessin d'origine.", emptyList()) { m }),
-            )
+            )).avecCategorie(m.categorie)
         } + calcules.values.filter { c -> biblio.modeles.none { it.id == c.id } }
         Contenu(entrees, biblio.erreurs).also { cache = it }
     }

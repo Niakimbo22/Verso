@@ -1,22 +1,23 @@
 {
-  "id": "etoile",
-  "nom": "Étoile",
+  "id": "losange",
+  "nom": "Losange",
+  "categorie": "Formes",
   "type": "statique",
   "frames": [
     {
       "dessin": [
         ".............",
-        ".............",
         "......X......",
         ".....XXX.....",
-        ".....XXX.....",
+        "....XXXXX....",
+        "...XXXXXXX...",
+        "..XXXXXXXXX..",
+        ".XXXXXXXXXXX.",
         "..XXXXXXXXX..",
         "...XXXXXXX...",
         "....XXXXX....",
-        "....XXXXX....",
-        "...XXX.XXX...",
-        "...XX...XX...",
-        ".............",
+        ".....XXX.....",
+        "......X......",
         "............."
       ],
       "dureeMs": 1000

@@ -11,6 +11,7 @@ import org.json.JSONObject
  * {
  *   "id": "coeur",
  *   "nom": "Cœur",
+ *   "categorie": "Émotions",         (optionnel : rayon de la bibliothèque)
  *   "type": "anime",
  *   "dynamique": "horloge",          (optionnel : modèle calculé en direct)
  *   "frames": [
@@ -45,7 +46,8 @@ object ModeleJson {
                 }
             }
             val dynamique = json.optString("dynamique", "").takeIf { it.isNotBlank() }?.let(Modele.Dynamique::fromJson)
-            return Modele(id = id, nom = nom, type = type, images = images, dynamique = dynamique)
+            val categorie = json.optString("categorie", "").takeIf { it.isNotBlank() }
+            return Modele(id = id, nom = nom, type = type, images = images, dynamique = dynamique, categorie = categorie)
         } catch (e: Exception) {
             throw IllegalArgumentException("Modèle « $id » : ${e.message}", e)
         }
@@ -95,6 +97,7 @@ object ModeleJson {
     fun toJson(modele: Modele): JSONObject = JSONObject().apply {
         put("id", modele.id)
         put("nom", modele.nom)
+        modele.categorie?.let { put("categorie", it) }
         put("type", modele.type.json)
         modele.dynamique?.let { put("dynamique", it.json) }
         put("frames", JSONArray().apply {

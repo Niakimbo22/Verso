@@ -1,6 +1,7 @@
 {
   "id": "chargement",
   "nom": "Chargement",
+  "categorie": "Effets",
   "type": "anime",
   "frames": [
     {

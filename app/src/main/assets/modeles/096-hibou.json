@@ -1,0 +1,44 @@
+{
+  "id": "hibou",
+  "nom": "Hibou",
+  "categorie": "Persos",
+  "type": "anime",
+  "frames": [
+    {
+      "dessin": [
+        ".............",
+        "..XX.....XX..",
+        "...XXXXXXX...",
+        "..XXXXXXXXX..",
+        "..X..XXX..X..",
+        "..X..XXX..X..",
+        "..XXXX.XXXX..",
+        "..XXXX.XXXX..",
+        "..X.X.X.X.X..",
+        "..XX.X.X.XX..",
+        "...XXXXXXX...",
+        "....X...X....",
+        "............."
+      ],
+      "dureeMs": 2500
+    },
+    {
+      "dessin": [
+        ".............",
+        "..XX.....XX..",
+        "...XXXXXXX...",
+        "..XXXXXXXXX..",
+        "..XXXXXXXXX..",
+        "..XXXXXXXXX..",
+        "..XXXX.XXXX..",
+        "..XXXX.XXXX..",
+        "..X.X.X.X.X..",
+        "..XX.X.X.XX..",
+        "...XXXXXXX...",
+        "....X...X....",
+        "............."
+      ],
+      "dureeMs": 200
+    }
+  ]
+}

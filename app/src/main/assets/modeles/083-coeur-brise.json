@@ -1,0 +1,80 @@
+{
+  "id": "coeur-brise",
+  "nom": "Cœur brisé",
+  "categorie": "Émotions",
+  "type": "anime",
+  "frames": [
+    {
+      "dessin": [
+        ".............",
+        ".............",
+        "..XXX...XXX..",
+        ".XXXXX.XXXXX.",
+        ".XXXX.XXXXXX.",
+        ".XXXXX.XXXXX.",
+        ".XXXXXX.XXXX.",
+        "..XXXX.XXXX..",
+        "...XX.XXXX...",
+        "....XX.XX....",
+        ".....X.X.....",
+        "......X......",
+        "............."
+      ],
+      "dureeMs": 1200
+    },
+    {
+      "dessin": [
+        ".............",
+        ".............",
+        "..XXX...XXX..",
+        ".XXXXX.XXXXX.",
+        ".XXXX.XXXXXX.",
+        ".XXXXX.XXXXX.",
+        ".XXXXXX.XXXX.",
+        "..XXXX.XXXX..",
+        "...XX.XXXX...",
+        "....XX.XX....",
+        ".....X.X.....",
+        "......X......",
+        "............."
+      ],
+      "dureeMs": 120
+    },
+    {
+      "dessin": [
+        ".............",
+        ".............",
+        "..XXX...XXX..",
+        ".XXXXX.XXXXX.",
+        ".XXXX..XXXXX.",
+        ".XXXXX.XXXXX.",
+        ".XXXXX.XXXXX.",
+        "..XXXX.XXXX..",
+        "...XX..XXX...",
+        "....XX.XX....",
+        ".....X.X.....",
+        ".......X.....",
+        "............."
+      ],
+      "dureeMs": 120
+    },
+    {
+      "dessin": [
+        ".............",
+        ".............",
+        ".............",
+        ".XXX.....XXX.",
+        "XXXXX...XXXXX",
+        "XXXX...XXXXXX",
+        "XXXXX...XXXXX",
+        "XXXXX..X.XXXX",
+        ".XXXX...XXXX.",
+        "..XX...XXXX..",
+        "...XX...XX...",
+        "....X...X....",
+        ".......X....."
+      ],
+      "dureeMs": 1500
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 {
   "id": "pluie",
   "nom": "Pluie",
+  "categorie": "Météo",
   "type": "anime",
   "frames": [
     {

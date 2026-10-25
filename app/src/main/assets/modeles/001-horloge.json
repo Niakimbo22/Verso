@@ -1,6 +1,7 @@
 {
   "id": "horloge",
   "nom": "Horloge",
+  "categorie": "Infos",
   "type": "statique",
   "dynamique": "horloge",
   "frames": [

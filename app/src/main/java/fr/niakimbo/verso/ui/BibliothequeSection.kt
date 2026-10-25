@@ -16,6 +16,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -57,6 +60,24 @@ private val Panel = Color(0xFF111111)
 private val Border = Color(0xFF2A2A2A)
 
 private const val COLONNES = 3
+private const val TOUS = "Tous"
+private const val FAVORIS = "★"
+
+@Composable
+private fun Puce(texte: String, actif: Boolean, onTap: () -> Unit) {
+    val forme = RoundedCornerShape(50)
+    Text(
+        texte,
+        color = if (actif) Color.White else Color(0xFFDDDDDD),
+        fontSize = 13.sp,
+        modifier = Modifier
+            .clip(forme)
+            .background(if (actif) Red else Panel)
+            .border(1.dp, if (actif) Red else Border, forme)
+            .clickable(onClick = onTap)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+    )
+}
 
 /**
  * Bibliothèque (étape 3) : aperçu de ce qui est sur la matrice, grille des modèles,
@@ -78,6 +99,7 @@ fun BibliothequeSection(
     val revision by reglages.revision.collectAsStateWithLifecycle()
     val favorisIds by favoris.ids.collectAsStateWithLifecycle()
     var fiche by remember { mutableStateOf<EntreeCatalogue?>(null) }
+    var rayon by rememberSaveable { mutableStateOf(TOUS) }
 
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         DotMatrix(
@@ -120,11 +142,41 @@ fun BibliothequeSection(
         )
         Spacer(Modifier.height(12.dp))
 
+        if (!entrees.isNullOrEmpty()) {
+            val rayons = listOf(TOUS, FAVORIS) + entrees.map { it.categorie }.distinct()
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                rayons.forEach { r ->
+                    val n = when (r) {
+                        TOUS -> entrees.size
+                        FAVORIS -> favorisIds.count { id -> entrees.any { it.id == id } }
+                        else -> entrees.count { it.categorie == r }
+                    }
+                    Puce("$r $n", r == rayon) { rayon = r }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+        }
+        val visibles = entrees?.let { l ->
+            when (rayon) {
+                TOUS -> l
+                FAVORIS -> favorisIds.mapNotNull { id -> l.firstOrNull { it.id == id } }
+                else -> l.filter { it.categorie == rayon }
+            }
+        }
+        // « Tous » affiche toute la bibliothèque : aperçus fixes, sinon des dizaines d'animations tournent en même temps.
+        val animer = rayon != TOUS
+
         when {
-            entrees == null -> Text("Chargement…", color = Dim, fontSize = 14.sp)
-            entrees.isEmpty() -> Text("Aucun modèle trouvé (voir Diagnostic).", color = Dim, fontSize = 14.sp)
+            visibles == null -> Text("Chargement…", color = Dim, fontSize = 14.sp)
+            visibles.isEmpty() -> Text(
+                if (rayon == FAVORIS) "Aucun favori : touche ☆ sur un modèle." else "Aucun modèle trouvé (voir Diagnostic).",
+                color = Dim, fontSize = 14.sp,
+            )
             else -> Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                entrees.chunked(COLONNES).forEach { ligne ->
+                visibles.chunked(COLONNES).forEach { ligne ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         ligne.forEach { entree ->
                             val modele by produceState<Modele?>(null, entree, revision) {
@@ -134,6 +186,7 @@ fun BibliothequeSection(
                                 nom = entree.nom,
                                 modele = modele,
                                 actif = entree.id == actif?.id,
+                                animer = animer || entree.id == actif?.id,
                                 favori = entree.id in favorisIds,
                                 onFavori = { favoris.basculer(entree.id) },
                                 onTap = { modele?.let(player::jouer) },
@@ -254,6 +307,7 @@ private fun CarteModele(
     nom: String,
     modele: Modele?,
     actif: Boolean,
+    animer: Boolean,
     favori: Boolean,
     onFavori: () -> Unit,
     onTap: () -> Unit,
@@ -271,7 +325,10 @@ private fun CarteModele(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
-            DotMatrix(modele?.let { apercuAnime(it) }, Modifier.fillMaxWidth().aspectRatio(1f))
+            DotMatrix(
+                modele?.let { if (animer) apercuAnime(it) else if (it.dynamique != null) it.frameDynamique() else it.apercu },
+                Modifier.fillMaxWidth().aspectRatio(1f),
+            )
             if (modele?.estVivant == true) {
                 Text("▶", color = Dim, fontSize = 10.sp, modifier = Modifier.align(Alignment.TopEnd))
             }
