@@ -31,6 +31,8 @@ class FakeMatrixController : MatrixController {
         log.warn("Build sans SDK Glyph : rien ne s'affichera sur la matrice.")
     }
 
+    override val redemarrageConseille: StateFlow<Boolean> = MutableStateFlow(false)
+
     override fun relancer(raison: String) {
         log.info("[factice] Relance ($raison)")
     }

@@ -66,6 +66,50 @@ class VersoApp : Application() {
         matrix.relancer(raison)
     }
 
+    /**
+     * Redémarre le processus Verso : seul moyen de retrouver le service Glyph quand sa liaison
+     * est perdue. [rouvrir] relance l'écran de Verso ; sinon le système relance tout seul le
+     * Glyph Toy (service lié), qui reprend le modèle actif.
+     */
+    fun redemarrer(raison: String, rouvrir: Boolean) {
+        journalToy.ajouter("Redémarrage de Verso : $raison")
+        getSharedPreferences("verso", MODE_PRIVATE).edit()
+            .putLong(CLE_DERNIER_REDEMARRAGE, System.currentTimeMillis()).commit()
+        if (rouvrir) {
+            packageManager.getLaunchIntentForPackage(packageName)?.let {
+                startActivity(it.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK))
+            }
+        }
+        android.os.Process.killProcess(android.os.Process.myPid())
+    }
+
+    /**
+     * App fermée et liaison Glyph perdue alors qu'elle avait marché : redémarrage automatique,
+     * au plus une fois toutes les 10 min.
+     */
+    private fun surveillerLiaison() {
+        // Matrice prête au moins une fois dans ce processus. Sinon (Glyph Interface coupée, horaire
+        // du coucher…), redémarrer ne servirait à rien et tournerait en boucle : on ne le fait pas.
+        val dejaPrete = java.util.concurrent.atomic.AtomicBoolean(false)
+        appScope.launch { matrix.state.collect { if (it == MatrixState.Ready) dejaPrete.set(true) } }
+        appScope.launch {
+            matrix.redemarrageConseille.collect { perdu ->
+                if (!perdu || !dejaPrete.get()) return@collect
+                val dernier = getSharedPreferences("verso", MODE_PRIVATE).getLong(CLE_DERNIER_REDEMARRAGE, 0L)
+                if (System.currentTimeMillis() - dernier < 10 * 60_000L) {
+                    journalToy.ajouter("Liaison Glyph perdue, redémarrage automatique déjà tenté il y a moins de 10 min")
+                    return@collect
+                }
+                if (player.appVisible) return@collect // l'utilisateur a le bouton « Redémarrer Verso »
+                redemarrer("liaison au service Glyph perdue", rouvrir = false)
+            }
+        }
+    }
+
+    private companion object {
+        const val CLE_DERNIER_REDEMARRAGE = "dernier_redemarrage"
+    }
+
     /** Essai d'affichage par le canal app après un démarrage (DemarrageReceiver), annulé si le Toy se lie. */
     @Volatile
     var essaiDemarrage: Job? = null
@@ -76,6 +120,7 @@ class VersoApp : Application() {
     override fun onCreate() {
         super.onCreate()
         Capteurs.init(this)
+        surveillerLiaison()
         // Chaque (re)démarrage du processus est noté : on voit qui a réveillé Verso
         // (ouverture de l'app, liaison du Toy, démarrage du téléphone).
         journalToy.ajouter("Processus Verso démarré")
