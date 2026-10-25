@@ -20,7 +20,9 @@ Remplace les apps du Play Store (bugs, features payantes, réglages compliqués)
 
 - SDK officiel : https://github.com/Nothing-Developer-Programme/GlyphMatrix-Developer-Kit
 - Le fichier `glyph-matrix-sdk-2.0.aar` **n'est pas redistribuable** : il ne va pas dans le dépôt (voir §7).
-- `GlyphMatrixManager.getInstance()` est un singleton pour tout le processus : une seule connexion partagée, et aucun composant ne doit appeler `unInit()` dans son coin.
+- `GlyphMatrixManager.getInstance()` est un singleton pour tout le processus : une seule connexion partagée, et aucun composant ne doit appeler `unInit()` dans son coin. Seul `MatrixController.relancer()` fait `unInit()` puis tout de suite `init()` + `register()`.
+- **Connexion figée** (constaté le 25/10, v0.1.28) : après que le système a délié puis relié le Toy, le SDK acceptait toujours les images (~550/min dans le journal) mais la matrice restait figée sur la dernière. Verso refait donc la connexion complète à chaque liaison du Toy, à l'ouverture de l'app (au plus 1×/min), à l'allumage de l'écran (au plus 1×/2 min, utile après « Horaire du coucher » qui coupe Glyph Interface la nuit) et via le bouton « ↻ Matrice figée ? Relancer » sous la grande matrice.
+- Le contrôleur n'empile jamais les images (seule la dernière commande attend) et un chien de garde remplace le thread du SDK si un appel bloque plus de 4 s ; un bandeau « La matrice ne répond pas » s'affiche alors dans l'app.
 - Deux canaux d'affichage :
   - **App** (`setAppMatrixFrame`) : ne tient que tant que l'app est au premier plan, et **n'importe quel Glyph Toy passe devant**.
   - **Glyph Toy** (`setMatrixFrame`) : prioritaire, reste affiché app fermée. Sur le (4a) Pro, seuls les Toys « Always-on » existent (*Réglages › Glyph Interface › Flip to Glyph › Always-on Glyph Toy*), un seul à la fois, et le système envoie `EVENT_AOD` environ une fois par minute.
@@ -32,7 +34,7 @@ Remplace les apps du Play Store (bugs, features payantes, réglages compliqués)
 ### 3.1 Bibliothèque de modèles
 - Une liste de modèles avec un aperçu dot-matrix 13×13 qui reproduit la forme ronde de la vraie matrice.
 - Deux types de modèles : **statique** (une seule image) et **animé** (plusieurs images + durée de chaque image).
-- 90 modèles intégrés (étape 6), rangés par rayon : Effets, Météo, Icônes, Émotions, Persos (originaux, aucun personnage protégé), Formes, Fêtes, Texte, Infos. Puces en haut de la bibliothèque : Tous, ★, puis chaque rayon. Dans « Tous », aperçus fixes (sauf le modèle actif) pour ne pas faire tourner 90 animations à la fois.
+- 90 modèles intégrés (étape 6), rangés par rayon : Effets, Météo, Icônes, Émotions, Persos (originaux, aucun personnage protégé), Formes, Fêtes, Texte, Infos. Puces en haut de la bibliothèque : Tous, ★, puis chaque rayon. Tous les aperçus sont animés, partout (bibliothèque, fenêtre ☰), mais seulement quand la carte est à l'écran : on peut faire défiler 90 modèles sans ralentir l'app.
 - Tap sur un modèle → il s'affiche **immédiatement** sur la matrice.
 - Un bouton « Éteindre la matrice » ; matrice éteinte, il devient « Rallumer « X » » (dernier modèle éteint, depuis l'app, le widget ou la fenêtre ☰). Toucher la grande matrice ouvre les réglages du modèle affiché.
 - Favoris : ☆/★ sur chaque carte (`FavorisStore`) ; un nouveau favori arrive à la fin. **Ordre réglable** (étape 8) : dans le rayon ★, appui long sur une carte puis glisser (les autres cartes se décalent, petite vibration à chaque changement de place, ⚙ ouvre toujours les réglages). Cet ordre est celui du widget (‹ ›, tap « Suivant ») et de la fenêtre ☰.
@@ -83,19 +85,25 @@ Champ optionnel `categorie` (rayon de la bibliothèque). Les modèles intégrés
 
 Le même format sert à l'éditeur (§3.5) et servira à Trame. Champ optionnel `dynamique` : `horloge` (modèle intégré calculé) ou `blocs` (§3.5).
 
-### 3.5 Créateur de modèles (étape 7)
-Trois boutons au-dessus de la bibliothèque : **+ Dessin**, **+ Dynamique**, **Importer**. Les créations sont rangées dans le rayon **Mes modèles** (puce dédiée, marquées ✎) ; un autre rayon choisi à l'enregistrement les range *en plus* avec les modèles de ce rayon. Elles marchent partout comme les modèles intégrés : tap, réglages communs, favoris, widget, fenêtre ☰, Glyph Toy.
+### 3.5 Créateur de modèles (étape 7, refait en version simple le 25/10)
+Au-dessus de la bibliothèque : **✎ Créer un dessin** et **Importer**. Les créations sont rangées dans le rayon **Mes modèles** (puce dédiée, marquées ✎) et marchent partout comme les modèles intégrés : tap, réglages communs, favoris, widget, fenêtre ☰, Glyph Toy.
 
-**Stockage** (`MesModelesStore`) : un fichier JSON par modèle dans `files/mes_modeles/`, id `perso-<date de création en base 36>` (jamais en conflit avec les modèles intégrés, ordre = ordre de création). Fiche d'une création (appui long / ⚙) : **Modifier**, **Partager** (JSON en texte, via la feuille de partage Android), **Fichier .json** (enregistrer où on veut), **Supprimer** (avec confirmation ; retire aussi le favori et éteint la matrice si le modèle y était). Fiche d'un modèle intégré : **Copier dans l'éditeur dessin** (le modèle d'origine ne change pas). **Importer** : un fichier .json ou le presse-papiers, un modèle ou un tableau de modèles ; chaque modèle importé reçoit un nouvel id (un import ne remplace jamais rien).
+**Stockage** (`MesModelesStore`) : un fichier JSON par modèle dans `files/mes_modeles/`, id `perso-<date de création en base 36>`. Fiche d'une création (appui long / ⚙) : **Modifier**, **Partager** (JSON), **Fichier .json**, **Supprimer** (avec confirmation). Fiche d'un modèle intégré : **Dessiner à partir de ce modèle** (copie, l'original ne change pas). **Importer** : un fichier .json ou le presse-papiers ; chaque modèle importé reçoit un nouvel id.
 
-**Éditeur dessin** (`CreateurActivity` › `EditeurDessin`) — statique et animé :
-- Outils : crayon, gomme, remplir (zone de même luminosité), ligne, cercle, disque, pipette ; 9 luminosités (niveau n = n × 255 / 9, comme le format `dessin`) ; symétries ↔ et ↕ (cumulables, valent pour tous les outils).
-- Image courante : décaler ← → ↑ ↓ (ce qui sort revient de l'autre côté), tourner ⟲ ⟳, retourner, plus sombre / plus clair, négatif, effacer. Annuler / rétablir (60 pas).
-- Images : nouvelle, dupliquer, déplacer ◀ ▶, supprimer ; durée par image (40 ms à 2 s) ou pour toutes ; lecture ▶ ; pelure d'oignon (image précédente en rouge léger).
-- **Aperçu en direct sur la vraie matrice** pendant le dessin et la lecture (désactivable). En sortant de l'éditeur, la matrice reprend le modèle actif d'avant (ou s'éteint).
-- Une image = modèle `statique`, plusieurs = `anime`. Enregistré au format §3.4 (`pixels`).
+**Éditeur dessin** (`CreateurActivity` › `EditeurDessin`) — un seul écran, pensé pour être compris sans explication :
+- En haut : ←, le nom (tap = renommer ; demandé à l'enregistrement s'il est vide), **✓ Enregistrer**.
+- La grande matrice : on dessine au doigt. Indice discret en dessous (« Dessine au doigt… »).
+- **Crayon**, **Gomme**, **Remplir** + **5 luminosités** (niveaux 1, 3, 5, 7, 9).
+- **Bande d'images** : tap = choisir l'image, **＋** = nouvelle image (copie de l'image affichée).
+- **▶ Lire**, **↶ Annuler**, **↷ Rétablir**, **⋯ Plus**.
+- Menu **⋯** : formes (ligne, cercle, disque), symétries ↔ ↕, image affichée (décaler, tourner, retourner, effacer, négatif, avancer / reculer, supprimer), vitesse de l'animation (une durée pour toutes les images : très lente 500 ms → très rapide 40 ms), pelure d'oignon, « Voir le dessin au dos du téléphone ».
+- Aperçu sur la vraie matrice **seulement tant que l'éditeur est à l'écran** : dès qu'il passe en arrière-plan ou se ferme (`onPause`), la matrice reprend le modèle actif.
 
-**Créateur dynamique par blocs** (`EditeurBlocs`, rendu `MoteurBlocs`) : des blocs posés sur la matrice, chacun avec position `x`,`y`, taille `l`×`h` (en LEDs) et luminosité `niveau` 1-9. Sur l'aperçu : toucher un bloc le choisit, le faire glisser le déplace. Les blocs sont dessinés dans l'ordre de la liste (▲ ▼) ; une LED garde la valeur la plus lumineuse. Le contenu d'un bloc est centré dans son rectangle et coupé à ses bords. Exemples pour démarrer : Cadran + secondes, Heure + batterie, Jour + date, Texte défilant.
+**Plus tard** (option « dynamiques tout faits ») : choisir un modèle dynamique prêt à l'emploi (heure + secondes, heure + batterie, texte défilant…) avec 2-3 réglages, à la place des blocs.
+
+**Anciens modèles par blocs** (v0.1.26 à 0.1.28, éditeur retiré le 25/10) : ils restent jouables et partageables, mais ne se modifient plus. Format conservé pour référence :
+
+Rendu `MoteurBlocs` : des blocs posés sur la matrice, chacun avec position `x`,`y`, taille `l`×`h` (en LEDs) et luminosité `niveau` 1-9. Les blocs sont dessinés dans l'ordre de la liste ; une LED garde la valeur la plus lumineuse. Le contenu d'un bloc est centré dans son rectangle et coupé à ses bords.
 
 | Type (`type`) | Options (`options`) |
 |---|---|
@@ -164,5 +172,5 @@ Valeurs absentes = défauts ci-dessus ; un bloc qui déborde est ramené dans la
 4. Glyph Toy AOD : affichage app fermée, horloge réelle, animations, restauration au redémarrage (le système relance le Toy). Tester si les animations tournent écran éteint (journal du Toy + expérience « wake lock »).
 5. Widget écran d'accueil (+ favoris simples).
 6. Plein de modèles (90) + bibliothèque par rayons.
-7. Créateur de modèles : éditeur dessin complet (statique et animé) + créateur dynamique **par blocs**, import/export JSON (§3.5).
+7. Créateur de modèles : éditeur dessin (statique et animé), import/export JSON (§3.5). Refait en version simple le 25/10 ; le créateur par blocs a été retiré (trop compliqué).
 8. Ordre des favoris (glisser-déposer) + finitions : correctif de l'essai « canal app » au démarrage, bouton Rallumer, tap sur la grande matrice = réglages, vibrations, onglet « Mes » dans la fenêtre ☰. **V1 complète.**

@@ -45,6 +45,7 @@ import fr.niakimbo.verso.VersoApp
 import fr.niakimbo.verso.modele.Modele
 import fr.niakimbo.verso.ui.DotMatrix
 import fr.niakimbo.verso.ui.apercuAnime
+import fr.niakimbo.verso.ui.suivreVisibilite
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -153,7 +154,7 @@ private fun Fenetre(
                     else -> liste.chunked(COLONNES).forEach { ligne ->
                         Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             ligne.forEach { c ->
-                                Case(c, c.id == actif, animer = onglet != Onglet.TOUS || c.id == actif, Modifier.weight(1f)) { onChoisir(c.modele) }
+                                Case(c, c.id == actif, Modifier.weight(1f)) { onChoisir(c.modele) }
                             }
                             repeat(COLONNES - ligne.size) { Spacer(Modifier.weight(1f)) }
                         }
@@ -171,10 +172,13 @@ private fun Fenetre(
 }
 
 @Composable
-private fun Case(c: Choix, actif: Boolean, animer: Boolean, modifier: Modifier, onTap: () -> Unit) {
+private fun Case(c: Choix, actif: Boolean, modifier: Modifier, onTap: () -> Unit) {
     val forme = RoundedCornerShape(14.dp)
+    // Animée seulement quand elle est à l'écran (la liste « Tous » est longue).
+    var animer by remember { mutableStateOf(false) }
     Column(
         modifier
+            .suivreVisibilite { animer = it }
             .clip(forme)
             .background(Panneau)
             .border(if (actif) 2.dp else 1.dp, if (actif) Rouge else Bord, forme)

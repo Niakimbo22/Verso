@@ -24,7 +24,9 @@ import kotlinx.coroutines.launch
  *
  * Ce service ne parle jamais au SDK directement : il bascule le [fr.niakimbo.verso.matrix.MatrixController]
  * partagé sur le canal Toy et laisse le [fr.niakimbo.verso.modele.ModelePlayer] afficher le modèle mémorisé.
- * Pas d'unInit() ici (VERSO_SPEC §2), contrairement à l'exemple de Nothing.
+ * Pas d'unInit() ici (VERSO_SPEC §2) ; à chaque liaison, la connexion au SDK est refaite
+ * entièrement ([fr.niakimbo.verso.matrix.MatrixController.relancer]) : une connexion d'avant
+ * la liaison laisse la matrice figée (constaté le 25/10).
  */
 class VersoToyService : Service() {
 
@@ -51,7 +53,11 @@ class VersoToyService : Service() {
     private val ecran = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
-                Intent.ACTION_SCREEN_ON -> app.journalToy.ajouter("Écran allumé · ${bilanImages()}")
+                Intent.ACTION_SCREEN_ON -> {
+                    app.journalToy.ajouter("Écran allumé · ${bilanImages()}")
+                    // Après « Horaire du coucher » ou une coupure de Glyph Interface, la connexion a pu se figer.
+                    app.relancerMatrice("écran allumé", delaiMin = 120_000L)
+                }
                 Intent.ACTION_SCREEN_OFF -> app.journalToy.ajouter("Écran éteint · ${bilanImages()}")
             }
         }
@@ -110,7 +116,7 @@ class VersoToyService : Service() {
         SurveillanceToy.surLiaison(this)
         app.toyLie.value = true
         app.matrix.setCanal(Canal.TOY)
-        app.matrix.connect()
+        app.relancerMatrice("Toy lié par le système")
         app.player.setToyLie(true)
         app.appScope.launch {
             if (app.store.modeleActif == null) {

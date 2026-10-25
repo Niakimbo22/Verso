@@ -54,6 +54,15 @@ interface MatrixController {
     /** Se connecte au service Glyph. Sans effet si déjà connecté ou en cours. */
     fun connect()
 
+    /**
+     * Reconnexion complète au service Glyph (unInit, init, register), même si tout semble prêt.
+     *
+     * Constat du 25/10 (v0.1.28) : après que le système a délié puis relié le Glyph Toy, le SDK
+     * acceptait toujours les images mais la matrice restait figée sur la dernière. Une connexion
+     * faite avant la nouvelle liaison ne suffit pas : on la refait à chaque liaison du Toy.
+     */
+    fun relancer(raison: String)
+
     /** Bascule vers le canal du Glyph Toy (lié par le système) ou revient au canal app. */
     fun setCanal(canal: Canal)
 

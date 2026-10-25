@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -59,6 +60,7 @@ import fr.niakimbo.verso.VersoApp
 import fr.niakimbo.verso.createur.MesModelesStore
 import kotlinx.coroutines.launch
 import fr.niakimbo.verso.matrix.MatrixController
+import fr.niakimbo.verso.matrix.MatrixState
 import fr.niakimbo.verso.matrix.MatrixFrame
 import fr.niakimbo.verso.modele.FavorisStore
 import fr.niakimbo.verso.toy.ChoixToy
@@ -170,6 +172,30 @@ fun BibliothequeSection(
             ) { Text("Éteindre la matrice") }
         }
 
+        TextButton(onClick = {
+            vibreur.performHapticFeedback(HapticFeedbackType.LongPress)
+            app.relancerMatrice("bouton Relancer")
+        }) { Text("↻ Matrice figée ? Relancer", color = Dim, fontSize = 12.sp) }
+
+        // La matrice ne répond plus : on le dit ici (pas seulement dans Diagnostic) et on propose de relancer.
+        val etatMatrice by controller.state.collectAsStateWithLifecycle()
+        (etatMatrice as? MatrixState.Error)?.let { erreur ->
+            Spacer(Modifier.height(14.dp))
+            val forme = RoundedCornerShape(16.dp)
+            Column(
+                Modifier.fillMaxWidth().background(Panel, forme).border(1.dp, Red, forme).padding(14.dp),
+            ) {
+                Text("La matrice ne répond pas", color = Color.White, fontSize = 14.sp)
+                Spacer(Modifier.height(4.dp))
+                Text(erreur.message, color = Dim, fontSize = 12.sp, lineHeight = 16.sp)
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = { app.relancerMatrice("bouton Reconnecter") },
+                    colors = ButtonDefaults.buttonColors(containerColor = Red, contentColor = Color.White),
+                ) { Text("Reconnecter") }
+            }
+        }
+
         Spacer(Modifier.height(20.dp))
         StatutToy(etatToy, onChoisirToy)
 
@@ -212,8 +238,8 @@ fun BibliothequeSection(
                 else -> l.filter { it.categorie == rayon }
             }
         }
-        // « Tous » affiche toute la bibliothèque : aperçus fixes, sinon des dizaines d'animations tournent en même temps.
-        val animer = rayon != TOUS
+        // Toutes les cartes s'animent, mais seulement quand elles sont à l'écran (voir CarteModele).
+        val animer = true
 
         when {
             visibles == null -> Text("Chargement…", color = Dim, fontSize = 14.sp)
@@ -392,8 +418,10 @@ private fun CarteModele(
     appuiLongReglages: Boolean = true,
 ) {
     val shape = RoundedCornerShape(16.dp)
+    var visible by remember { mutableStateOf(false) }
     Column(
         modifier
+            .suivreVisibilite { visible = it }
             .clip(shape)
             .background(Panel)
             .border(if (actif) 2.dp else 1.dp, if (actif) Red else Border, shape)
@@ -403,7 +431,7 @@ private fun CarteModele(
     ) {
         Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
             DotMatrix(
-                modele?.let { if (animer) apercuAnime(it) else if (it.dynamique != null) it.frameDynamique() else it.apercu },
+                modele?.let { if (animer && visible) apercuAnime(it) else if (it.dynamique != null) it.frameDynamique() else it.apercu },
                 Modifier.fillMaxWidth().aspectRatio(1f),
             )
             if (modele?.estVivant == true) {
