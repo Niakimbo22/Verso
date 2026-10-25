@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -63,6 +65,8 @@ fun VersoScreen(
     onChoisirToy: () -> Unit,
     sectionWidgets: @Composable () -> Unit = {},
     sectionAuto: @Composable () -> Unit = {},
+    /** Mini-lecteur flottant (modèle affiché), [onRemonter] = revenir à la grande matrice. */
+    miniLecteur: @Composable (modifier: Modifier, onRemonter: () -> Unit) -> Unit = { _, _ -> },
 ) {
     // Rechargée quand un modèle est créé, modifié ou supprimé (rayon « Mes modèles »).
     val revisionModeles by catalogue.revision.collectAsStateWithLifecycle()
@@ -73,13 +77,26 @@ fun VersoScreen(
 
     val defilement = rememberScrollState()
     // Liquid Glass : tout l'écran est posé sur le fond animé que le verre réfracte.
-    fr.niakimbo.verso.ui.verre.EcranVerre(defilement = defilement) {
+    val portee = androidx.compose.runtime.rememberCoroutineScope()
+    fr.niakimbo.verso.ui.verre.EcranVerre(
+        defilement = defilement,
+        dessus = {
+            miniLecteur(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+            ) { portee.launch { defilement.animateScrollTo(0) } }
+        },
+    ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .safeDrawingPadding()
             .verticalScroll(defilement)
-            .padding(24.dp),
+            .padding(24.dp)
+            // Place pour le mini-lecteur flottant.
+            .padding(bottom = 84.dp),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

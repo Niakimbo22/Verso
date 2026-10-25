@@ -64,6 +64,7 @@ class MainActivity : ComponentActivity() {
                 onChoisirToy = { app.journalToy.ajouter(ChoixToy.ouvrir(this)) },
                 sectionWidgets = { SectionWidgets(app) },
                 sectionAuto = { SectionAuto(app) },
+                miniLecteur = { m, remonter -> fr.niakimbo.verso.ui.MiniLecteur(app, m, remonter) },
             )
         }
     }
