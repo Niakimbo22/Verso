@@ -13,6 +13,9 @@
     <!-- Widget : remettre l'horloge à l'heure à la minute pile (sans réveiller le téléphone) -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
+    <!-- Prévenir quand le système arrête le Glyph Toy -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- Relancer le modèle après un redémarrage du téléphone -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
@@ -46,6 +49,11 @@
 
         <receiver
             android:name=".update.InstallResultReceiver"
+            android:exported="false" />
+
+        <!-- Vérifie 2 min après un arrêt du Glyph Toy s'il a été relancé, sinon notifie -->
+        <receiver
+            android:name=".toy.SurveillanceToy"
             android:exported="false" />
 
         <receiver

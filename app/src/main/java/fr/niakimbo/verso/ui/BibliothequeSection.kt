@@ -169,17 +169,17 @@ sealed interface EtatToy {
     data class ChoisiNonLance(val depuis: Long) : EtatToy
 
     /** Le système l'a délié : un autre Toy a sans doute été choisi. */
-    data class Delie(val depuis: Long) : EtatToy
+    data class Delie(val depuis: Long, val cause: String?) : EtatToy
 
     /** Jamais lié par le système. */
     data object Jamais : EtatToy
 
     companion object {
-        fun calculer(lie: Boolean, derniereLiaison: Long, dernierDeliement: Long): EtatToy = when {
+        fun calculer(lie: Boolean, derniereLiaison: Long, dernierDeliement: Long, cause: String? = null): EtatToy = when {
             lie -> Lie
             derniereLiaison == 0L -> Jamais
             dernierDeliement < derniereLiaison -> ChoisiNonLance(derniereLiaison)
-            else -> Delie(dernierDeliement)
+            else -> Delie(dernierDeliement, cause)
         }
     }
 }
@@ -205,7 +205,8 @@ private fun StatutToy(etat: EtatToy, onChoisirToy: () -> Unit) {
         is EtatToy.Delie -> Triple(
             Ambre,
             "Le système a arrêté le Toy Verso",
-            "Le ${date(etat.depuis)}. Un autre Glyph Toy a peut-être été choisi. Pour revenir :\n${ChoixToy.CHEMIN}",
+            "Le ${date(etat.depuis)}" + (etat.cause?.let { ", avec $it" } ?: "") +
+                ". Le système le coupe parfois tout seul (ou un autre Toy a été choisi). Pour le remettre :\n${ChoixToy.CHEMIN}",
         )
         EtatToy.Jamais -> Triple(
             Red,

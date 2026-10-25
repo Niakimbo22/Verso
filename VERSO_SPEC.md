@@ -60,6 +60,7 @@ Remplace les apps du Play Store (bugs, features payantes, réglages compliqués)
 - Le `MatrixController` est unique et bascule de canal : Toy quand le système a lié le service, app sinon.
 - Le `ModelePlayer` joue les animations / l'horloge tant que l'app est à l'écran ou que le Toy est lié, et redessine à chaque `EVENT_AOD`.
 - Journal du Toy gardé sur le téléphone (liaisons, AOD, écran allumé/éteint, nombre d'images envoyées) pour savoir ce qui se passe app fermée.
+- Le système délie parfois le Toy tout seul (constaté le 25/10 à 01:44, rien touché) : au déliement, l'état du téléphone est noté (écran, économie de batterie, Ne pas déranger, batterie, AOD) et la cause probable s'affiche dans l'app ; s'il n'est pas relancé 2 min après, une notification « La matrice ne s'affiche plus » ouvre directement le choix du Glyph Toy (`SurveillanceToy`). Verso ne peut pas se re-choisir lui-même (réglage système protégé).
 - ~~Foreground service~~ : abandonné, il ne passe pas devant un Toy.
 
 ### 3.4 Format d'un modèle
