@@ -52,8 +52,16 @@ class VersoToyService : Service() {
     private val ecran = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
-                Intent.ACTION_SCREEN_ON -> app.journalToy.ajouter("Écran allumé · ${bilanImages()}")
-                Intent.ACTION_SCREEN_OFF -> app.journalToy.ajouter("Écran éteint · ${bilanImages()}")
+                // Constat du 25/10 : à l'extinction de l'écran, le SDK accepte toujours les images mais la
+                // matrice se fige, et repart au rallumage. Même remède qu'à la liaison du Toy : register().
+                Intent.ACTION_SCREEN_ON -> {
+                    app.journalToy.ajouter("Écran allumé · ${bilanImages()} · réenregistrement")
+                    app.matrix.relancer("écran allumé")
+                }
+                Intent.ACTION_SCREEN_OFF -> {
+                    app.journalToy.ajouter("Écran éteint · ${bilanImages()} · réenregistrement")
+                    app.matrix.relancer("écran éteint")
+                }
             }
         }
     }
@@ -127,7 +135,8 @@ class VersoToyService : Service() {
     private fun surAod() {
         nbAod++
         app.journalToy.ajouter("AOD n°$nbAod · ${bilanImages()}")
-        app.matrix.connect()
+        // Écran éteint, l'AOD arrive chaque minute : on se réenregistre pour que la matrice suive.
+        app.matrix.relancer("AOD")
         app.player.signalMinute()
     }
 
