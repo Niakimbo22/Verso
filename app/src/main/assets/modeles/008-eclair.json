@@ -1,6 +1,7 @@
 {
   "id": "eclair",
   "nom": "Éclair",
+  "categorie": "Météo",
   "type": "statique",
   "frames": [
     {

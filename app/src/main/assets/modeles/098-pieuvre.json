@@ -1,0 +1,152 @@
+{
+  "id": "pieuvre",
+  "nom": "Pieuvre",
+  "categorie": "Persos",
+  "type": "anime",
+  "frames": [
+    {
+      "dessin": [
+        ".............",
+        "....XXXXX....",
+        "...XXXXXXX...",
+        "..XXXXXXXXX..",
+        "..XX.XXX.XX..",
+        "..XX.XXX.XX..",
+        "..XXXXXXXXX..",
+        "...XXXXXXX...",
+        "....XXX..X...",
+        "....XXX..X...",
+        "...XX..X..X..",
+        "...55..5..5..",
+        "............."
+      ],
+      "dureeMs": 130
+    },
+    {
+      "dessin": [
+        ".............",
+        "....XXXXX....",
+        "...XXXXXXX...",
+        "..XXXXXXXXX..",
+        "..XX.XXX.XX..",
+        "..XX.XXX.XX..",
+        "..XXXXXXXXX..",
+        "...XXXXXXX...",
+        "....XXX..X...",
+        "...XX..X..X..",
+        "...XX..X..X..",
+        "..5..5..55...",
+        "............."
+      ],
+      "dureeMs": 130
+    },
+    {
+      "dessin": [
+        ".............",
+        "....XXXXX....",
+        "...XXXXXXX...",
+        "..XXXXXXXXX..",
+        "..XX.XXX.XX..",
+        "..XX.XXX.XX..",
+        "..XXXXXXXXX..",
+        "...XXXXXXX...",
+        "...X.XX..X...",
+        "...XX..X..X..",
+        "..X..X..XX...",
+        "..5..5..55...",
+        "............."
+      ],
+      "dureeMs": 130
+    },
+    {
+      "dessin": [
+        ".............",
+        "....XXXXX....",
+        "...XXXXXXX...",
+        "..XXXXXXXXX..",
+        "..XX.XXX.XX..",
+        "..XX.XXX.XX..",
+        "..XXXXXXXXX..",
+        "...XXXXXXX...",
+        "...XX..X..X..",
+        "..X..X.X..X..",
+        "..X..X..XX...",
+        "...5..555....",
+        "............."
+      ],
+      "dureeMs": 130
+    },
+    {
+      "dessin": [
+        ".............",
+        "....XXXXX....",
+        "...XXXXXXX...",
+        "..XXXXXXXXX..",
+        "..XX.XXX.XX..",
+        "..XX.XXX.XX..",
+        "..XXXXXXXXX..",
+        "...XXXXXXX...",
+        "...XX..X..X..",
+        "..X..X..XX...",
+        "...X..XX.X...",
+        "...5..555....",
+        "............."
+      ],
+      "dureeMs": 130
+    },
+    {
+      "dessin": [
+        ".............",
+        "....XXXXX....",
+        "...XXXXXXX...",
+        "..XXXXXXXXX..",
+        "..XX.XXX.XX..",
+        "..XX.XXX.XX..",
+        "..XXXXXXXXX..",
+        "...XXXXXXX...",
+        "..X..X..XX...",
+        "..X..X..XX...",
+        "...X..XXX....",
+        "....555..5...",
+        "............."
+      ],
+      "dureeMs": 130
+    },
+    {
+      "dessin": [
+        ".............",
+        "....XXXXX....",
+        "...XXXXXXX...",
+        "..XXXXXXXXX..",
+        "..XX.XXX.XX..",
+        "..XX.XXX.XX..",
+        "..XXXXXXXXX..",
+        "...XXXXXXX...",
+        "..X..X..XX...",
+        "...X..XXX....",
+        "...X..XXX....",
+        "....555..5...",
+        "............."
+      ],
+      "dureeMs": 130
+    },
+    {
+      "dessin": [
+        ".............",
+        "....XXXXX....",
+        "...XXXXXXX...",
+        "..XXXXXXXXX..",
+        "..XX.XXX.XX..",
+        "..XX.XXX.XX..",
+        "..XXXXXXXXX..",
+        "...XXXXXXX...",
+        "...X..XXX....",
+        "...X..XXX....",
+        "....XXX..X...",
+        "...5.55..5...",
+        "............."
+      ],
+      "dureeMs": 130
+    }
+  ]
+}

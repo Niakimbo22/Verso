@@ -1,6 +1,7 @@
 {
   "id": "lune",
   "nom": "Lune",
+  "categorie": "Météo",
   "type": "statique",
   "frames": [
     {

@@ -1,0 +1,26 @@
+{
+  "id": "cadeau",
+  "nom": "Cadeau",
+  "categorie": "Fêtes",
+  "type": "statique",
+  "frames": [
+    {
+      "dessin": [
+        ".............",
+        "....XX.XX....",
+        "...X..X..X...",
+        "....XXXXX....",
+        ".XXXXXXXXXXX.",
+        ".XXXXX.XXXXX.",
+        "..XXXX.XXXX..",
+        "..XXXX.XXXX..",
+        "..XXXX.XXXX..",
+        "..XXXX.XXXX..",
+        "..XXXXXXXXX..",
+        ".............",
+        "............."
+      ],
+      "dureeMs": 1000
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "id": "chat",
+  "nom": "Chat",
+  "categorie": "Persos",
+  "type": "anime",
+  "frames": [
+    {
+      "dessin": [
+        ".............",
+        "..X.......X..",
+        "..XX.....XX..",
+        "..XXXXXXXXX..",
+        ".XXXXXXXXXXX.",
+        ".XX..XXX..XX.",
+        ".XX..XXX..XX.",
+        ".XXXXX.XXXXX.",
+        "XXXXXX.XXXXXX",
+        ".XXXX...XXXX.",
+        "..XXXXXXXXX..",
+        "....XXXXX....",
+        "............."
+      ],
+      "dureeMs": 2200
+    },
+    {
+      "dessin": [
+        ".............",
+        "..X.......X..",
+        "..XX.....XX..",
+        "..XXXXXXXXX..",
+        ".XXXXXXXXXXX.",
+        ".XXXXXXXXXXX.",
+        ".XX..XXX..XX.",
+        ".XXXXX.XXXXX.",
+        "XXXXXX.XXXXXX",
+        ".XXXX...XXXX.",
+        "..XXXXXXXXX..",
+        "....XXXXX....",
+        "............."
+      ],
+      "dureeMs": 160
+    }
+  ]
+}

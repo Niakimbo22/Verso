@@ -1,0 +1,26 @@
+{
+  "id": "pouce",
+  "nom": "Pouce levé",
+  "categorie": "Émotions",
+  "type": "statique",
+  "frames": [
+    {
+      "dessin": [
+        ".............",
+        "......XX.....",
+        "......XX.....",
+        "......XX.....",
+        "......XX.....",
+        "..XX.XXXXXX..",
+        "..XX.XXXXXXX.",
+        "..XX.XXXXXXX.",
+        "..XX.XXXXXXX.",
+        "..XX.XXXXXX..",
+        "..XX.XXXXX...",
+        ".............",
+        "............."
+      ],
+      "dureeMs": 1000
+    }
+  ]
+}

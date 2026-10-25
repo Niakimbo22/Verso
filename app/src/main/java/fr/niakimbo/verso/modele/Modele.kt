@@ -20,6 +20,8 @@ data class Modele(
      * Null = dessin par défaut du type [dynamique].
      */
     val rendu: ((LocalTime) -> MatrixFrame)? = null,
+    /** Rayon de la bibliothèque (Effets, Météo, Icônes…), null = « Autres ». */
+    val categorie: String? = null,
 ) {
     /** Image d'un modèle dynamique à l'instant [heure]. */
     fun frameDynamique(heure: LocalTime = LocalTime.now()): MatrixFrame =

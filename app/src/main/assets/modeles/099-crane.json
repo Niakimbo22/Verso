@@ -1,0 +1,26 @@
+{
+  "id": "crane",
+  "nom": "Crâne",
+  "categorie": "Persos",
+  "type": "statique",
+  "frames": [
+    {
+      "dessin": [
+        ".............",
+        "...XXXXXXX...",
+        "..XXXXXXXXX..",
+        ".XXXXXXXXXXX.",
+        ".XX...X...XX.",
+        ".XX...X...XX.",
+        ".XXXXX.XXXXX.",
+        "..XXXX.XXXX..",
+        "...XXXXXXX...",
+        "...X.X.X.X...",
+        "...XXXXXXX...",
+        ".............",
+        "............."
+      ],
+      "dureeMs": 1000
+    }
+  ]
+}

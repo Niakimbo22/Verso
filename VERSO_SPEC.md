@@ -32,7 +32,7 @@ Remplace les apps du Play Store (bugs, features payantes, réglages compliqués)
 ### 3.1 Bibliothèque de modèles
 - Une liste de modèles avec un aperçu dot-matrix 13×13 qui reproduit la forme ronde de la vraie matrice.
 - Deux types de modèles : **statique** (une seule image) et **animé** (plusieurs images + durée de chaque image).
-- Une dizaine de modèles intégrés pour commencer : horloge simple, cœur, smiley, étoile, onde, pluie, logo NC, etc.
+- 90 modèles intégrés (étape 6), rangés par rayon : Effets, Météo, Icônes, Émotions, Persos (originaux, aucun personnage protégé), Formes, Fêtes, Texte, Infos. Puces en haut de la bibliothèque : Tous, ★, puis chaque rayon. Dans « Tous », aperçus fixes (sauf le modèle actif) pour ne pas faire tourner 90 animations à la fois.
 - Tap sur un modèle → il s'affiche **immédiatement** sur la matrice.
 - Un bouton « Éteindre la matrice ».
 - Favoris : ☆/★ sur chaque carte (`FavorisStore`), dans l'ordre d'ajout. L'ordre réglable vient à l'étape 6.
@@ -78,17 +78,16 @@ Fichier JSON (une base Room est possible si ça devient plus simple) :
 ```
 Chaque image s'écrit au choix avec `pixels` (169 valeurs 0-255, tableau ou texte) ou avec `dessin` (13 lignes de 13 caractères : `.` éteint, `1`…`9` luminosité croissante, `X` plein), plus lisible à la main. L'export se fait toujours en `pixels`.
 
-Les modèles intégrés sont dans `app/src/main/assets/modeles/` (ordre = nom de fichier) et se régénèrent avec `outils/gen_modeles.py`. Un fichier invalide est ignoré et signalé dans Diagnostic.
+Champ optionnel `categorie` (rayon de la bibliothèque). Les modèles intégrés sont dans `app/src/main/assets/modeles/` (ordre = nom de fichier, numéros sur 3 chiffres) et se régénèrent avec `outils/gen_modeles.py` (les 10 d'origine) et `outils/gen_modeles_pack.py` (le pack de l'étape 6). Un fichier invalide est ignoré et signalé dans Diagnostic.
 
 Le même format servira à l'éditeur, aux modèles dynamiques et à Trame.
 
 ## 4. Feuille de route après la V1 (dans cet ordre)
 
-1. **Éditeur pixel 13×13** : dessin au doigt, aperçu en direct sur la matrice, plusieurs images avec un réglage du timing, import et export en JSON.
-2. **Modèles dynamiques** : horloge (déjà là, champ `"dynamique": "horloge"`), minuteur, visualiseur musique, notifications.
-3. **Modèles automatiques** : changement de modèle selon des règles (heure, musique en cours, notification d'une app précise).
-4. **Connexion Trame** : afficher la créature Trame au dos du téléphone. Pas urgent.
-5. **Intégration NCOS.**
+1. **Modèles dynamiques avancés** : minuteur, visualiseur musique, notifications, météo réelle.
+2. **Modèles automatiques** : changement de modèle selon des règles (heure, musique en cours, notification d'une app précise).
+3. **Connexion Trame** : afficher la créature Trame au dos du téléphone. Pas urgent.
+4. **Intégration NCOS.**
 
 ## 5. Interface pour les autres apps (préparer dès la V1)
 
@@ -115,5 +114,7 @@ Le même format servira à l'éditeur, aux modèles dynamiques et à Trame.
 2. `MatrixController` + test : afficher un pixel, puis une image, sur le vrai téléphone. Vérifier la question des 48 h du mode debug.
 3. Format des modèles + bibliothèque intégrée + écran liste avec aperçus. Les animations tournent dans l'app tant qu'elle est ouverte (`ModelePlayer`) ; l'écran de test devient « Diagnostic » (repliable).
 4. Glyph Toy AOD : affichage app fermée, horloge réelle, animations, restauration au redémarrage (le système relance le Toy). Tester si les animations tournent écran éteint (journal du Toy + expérience « wake lock »).
-5. Widget écran d'accueil (+ favoris simples, avancés depuis l'étape 6).
-6. Favoris + finitions UI.
+5. Widget écran d'accueil (+ favoris simples).
+6. Plein de modèles (90) + bibliothèque par rayons.
+7. Créateur de modèles : éditeur dessin complet (statique et animé : crayon, gomme, 9 luminosités, remplissage, ligne/cercle, symétrie, décaler/tourner, images + durée, pelure d'oignon, aperçu live sur la matrice, import/export JSON) + modèles dynamiques (forme à préciser : blocs ou formule).
+8. Ordre des favoris + finitions UI.

@@ -40,13 +40,19 @@ def write(idx, mid, nom, frames, dynamique=None):
     for i, (g, _) in enumerate(frames):
         check(f"{mid}#{i}", g)
     typ = "anime" if len(frames) > 1 else "statique"
-    data = {"id": mid, "nom": nom, "type": typ}
+    data = {"id": mid, "nom": nom, "categorie": CATEGORIES[mid], "type": typ}
     if dynamique:
         data["dynamique"] = dynamique
     data |= {"frames": [{"dessin": to_dessin(g), "dureeMs": d} for g, d in frames]}
-    with open(os.path.join(OUT, f"{idx:02d}-{mid}.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(OUT, f"{idx:03d}-{mid}.json"), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
         f.write("\n")
+
+# Catégorie de chaque modèle d'origine (le pack de l'étape 6 est dans gen_modeles_pack.py).
+CATEGORIES = {
+    "horloge": "Infos", "coeur": "Émotions", "smiley": "Émotions", "etoile": "Formes", "onde": "Effets",
+    "pluie": "Météo", "nc": "Formes", "eclair": "Météo", "lune": "Météo", "chargement": "Effets",
+}
 
 def line(g, x0, y0, x1, y1, v=9):
     n = max(abs(x1 - x0), abs(y1 - y0))

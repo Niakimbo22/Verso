@@ -1,0 +1,116 @@
+{
+  "id": "gateau",
+  "nom": "Anniversaire",
+  "categorie": "Fêtes",
+  "type": "anime",
+  "frames": [
+    {
+      "dessin": [
+        ".............",
+        "...4.....4...",
+        "...X.6..XX...",
+        "...X.X.X.X...",
+        "...X.X.X.X...",
+        "..XXXXXXXXX..",
+        "..X.X.X.X.X..",
+        "..XXXXXXXXX..",
+        ".XXXXXXXXXXX.",
+        ".X.X.X.X.X.X.",
+        ".XXXXXXXXXXX.",
+        ".............",
+        "............."
+      ],
+      "dureeMs": 140
+    },
+    {
+      "dessin": [
+        ".............",
+        ".......4.....",
+        "...6..XX.6...",
+        "...X.X.X.X...",
+        "...X.X.X.X...",
+        "..XXXXXXXXX..",
+        "..X.X.X.X.X..",
+        "..XXXXXXXXX..",
+        ".XXXXXXXXXXX.",
+        ".X.X.X.X.X.X.",
+        ".XXXXXXXXXXX.",
+        ".............",
+        "............."
+      ],
+      "dureeMs": 140
+    },
+    {
+      "dessin": [
+        ".............",
+        ".....4.......",
+        "....XX.6..X..",
+        "...X.X.X.X...",
+        "...X.X.X.X...",
+        "..XXXXXXXXX..",
+        "..X.X.X.X.X..",
+        "..XXXXXXXXX..",
+        ".XXXXXXXXXXX.",
+        ".X.X.X.X.X.X.",
+        ".XXXXXXXXXXX.",
+        ".............",
+        "............."
+      ],
+      "dureeMs": 140
+    },
+    {
+      "dessin": [
+        ".............",
+        "...4.....4...",
+        "...X.6..XX...",
+        "...X.X.X.X...",
+        "...X.X.X.X...",
+        "..XXXXXXXXX..",
+        "..X.X.X.X.X..",
+        "..XXXXXXXXX..",
+        ".XXXXXXXXXXX.",
+        ".X.X.X.X.X.X.",
+        ".XXXXXXXXXXX.",
+        ".............",
+        "............."
+      ],
+      "dureeMs": 140
+    },
+    {
+      "dessin": [
+        ".............",
+        ".......4.....",
+        "...6..XX.6...",
+        "...X.X.X.X...",
+        "...X.X.X.X...",
+        "..XXXXXXXXX..",
+        "..X.X.X.X.X..",
+        "..XXXXXXXXX..",
+        ".XXXXXXXXXXX.",
+        ".X.X.X.X.X.X.",
+        ".XXXXXXXXXXX.",
+        ".............",
+        "............."
+      ],
+      "dureeMs": 140
+    },
+    {
+      "dessin": [
+        ".............",
+        ".....4.......",
+        "....XX.6..X..",
+        "...X.X.X.X...",
+        "...X.X.X.X...",
+        "..XXXXXXXXX..",
+        "..X.X.X.X.X..",
+        "..XXXXXXXXX..",
+        ".XXXXXXXXXXX.",
+        ".X.X.X.X.X.X.",
+        ".XXXXXXXXXXX.",
+        ".............",
+        "............."
+      ],
+      "dureeMs": 140
+    }
+  ]
+}
