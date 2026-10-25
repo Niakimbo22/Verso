@@ -35,7 +35,7 @@ Remplace les apps du Play Store (bugs, features payantes, réglages compliqués)
 - 90 modèles intégrés (étape 6), rangés par rayon : Effets, Météo, Icônes, Émotions, Persos (originaux, aucun personnage protégé), Formes, Fêtes, Texte, Infos. Puces en haut de la bibliothèque : Tous, ★, puis chaque rayon. Dans « Tous », aperçus fixes (sauf le modèle actif) pour ne pas faire tourner 90 animations à la fois.
 - Tap sur un modèle → il s'affiche **immédiatement** sur la matrice.
 - Un bouton « Éteindre la matrice ».
-- Favoris : ☆/★ sur chaque carte (`FavorisStore`), dans l'ordre d'ajout. L'ordre réglable vient à l'étape 6.
+- Favoris : ☆/★ sur chaque carte (`FavorisStore`), dans l'ordre d'ajout. L'ordre réglable vient à l'étape 8.
 
 ### 3.1 bis Versions et réglages de chaque modèle
 - Appui long sur une carte (ou bouton ⚙) → fiche du modèle : aperçu en direct, choix de la **version** (V1, V2… : quand un modèle est amélioré, l'ancienne version reste disponible) et **réglages**.
@@ -80,7 +80,54 @@ Chaque image s'écrit au choix avec `pixels` (169 valeurs 0-255, tableau ou text
 
 Champ optionnel `categorie` (rayon de la bibliothèque). Les modèles intégrés sont dans `app/src/main/assets/modeles/` (ordre = nom de fichier, numéros sur 3 chiffres) et se régénèrent avec `outils/gen_modeles.py` (les 10 d'origine) et `outils/gen_modeles_pack.py` (le pack de l'étape 6). Un fichier invalide est ignoré et signalé dans Diagnostic.
 
-Le même format servira à l'éditeur, aux modèles dynamiques et à Trame.
+Le même format sert à l'éditeur (§3.5) et servira à Trame. Champ optionnel `dynamique` : `horloge` (modèle intégré calculé) ou `blocs` (§3.5).
+
+### 3.5 Créateur de modèles (étape 7)
+Trois boutons au-dessus de la bibliothèque : **+ Dessin**, **+ Dynamique**, **Importer**. Les créations sont rangées dans le rayon **Mes modèles** (puce dédiée, marquées ✎) ; un autre rayon choisi à l'enregistrement les range *en plus* avec les modèles de ce rayon. Elles marchent partout comme les modèles intégrés : tap, réglages communs, favoris, widget, fenêtre ☰, Glyph Toy.
+
+**Stockage** (`MesModelesStore`) : un fichier JSON par modèle dans `files/mes_modeles/`, id `perso-<date de création en base 36>` (jamais en conflit avec les modèles intégrés, ordre = ordre de création). Fiche d'une création (appui long / ⚙) : **Modifier**, **Partager** (JSON en texte, via la feuille de partage Android), **Fichier .json** (enregistrer où on veut), **Supprimer** (avec confirmation ; retire aussi le favori et éteint la matrice si le modèle y était). Fiche d'un modèle intégré : **Copier dans l'éditeur dessin** (le modèle d'origine ne change pas). **Importer** : un fichier .json ou le presse-papiers, un modèle ou un tableau de modèles ; chaque modèle importé reçoit un nouvel id (un import ne remplace jamais rien).
+
+**Éditeur dessin** (`CreateurActivity` › `EditeurDessin`) — statique et animé :
+- Outils : crayon, gomme, remplir (zone de même luminosité), ligne, cercle, disque, pipette ; 9 luminosités (niveau n = n × 255 / 9, comme le format `dessin`) ; symétries ↔ et ↕ (cumulables, valent pour tous les outils).
+- Image courante : décaler ← → ↑ ↓ (ce qui sort revient de l'autre côté), tourner ⟲ ⟳, retourner, plus sombre / plus clair, négatif, effacer. Annuler / rétablir (60 pas).
+- Images : nouvelle, dupliquer, déplacer ◀ ▶, supprimer ; durée par image (40 ms à 2 s) ou pour toutes ; lecture ▶ ; pelure d'oignon (image précédente en rouge léger).
+- **Aperçu en direct sur la vraie matrice** pendant le dessin et la lecture (désactivable). En sortant de l'éditeur, la matrice reprend le modèle actif d'avant (ou s'éteint).
+- Une image = modèle `statique`, plusieurs = `anime`. Enregistré au format §3.4 (`pixels`).
+
+**Créateur dynamique par blocs** (`EditeurBlocs`, rendu `MoteurBlocs`) : des blocs posés sur la matrice, chacun avec position `x`,`y`, taille `l`×`h` (en LEDs) et luminosité `niveau` 1-9. Sur l'aperçu : toucher un bloc le choisit, le faire glisser le déplace. Les blocs sont dessinés dans l'ordre de la liste (▲ ▼) ; une LED garde la valeur la plus lumineuse. Le contenu d'un bloc est centré dans son rectangle et coupé à ses bords. Exemples pour démarrer : Cadran + secondes, Heure + batterie, Jour + date, Texte défilant.
+
+| Type (`type`) | Options (`options`) |
+|---|---|
+| `heure` | `style` chiffres / aiguilles · `afficher` hhmm (2 lignes, 7×11) / hh / mm · `format` 24 / 12 · `cadran` oui / non |
+| `date` | `format` jour / jourmois (2 lignes) / semaine (LU…DI) |
+| `batterie` | `style` anneau / barre / chiffre · `piste` oui / non |
+| `secondes` | `style` anneau / point · `piste` oui / non |
+| `texte` | `texte` (60 caractères, police 3×5, accents retirés, ♥ ★) · `vitesse` lent / normal / rapide · `taille` petite / grande (×2). Un texte qui tient reste immobile, centré. |
+| `dessin` | `modele` (id d'un modèle : sa première image) · `ajuster` reduire / decouper |
+| `effet` | `modele` (id d'un modèle animé) · `ajuster` · `vitesse` 0.5 / 1 / 2 |
+| `minuteur` | `cible` HH:MM — minutes restantes avant cette heure (H puis MM sur 2 lignes au-delà d'une heure si le bloc fait 11 de haut) |
+
+Un bloc `dessin` / `effet` reprend un modèle intégré ou un dessin créé (avec ses réglages), jamais un autre modèle par blocs. Un bloc introuvable ou mal réglé est simplement ignoré.
+
+**Rendu en direct** : comme l'horloge, dans `ModelePlayer` (app ouverte ou Glyph Toy lié) et dans les aperçus. Cadence = la plus rapide demandée par les blocs (`Modele.periodeMs`) : texte qui défile 60-150 ms, effet = sa plus courte image, secondes 1 s ; sinon une image à chaque minute pile. Le widget reçoit une image, remise à jour chaque minute (comme l'horloge).
+
+Format JSON d'un modèle par blocs :
+```json
+{
+  "id": "perso-mh3k2x1a",
+  "nom": "Mon cadran",
+  "categorie": "Mes modèles",
+  "type": "statique",
+  "dynamique": "blocs",
+  "blocs": [
+    { "type": "secondes", "x": 0, "y": 0, "l": 13, "h": 13, "niveau": 4 },
+    { "type": "heure", "x": 1, "y": 1, "l": 11, "h": 11, "niveau": 9,
+      "options": { "style": "aiguilles", "cadran": "non" } }
+  ],
+  "frames": [ { "pixels": "<aperçu à 10:10, image de secours>", "dureeMs": 1000 } ]
+}
+```
+Valeurs absentes = défauts ci-dessus ; un bloc qui déborde est ramené dans la grille.
 
 ## 4. Feuille de route après la V1 (dans cet ordre)
 
@@ -116,5 +163,5 @@ Le même format servira à l'éditeur, aux modèles dynamiques et à Trame.
 4. Glyph Toy AOD : affichage app fermée, horloge réelle, animations, restauration au redémarrage (le système relance le Toy). Tester si les animations tournent écran éteint (journal du Toy + expérience « wake lock »).
 5. Widget écran d'accueil (+ favoris simples).
 6. Plein de modèles (90) + bibliothèque par rayons.
-7. Créateur de modèles : éditeur dessin complet (statique et animé : crayon, gomme, 9 luminosités, remplissage, ligne/cercle, symétrie, décaler/tourner, images + durée, pelure d'oignon, aperçu live sur la matrice, import/export JSON) + modèles dynamiques (forme à préciser : blocs ou formule).
+7. Créateur de modèles : éditeur dessin complet (statique et animé) + créateur dynamique **par blocs**, import/export JSON (§3.5).
 8. Ordre des favoris + finitions UI.

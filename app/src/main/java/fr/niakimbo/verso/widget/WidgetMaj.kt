@@ -33,7 +33,7 @@ object WidgetMaj {
         val id = app.store.modeleActif
         val modele = id?.let { app.catalogue.resoudre(it) }
         val minute = if (modele?.dynamique != null) LocalTime.now().truncatedTo(ChronoUnit.MINUTES).toString() else ""
-        val revision = app.reglages.revision.value
+        val revision = "${app.reglages.revision.value}.${app.mesModeles.revision.value}"
 
         for ((format, ids) in parFormat) {
             for (w in ids) {

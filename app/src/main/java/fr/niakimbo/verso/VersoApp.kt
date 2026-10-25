@@ -1,6 +1,8 @@
 package fr.niakimbo.verso
 
 import android.app.Application
+import fr.niakimbo.verso.createur.Capteurs
+import fr.niakimbo.verso.createur.MesModelesStore
 import fr.niakimbo.verso.matrix.GlyphBackend
 import fr.niakimbo.verso.matrix.MatrixController
 import fr.niakimbo.verso.matrix.MatrixHistory
@@ -34,7 +36,8 @@ class VersoApp : Application() {
     val modeles: ModeleRepository by lazy { ModeleRepository(this) }
     val store: ModeleStore by lazy { ModeleStore(this) }
     val reglages: ReglagesStore by lazy { ReglagesStore(this) }
-    val catalogue: Catalogue by lazy { Catalogue(modeles, reglages) }
+    val mesModeles: MesModelesStore by lazy { MesModelesStore(this) }
+    val catalogue: Catalogue by lazy { Catalogue(modeles, reglages, mesModeles) }
     val player: ModelePlayer by lazy { ModelePlayer(this, matrix, catalogue, store, appScope) }
     val journalToy: JournalToy by lazy { JournalToy(this) }
     val favoris: FavorisStore by lazy { FavorisStore(this) }
@@ -45,13 +48,14 @@ class VersoApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        Capteurs.init(this)
         // Chaque (re)démarrage du processus est noté : on voit qui a réveillé Verso
         // (ouverture de l'app, liaison du Toy, démarrage du téléphone).
         journalToy.ajouter("Processus Verso démarré")
 
         // Widgets : redessinés quand le modèle actif, ses réglages ou le style d'un widget changent.
         appScope.launch {
-            combine(player.actif, reglages.revision, stylesWidget.revision) { actif, r, w -> Triple(actif?.id, r, w) }
+            combine(player.actif, reglages.revision, stylesWidget.revision, mesModeles.revision) { actif, r, w, m -> listOf(actif?.id, r, w, m) }
                 .collectLatest { WidgetMaj.majTous(this@VersoApp) }
         }
     }

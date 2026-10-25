@@ -151,7 +151,7 @@ class ModelePlayer(
         controller.show(premiere)
         if (modele.estVivant) {
             controller.log.info(
-                if (modele.dynamique != null) "Modèle dynamique « ${modele.nom} »"
+                if (modele.dynamique != null) "Modèle dynamique « ${modele.nom} »" + (modele.periodeMs?.let { " (une image toutes les $it ms)" } ?: "")
                 else "Animation « ${modele.nom} » : ${modele.images.size} images",
             )
             if (doitTourner()) lancerBoucle(modele)
@@ -175,8 +175,12 @@ class ModelePlayer(
         boucle = scope.launch {
             if (modele.dynamique != null) {
                 while (isActive) {
-                    delay(Horloge.msAvantProchaineMinute())
+                    delay(modele.msAvantProchaineImage())
                     envoyer(modele.frameDynamique()) ?: return@launch
+                    // Blocs rapides (texte défilant, secondes) : comme une animation.
+                    if (modele.periodeMs != null) {
+                        if (store.animationsEveillees) wakeLock.acquire(WAKE_LOCK_MS) else relacherEveil()
+                    }
                 }
             } else {
                 while (isActive) {
