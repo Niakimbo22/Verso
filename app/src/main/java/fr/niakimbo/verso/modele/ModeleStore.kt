@@ -37,7 +37,13 @@ class ModeleStore(context: Context) {
         get() = prefs.getLong(CLE_DELIEMENT, 0L)
         set(value) = prefs.edit().putLong(CLE_DELIEMENT, value).apply()
 
+    /** Cause probable du dernier déliement (économie de batterie, Ne pas déranger…), null = inconnue. */
+    var contexteDeliement: String?
+        get() = prefs.getString(CLE_CONTEXTE, null)
+        set(value) = prefs.edit().putString(CLE_CONTEXTE, value).apply()
+
     private companion object {
+        const val CLE_CONTEXTE = "toy_contexte_deliement"
         const val CLE_LIAISON = "toy_derniere_liaison"
         const val CLE_DELIEMENT = "toy_dernier_deliement"
         const val CLE_ACTIF = "modele_actif"

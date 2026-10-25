@@ -2,6 +2,7 @@ package fr.niakimbo.verso.reglage
 
 import fr.niakimbo.verso.generateur.Chargement
 import fr.niakimbo.verso.generateur.Coeur
+import fr.niakimbo.verso.generateur.Compteur
 import fr.niakimbo.verso.generateur.HorlogeReglable
 import fr.niakimbo.verso.generateur.Onde
 import fr.niakimbo.verso.generateur.Pluie
@@ -25,6 +26,8 @@ class EntreeCatalogue(
     val id: String,
     val nom: String,
     val versions: List<VersionModele>,
+    /** Modèle de test : absent de la bibliothèque et du widget, lancé depuis le Diagnostic. */
+    val cache: Boolean = false,
 ) {
     val parDefaut: VersionModele get() = versions.last()
     fun version(id: String?): VersionModele = versions.firstOrNull { it.id == id } ?: parDefaut
@@ -47,7 +50,7 @@ class Catalogue(
 
     suspend fun contenu(): Contenu = cache ?: run {
         val biblio = repository.bibliotheque()
-        val calcules = listOf(HorlogeReglable.entree, Coeur.entree, Onde.entree, Pluie.entree, Chargement.entree)
+        val calcules = listOf(HorlogeReglable.entree, Coeur.entree, Onde.entree, Pluie.entree, Chargement.entree, Compteur.entree)
             .associateBy { it.id }
         val entrees = biblio.modeles.map { m ->
             calcules[m.id] ?: EntreeCatalogue(

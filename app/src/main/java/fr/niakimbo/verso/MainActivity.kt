@@ -1,6 +1,8 @@
 package fr.niakimbo.verso
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -12,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import fr.niakimbo.verso.toy.ChoixToy
+import fr.niakimbo.verso.toy.SurveillanceToy
 import fr.niakimbo.verso.ui.EtatToy
 import fr.niakimbo.verso.ui.VersoScreen
 import kotlinx.coroutines.launch
@@ -26,6 +29,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val app = application as VersoApp
         app.matrix.connect()
+        demanderNotifications()
+        ouvrirChoixToySiDemande(intent)
         setContent {
             val state by updates.state.collectAsStateWithLifecycle()
             val toyLie by app.toyLie.collectAsStateWithLifecycle()
@@ -36,14 +41,35 @@ class MainActivity : ComponentActivity() {
                 matrix = app.matrix,
                 matrixHistory = app.matrixHistory,
                 player = app.player,
+                favoris = app.favoris,
                 catalogue = app.catalogue,
                 reglages = app.reglages,
                 store = app.store,
                 journalToy = app.journalToy,
                 // toyLie change à chaque liaison/déliaison : les dates relues ici sont à jour.
-                etatToy = EtatToy.calculer(toyLie, app.store.derniereLiaison, app.store.dernierDeliement),
+                etatToy = EtatToy.calculer(toyLie, app.store.derniereLiaison, app.store.dernierDeliement, app.store.contexteDeliement),
                 onChoisirToy = { app.journalToy.ajouter(ChoixToy.ouvrir(this)) },
             )
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        ouvrirChoixToySiDemande(intent)
+    }
+
+    /** Tap sur la notification « La matrice ne s'affiche plus » : direct au choix du Glyph Toy. */
+    private fun ouvrirChoixToySiDemande(intent: Intent?) {
+        if (intent?.getBooleanExtra(SurveillanceToy.EXTRA_CHOISIR_TOY, false) != true) return
+        intent.removeExtra(SurveillanceToy.EXTRA_CHOISIR_TOY)
+        val app = application as VersoApp
+        app.journalToy.ajouter(ChoixToy.ouvrir(this))
+    }
+
+    /** Une fois : sans cette permission, Verso ne peut pas prévenir quand le Toy s'arrête. */
+    private fun demanderNotifications() {
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
         }
     }
 

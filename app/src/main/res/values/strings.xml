@@ -3,4 +3,15 @@
     <string name="app_name">Verso</string>
     <string name="toy_nom">Verso</string>
     <string name="toy_resume">Affiche le modèle choisi dans l\'app Verso</string>
+    <string name="widget_carre">Verso · Carré</string>
+    <string name="widget_rond">Verso · Rond</string>
+    <string name="widget_barre">Verso · Barre</string>
+    <string name="widget_mini">Verso · Mini</string>
+    <string name="widget_desc_carre">Modèle actif, nom et boutons. Tap = modèle suivant.</string>
+    <string name="widget_desc_rond">Juste la matrice ronde. Tap = modèle suivant.</string>
+    <string name="widget_desc_barre">Matrice, nom, ‹ › et liste sur une ligne.</string>
+    <string name="widget_desc_mini">Matrice seule, 1×1. Tap = modèle suivant.</string>
+    <string name="widget_suivant">Modèle suivant</string>
+    <string name="widget_precedent">Modèle précédent</string>
+    <string name="widget_liste">Choisir un modèle</string>
 </resources>

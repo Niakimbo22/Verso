@@ -52,7 +52,7 @@ private val Border = Color(0xFF2A2A2A)
  * Les images passent par le [player] pour couper proprement une animation en cours.
  */
 @Composable
-fun MatrixTestSection(controller: MatrixController, player: ModelePlayer, history: MatrixHistory, erreursModeles: List<String>) {
+fun MatrixTestSection(controller: MatrixController, player: ModelePlayer, history: MatrixHistory, erreursModeles: List<String>, onCompteur: () -> Unit) {
     val state by controller.state.collectAsStateWithLifecycle()
     val frame by controller.lastFrame.collectAsStateWithLifecycle()
     val entries by controller.log.entries.collectAsStateWithLifecycle()
@@ -78,6 +78,10 @@ fun MatrixTestSection(controller: MatrixController, player: ModelePlayer, histor
                 colors = ButtonDefaults.buttonColors(containerColor = Red, contentColor = Color.White),
             ) { Text("Éteindre") }
         }
+
+        Spacer(Modifier.height(10.dp))
+        TestButton("Compteur test (widget)", Modifier.fillMaxWidth(), onCompteur)
+        Hint("00, 01, 02… un nombre par seconde. Mets-le dans un widget animé, note le nombre, ouvre une app 30 s puis reviens : s'il a avancé de 1 ou 2, le widget était bien en pause ; s'il a sauté d'environ 30, il tournait encore.")
 
         Spacer(Modifier.height(24.dp))
         HistoryPanel(past)

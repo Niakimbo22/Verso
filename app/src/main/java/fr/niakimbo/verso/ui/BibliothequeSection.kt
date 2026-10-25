@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import fr.niakimbo.verso.matrix.MatrixController
 import fr.niakimbo.verso.matrix.MatrixFrame
+import fr.niakimbo.verso.modele.FavorisStore
 import fr.niakimbo.verso.modele.Horloge
 import fr.niakimbo.verso.toy.ChoixToy
 import fr.niakimbo.verso.modele.Modele
@@ -68,12 +69,14 @@ fun BibliothequeSection(
     reglages: ReglagesStore,
     controller: MatrixController,
     player: ModelePlayer,
+    favoris: FavorisStore,
     etatToy: EtatToy,
     onChoisirToy: () -> Unit,
 ) {
     val actif by player.actif.collectAsStateWithLifecycle()
     val affiche by controller.lastFrame.collectAsStateWithLifecycle()
     val revision by reglages.revision.collectAsStateWithLifecycle()
+    val favorisIds by favoris.ids.collectAsStateWithLifecycle()
     var fiche by remember { mutableStateOf<EntreeCatalogue?>(null) }
 
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -111,7 +114,7 @@ fun BibliothequeSection(
         Spacer(Modifier.height(12.dp))
 
         Text(
-            "Tap = afficher · appui long ou ⚙ = versions et réglages",
+            "Tap = afficher · ☆ = favori (le widget les fait défiler) · appui long ou ⚙ = réglages",
             color = Dim,
             fontSize = 11.sp,
         )
@@ -131,6 +134,8 @@ fun BibliothequeSection(
                                 nom = entree.nom,
                                 modele = modele,
                                 actif = entree.id == actif?.id,
+                                favori = entree.id in favorisIds,
+                                onFavori = { favoris.basculer(entree.id) },
                                 onTap = { modele?.let(player::jouer) },
                                 onReglages = { fiche = entree },
                                 modifier = Modifier.weight(1f),
@@ -164,17 +169,17 @@ sealed interface EtatToy {
     data class ChoisiNonLance(val depuis: Long) : EtatToy
 
     /** Le système l'a délié : un autre Toy a sans doute été choisi. */
-    data class Delie(val depuis: Long) : EtatToy
+    data class Delie(val depuis: Long, val cause: String?) : EtatToy
 
     /** Jamais lié par le système. */
     data object Jamais : EtatToy
 
     companion object {
-        fun calculer(lie: Boolean, derniereLiaison: Long, dernierDeliement: Long): EtatToy = when {
+        fun calculer(lie: Boolean, derniereLiaison: Long, dernierDeliement: Long, cause: String? = null): EtatToy = when {
             lie -> Lie
             derniereLiaison == 0L -> Jamais
             dernierDeliement < derniereLiaison -> ChoisiNonLance(derniereLiaison)
-            else -> Delie(dernierDeliement)
+            else -> Delie(dernierDeliement, cause)
         }
     }
 }
@@ -200,7 +205,8 @@ private fun StatutToy(etat: EtatToy, onChoisirToy: () -> Unit) {
         is EtatToy.Delie -> Triple(
             Ambre,
             "Le système a arrêté le Toy Verso",
-            "Le ${date(etat.depuis)}. Un autre Glyph Toy a peut-être été choisi. Pour revenir :\n${ChoixToy.CHEMIN}",
+            "Le ${date(etat.depuis)}" + (etat.cause?.let { ", avec $it" } ?: "") +
+                ". Le système le coupe parfois tout seul (ou un autre Toy a été choisi). Pour le remettre :\n${ChoixToy.CHEMIN}",
         )
         EtatToy.Jamais -> Triple(
             Red,
@@ -248,6 +254,8 @@ private fun CarteModele(
     nom: String,
     modele: Modele?,
     actif: Boolean,
+    favori: Boolean,
+    onFavori: () -> Unit,
     onTap: () -> Unit,
     onReglages: () -> Unit,
     modifier: Modifier,
@@ -278,6 +286,15 @@ private fun CarteModele(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
+            )
+            Text(
+                if (favori) "★" else "☆",
+                color = if (favori) Red else Dim,
+                fontSize = 15.sp,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .clickable(onClick = onFavori)
+                    .padding(horizontal = 4.dp),
             )
             Text(
                 "⚙",

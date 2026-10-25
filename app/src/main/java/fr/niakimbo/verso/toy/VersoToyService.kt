@@ -79,8 +79,9 @@ class VersoToyService : Service() {
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
-        app.journalToy.ajouter("Délié par le système · ${bilanImages()}")
         app.store.dernierDeliement = System.currentTimeMillis()
+        val contexte = SurveillanceToy.surDeliement(this)
+        app.journalToy.ajouter("Délié par le système · $contexte · ${bilanImages()}")
         app.toyLie.value = false
         app.matrix.setCanal(Canal.APP)
         app.player.setToyLie(false)
@@ -100,6 +101,7 @@ class VersoToyService : Service() {
 
     private fun brancher() {
         app.store.derniereLiaison = System.currentTimeMillis()
+        SurveillanceToy.surLiaison(this)
         app.toyLie.value = true
         app.matrix.setCanal(Canal.TOY)
         app.matrix.connect()

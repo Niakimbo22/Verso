@@ -35,7 +35,7 @@ Remplace les apps du Play Store (bugs, features payantes, réglages compliqués)
 - Une dizaine de modèles intégrés pour commencer : horloge simple, cœur, smiley, étoile, onde, pluie, logo NC, etc.
 - Tap sur un modèle → il s'affiche **immédiatement** sur la matrice.
 - Un bouton « Éteindre la matrice ».
-- Favoris, avec un ordre réglable.
+- Favoris : ☆/★ sur chaque carte (`FavorisStore`), dans l'ordre d'ajout. L'ordre réglable vient à l'étape 6.
 
 ### 3.1 bis Versions et réglages de chaque modèle
 - Appui long sur une carte (ou bouton ⚙) → fiche du modèle : aperçu en direct, choix de la **version** (V1, V2… : quand un modèle est amélioré, l'ancienne version reste disponible) et **réglages**.
@@ -45,9 +45,14 @@ Remplace les apps du Play Store (bugs, features payantes, réglages compliqués)
 - Tout est enregistré tout de suite (`ReglagesStore`) et appliqué en direct sur la matrice, Glyph Toy compris.
 
 ### 3.2 Widget écran d'accueil
-- Montre le modèle actif avec son aperçu dot-matrix.
-- Tap → passe au favori suivant.
-- Appui long ou petit bouton → ouvre la liste des favoris pour en choisir un directement.
+- Quatre formats dans la liste des widgets, tous redimensionnables : **Carré** 2×2 (matrice, nom, ‹ › ☰), **Rond** (la matrice seule, ☰ discret), **Barre** 4×1 (matrice, nom, ‹ › ☰), **Mini** 1×1 (matrice seule).
+- Tap sur la matrice ou › → favori suivant (toute la bibliothèque s'il n'y a aucun favori) ; ‹ → précédent.
+- ☰ → petite fenêtre par-dessus l'écran d'accueil (`ChoixRapideActivity`) : onglets Favoris / Tous, tap = affiché, plus Éteindre et Ouvrir Verso. Android ne laisse pas un widget capter l'appui long (il sert au lanceur), d'où le bouton.
+- Écran de réglage à la pose, puis via appui long › Paramètres du widget (`ConfigWidgetActivity`), avec le vrai widget en aperçu : thème sombre/clair, fond plein/transparent, points ronds/carrés, taille des points, LEDs blanches (noires en clair) ou rouges, animé/fixe, nom, boutons. Un style par widget (`StylesWidgetStore`).
+- **Rendu** (`RenduWidget`) : trois images carrées empilées — disque « LED éteinte », image du modèle en ALPHA_8 45×45 (3 px par LED, teintée « LED allumée »), masque percé d'un trou par LED (teinté couleur du disque). Les calques sont générés par `outils/gen_masques_widget.py`.
+- **Animation** : toutes les images sont envoyées au lanceur dans un `ViewFlipper`. C'est le lanceur qui anime, Verso n'a pas besoin de tourner, et le ViewFlipper se met en pause dès que le widget n'est plus visible (app ouverte, écran éteint). Un seul intervalle par ViewFlipper : une image longue est répétée. Budget de 380 Ko d'images par widget (l'échange système → lanceur est limité à ~500 Ko) : au-delà, une image sur deux, durées cumulées (la pluie passe ainsi de 70 à 140 ms par image). Le modèle « Compteur test » (Diagnostic) sert à vérifier la pause.
+- **Horloge** : une image, renvoyée à chaque minute pile par une alarme RTC qui ne réveille pas le téléphone (`USE_EXACT_ALARM`) ; écran éteint, elle attend le réveil.
+- Mises à jour (`WidgetMaj`) quand le modèle actif, ses réglages ou le style d'un widget changent ; un widget inchangé n'est pas renvoyé.
 
 ### 3.3 Glyph Toy « Verso » (affichage permanent)
 - Verso déclare un **Glyph Toy AOD** (`VersoToyService`). Une fois choisi dans les réglages Glyph (bouton dans l'app), il affiche le modèle actif **app fermée**, et le système le relance tout seul après un redémarrage.
@@ -55,6 +60,7 @@ Remplace les apps du Play Store (bugs, features payantes, réglages compliqués)
 - Le `MatrixController` est unique et bascule de canal : Toy quand le système a lié le service, app sinon.
 - Le `ModelePlayer` joue les animations / l'horloge tant que l'app est à l'écran ou que le Toy est lié, et redessine à chaque `EVENT_AOD`.
 - Journal du Toy gardé sur le téléphone (liaisons, AOD, écran allumé/éteint, nombre d'images envoyées) pour savoir ce qui se passe app fermée.
+- Le système délie parfois le Toy tout seul (constaté le 25/10 à 01:44, rien touché) : au déliement, l'état du téléphone est noté (écran, économie de batterie, Ne pas déranger, batterie, AOD) et la cause probable s'affiche dans l'app ; s'il n'est pas relancé 2 min après, une notification « La matrice ne s'affiche plus » ouvre directement le choix du Glyph Toy (`SurveillanceToy`). Verso ne peut pas se re-choisir lui-même (réglage système protégé).
 - ~~Foreground service~~ : abandonné, il ne passe pas devant un Toy.
 
 ### 3.4 Format d'un modèle
@@ -108,5 +114,5 @@ Le même format servira à l'éditeur, aux modèles dynamiques et à Trame.
 2. `MatrixController` + test : afficher un pixel, puis une image, sur le vrai téléphone. Vérifier la question des 48 h du mode debug.
 3. Format des modèles + bibliothèque intégrée + écran liste avec aperçus. Les animations tournent dans l'app tant qu'elle est ouverte (`ModelePlayer`) ; l'écran de test devient « Diagnostic » (repliable).
 4. Glyph Toy AOD : affichage app fermée, horloge réelle, animations, restauration au redémarrage (le système relance le Toy). Tester si les animations tournent écran éteint (journal du Toy + expérience « wake lock »).
-5. Widget écran d'accueil.
+5. Widget écran d'accueil (+ favoris simples, avancés depuis l'étape 6).
 6. Favoris + finitions UI.
