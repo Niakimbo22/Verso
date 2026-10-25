@@ -3,6 +3,7 @@ package fr.niakimbo.verso.matrix
 import android.content.ComponentName
 import android.content.Context
 import android.os.Build
+import android.os.SystemClock
 import com.nothing.ketchum.Common
 import com.nothing.ketchum.Glyph
 import com.nothing.ketchum.GlyphException
@@ -37,8 +38,7 @@ internal object GlyphBackend {
  * Deux protections contre la matrice « figée » (constaté le 25/10, v0.1.28) :
  * - les images ne s'empilent jamais : seule la dernière commande (image ou extinction) attend
  *   son tour, une animation ne peut donc pas prendre de retard sur le SDK ;
- * - un chien de garde surveille le thread du SDK : si un appel reste bloqué plus de
- *   [BLOCAGE_MS], on abandonne ce thread, on en crée un neuf et on se reconnecte.
+ * - un chien de garde note dans le journal les appels au SDK anormalement longs (sans rien couper).
  */
 private class GlyphMatrixController(
     context: Context,
@@ -48,8 +48,7 @@ private class GlyphMatrixController(
 
     private val app = context.applicationContext
 
-    @Volatile
-    private var worker: ScheduledExecutorService = nouveauWorker()
+    private val worker: ScheduledExecutorService = nouveauWorker()
     private val manager: GlyphMatrixManager by lazy { GlyphMatrixManager.getInstance(app) }
 
     @Volatile
@@ -91,13 +90,13 @@ private class GlyphMatrixController(
     private val envoiPrevu = AtomicBoolean(false)
 
     /** Tâche du SDK en cours (pour le chien de garde). */
-    private class Tache(val nom: String, val debut: Long)
+    private class Tache(val nom: String, val debut: Long) {
+        @Volatile
+        var signale = false
+    }
 
     @Volatile
     private var enCours: Tache? = null
-
-    @Volatile
-    private var derniereRelance = 0L
 
     private val garde = Executors.newSingleThreadScheduledExecutor { Thread(it, "verso-matrix-garde").apply { isDaemon = true } }
 
@@ -133,7 +132,7 @@ private class GlyphMatrixController(
     private fun executer(nom: String, bloc: () -> Unit) {
         try {
             worker.execute {
-                val t = Tache(nom, System.currentTimeMillis())
+                val t = Tache(nom, SystemClock.uptimeMillis())
                 enCours = t
                 try {
                     bloc()
@@ -144,34 +143,25 @@ private class GlyphMatrixController(
                 }
             }
         } catch (_: RejectedExecutionException) {
-            // Ancien thread abandonné par le chien de garde : la commande est reprise par le nouveau.
+            // Ne devrait pas arriver : le thread du SDK n'est jamais arrêté.
         }
     }
 
-    /** Chien de garde : un appel au SDK ne doit jamais bloquer l'affichage. */
+    /**
+     * Chien de garde, en observation seulement : il note dans le journal un appel au SDK
+     * anormalement long, mais ne touche jamais à la connexion.
+     *
+     * Constat du 25/10 (v0.1.33) : téléphone posé face cachée, l'écran s'éteint, le processeur se met
+     * en veille au milieu d'un envoi, et l'horloge murale continue d'avancer. L'ancien chien de garde
+     * croyait le SDK bloqué, coupait la connexion… et la matrice restait figée au bout de 5 s.
+     * D'où l'horloge « uptime » (arrêtée pendant la veille) et l'absence de toute action.
+     */
     private fun surveiller() {
         val t = enCours ?: return
-        val duree = System.currentTimeMillis() - t.debut
-        if (duree < BLOCAGE_MS) return
-        val maintenant = System.currentTimeMillis()
-        if (maintenant - derniereRelance < RELANCE_MIN_MS) return
-        derniereRelance = maintenant
-        enCours = null
-
-        val ancien = worker
-        worker = nouveauWorker()
-        ancien.shutdownNow()
-        serviceConnected = false
-        connectTimeout = null
-        val raison = "Le SDK Glyph ne répond plus (« ${t.nom} » bloqué ${duree / 1000} s)"
-        _state.value = MatrixState.Error("$raison : reconnexion…")
-        history.recordFailure(raison)
-        log.error("$raison : nouveau thread, reconnexion au service Glyph")
-
-        // La commande en attente avait peut-être été postée sur l'ancien thread : on la reprend.
-        envoiPrevu.set(false)
-        executer("reconnexion") { bindService() }
-        if (commande.get() != null) planifierEnvoi()
+        val duree = SystemClock.uptimeMillis() - t.debut
+        if (duree < BLOCAGE_MS || t.signale) return
+        t.signale = true
+        log.warn("Appel au SDK lent : « ${t.nom} » dure depuis ${duree / 1000} s (aucune action)")
     }
 
     override fun connect() {
@@ -365,10 +355,7 @@ private class GlyphMatrixController(
         /** Après 2 attentes de 6 s sans réponse du service, on conseille de redémarrer le processus. */
         const val LIAISONS_AVANT_REDEMARRAGE = 2
 
-        /** Un appel IPC au service Glyph prend quelques ms : au-delà de 4 s, il est bloqué. */
+        /** Un appel IPC au service Glyph prend quelques ms : au-delà de 4 s (hors veille), c'est anormal. */
         const val BLOCAGE_MS = 4_000L
-
-        /** Pas plus d'une relance toutes les 15 s (si le service Glyph lui-même est planté). */
-        const val RELANCE_MIN_MS = 15_000L
     }
 }
