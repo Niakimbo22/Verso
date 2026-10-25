@@ -22,12 +22,17 @@ data class Modele(
     val rendu: ((LocalTime) -> MatrixFrame)? = null,
     /** Rayon de la bibliothèque (Effets, Météo, Icônes…), null = « Autres ». */
     val categorie: String? = null,
+    /**
+     * Modèle dynamique qui bouge plus vite qu'une fois par minute (texte défilant, secondes…) :
+     * intervalle entre deux images en ms. Null = une image par minute, à la minute pile.
+     */
+    val periodeMs: Long? = null,
 ) {
     /** Image d'un modèle dynamique à l'instant [heure]. */
     fun frameDynamique(heure: LocalTime = LocalTime.now()): MatrixFrame =
         rendu?.invoke(heure) ?: when (dynamique) {
             Dynamique.HORLOGE -> Horloge.frame(heure)
-            null -> apercu
+            Dynamique.BLOCS, null -> apercu
         }
 
     init {
@@ -50,12 +55,15 @@ data class Modele(
     }
 
     enum class Dynamique(val json: String) {
-        HORLOGE("horloge");
+        HORLOGE("horloge"),
+
+        /** Créé avec le créateur par blocs (heure, date, batterie…), voir [fr.niakimbo.verso.createur.MoteurBlocs]. */
+        BLOCS("blocs");
 
         companion object {
             fun fromJson(value: String): Dynamique =
                 entries.firstOrNull { it.json == value }
-                    ?: throw IllegalArgumentException("Modèle dynamique inconnu « $value » (attendu : horloge)")
+                    ?: throw IllegalArgumentException("Modèle dynamique inconnu « $value » (attendu : horloge ou blocs)")
         }
     }
 
@@ -73,6 +81,15 @@ data class Modele(
 
     /** Vrai si le modèle doit être rejoué en boucle (animation ou modèle dynamique). */
     val estVivant: Boolean get() = estAnime || dynamique != null
+
+    /**
+     * Pour un modèle dynamique : délai avant la prochaine image, calé sur l'horloge
+     * (à la minute pile, ou sur un multiple de [periodeMs]).
+     */
+    fun msAvantProchaineImage(): Long {
+        val p = periodeMs ?: return Horloge.msAvantProchaineMinute()
+        return (p - System.currentTimeMillis() % p).coerceIn(MIN_DUREE_MS / 2, p)
+    }
 
     companion object {
         /** En dessous, la matrice ne suit plus et l'œil ne voit pas la différence. */

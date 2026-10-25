@@ -42,7 +42,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.AlertDialog
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import fr.niakimbo.verso.VersoApp
+import fr.niakimbo.verso.createur.CreateurActivity
+import fr.niakimbo.verso.createur.MesModelesStore
 import fr.niakimbo.verso.modele.Modele
+import kotlinx.coroutines.launch
 import fr.niakimbo.verso.modele.ModelePlayer
 import fr.niakimbo.verso.reglage.Catalogue
 import fr.niakimbo.verso.reglage.EntreeCatalogue
@@ -167,6 +177,10 @@ fun FicheModele(
                 Controle(r, valeurs, onChange = { valeurs = it }, onFini = ::sauver)
             }
 
+            // ----- Créations : modifier, partager, supprimer ; modèles intégrés : en faire une copie -----
+            Spacer(Modifier.height(24.dp))
+            ActionsModele(entree, apercu, onFermer)
+
             Spacer(Modifier.height(20.dp))
             TextButton(onClick = {
                 val cles = (version.reglages + Personnalisation.reglages(true)).map { it.cle }
@@ -268,4 +282,76 @@ private fun Option(texte: String, choisi: Boolean, modifier: Modifier, onClick: 
             contentColor = Color.White,
         ),
     ) { Text(texte, fontSize = 12.sp, maxLines = 1) }
+}
+
+@Composable
+private fun ActionsModele(entree: EntreeCatalogue, apercu: Modele?, onFermer: () -> Unit) {
+    val context = LocalContext.current
+    val app = context.applicationContext as VersoApp
+    val scope = rememberCoroutineScope()
+    var confirmer by remember { mutableStateOf(false) }
+    val perso = entree.perso
+    val fichier = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        scope.launch {
+            val ok = ecrireJson(context, app, entree.id, uri)
+            Toast.makeText(context, if (ok) "Fichier enregistré" else "Impossible d'écrire le fichier", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    Titre(if (perso != null) "MA CRÉATION" else "CRÉER À PARTIR DE CE MODÈLE")
+    Spacer(Modifier.height(8.dp))
+    if (perso != null) {
+        val mode = if (perso is MesModelesStore.Perso.Blocs) CreateurActivity.BLOCS else CreateurActivity.DESSIN
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Option("✎ Modifier", false, Modifier.weight(1f)) {
+                CreateurActivity.ouvrir(context, mode, id = entree.id)
+                onFermer()
+            }
+            Option("⇪ Partager", false, Modifier.weight(1f)) { scope.launch { partagerJson(context, app, entree.id) } }
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Option("⇩ Fichier .json", false, Modifier.weight(1f)) { fichier.launch(nomFichier(entree.nom)) }
+            Option("🗑 Supprimer", false, Modifier.weight(1f)) { confirmer = true }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "Partager envoie le modèle en JSON (même format que les modèles intégrés) : il s'importe dans Verso avec « Importer ».",
+            color = Dim, fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.fillMaxWidth(),
+        )
+    } else {
+        Option("✎ Copier dans l'éditeur dessin", false, Modifier.fillMaxWidth()) {
+            CreateurActivity.ouvrir(context, CreateurActivity.DESSIN, copie = entree.id)
+            onFermer()
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            if (apercu?.dynamique != null) "Le dessin part de l'image actuelle (un modèle calculé en direct ne peut pas être copié tel quel)."
+            else "Le modèle d'origine ne change pas : tu modifies une copie, rangée dans « Mes modèles ».",
+            color = Dim, fontSize = 11.sp, lineHeight = 15.sp, modifier = Modifier.fillMaxWidth(),
+        )
+    }
+
+    if (confirmer) {
+        AlertDialog(
+            onDismissRequest = { confirmer = false },
+            containerColor = Panel,
+            titleContentColor = Color.White,
+            textContentColor = Dim,
+            title = { Text("Supprimer « ${entree.nom} » ?") },
+            text = { Text("Le modèle disparaît de la bibliothèque, des favoris et du widget. Pense à le partager d'abord pour en garder une copie.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmer = false
+                    scope.launch {
+                        supprimerPerso(app, entree.id)
+                        Toast.makeText(context, "« ${entree.nom} » supprimé", Toast.LENGTH_SHORT).show()
+                        onFermer()
+                    }
+                }) { Text("Supprimer", color = Red) }
+            },
+            dismissButton = { TextButton(onClick = { confirmer = false }) { Text("Annuler", color = Color.White) } },
+        )
+    }
 }

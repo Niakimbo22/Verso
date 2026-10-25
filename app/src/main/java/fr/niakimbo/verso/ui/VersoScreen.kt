@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import fr.niakimbo.verso.BuildConfig
 import fr.niakimbo.verso.matrix.MatrixController
 import fr.niakimbo.verso.matrix.MatrixHistory
@@ -62,7 +63,9 @@ fun VersoScreen(
     onChoisirToy: () -> Unit,
     sectionWidgets: @Composable () -> Unit = {},
 ) {
-    val bibliotheque by produceState<Catalogue.Contenu?>(null, catalogue) {
+    // Rechargée quand un modèle est créé, modifié ou supprimé (rayon « Mes modèles »).
+    val revisionModeles by catalogue.revision.collectAsStateWithLifecycle()
+    val bibliotheque by produceState<Catalogue.Contenu?>(null, catalogue, revisionModeles) {
         value = catalogue.contenu()
     }
     var diagnosticOuvert by rememberSaveable { mutableStateOf(false) }

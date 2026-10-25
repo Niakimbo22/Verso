@@ -40,10 +40,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import fr.niakimbo.verso.createur.MesModelesStore
 import fr.niakimbo.verso.matrix.MatrixController
 import fr.niakimbo.verso.matrix.MatrixFrame
 import fr.niakimbo.verso.modele.FavorisStore
-import fr.niakimbo.verso.modele.Horloge
 import fr.niakimbo.verso.toy.ChoixToy
 import fr.niakimbo.verso.modele.Modele
 import fr.niakimbo.verso.modele.ModelePlayer
@@ -62,6 +62,7 @@ private val Border = Color(0xFF2A2A2A)
 private const val COLONNES = 3
 private const val TOUS = "Tous"
 private const val FAVORIS = "★"
+private const val MES = MesModelesStore.RAYON
 
 @Composable
 private fun Puce(texte: String, actif: Boolean, onTap: () -> Unit) {
@@ -141,9 +142,11 @@ fun BibliothequeSection(
             fontSize = 11.sp,
         )
         Spacer(Modifier.height(12.dp))
+        BarreCreer(onImporte = { rayon = MES })
+        Spacer(Modifier.height(12.dp))
 
         if (!entrees.isNullOrEmpty()) {
-            val rayons = listOf(TOUS, FAVORIS) + entrees.map { it.categorie }.distinct()
+            val rayons = listOf(TOUS, FAVORIS, MES) + entrees.map { it.categorie }.distinct().filter { it != MES }
             Row(
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -152,6 +155,7 @@ fun BibliothequeSection(
                     val n = when (r) {
                         TOUS -> entrees.size
                         FAVORIS -> favorisIds.count { id -> entrees.any { it.id == id } }
+                        MES -> entrees.count { it.perso != null }
                         else -> entrees.count { it.categorie == r }
                     }
                     Puce("$r $n", r == rayon) { rayon = r }
@@ -163,6 +167,7 @@ fun BibliothequeSection(
             when (rayon) {
                 TOUS -> l
                 FAVORIS -> favorisIds.mapNotNull { id -> l.firstOrNull { it.id == id } }
+                MES -> l.filter { it.perso != null }
                 else -> l.filter { it.categorie == rayon }
             }
         }
@@ -172,7 +177,11 @@ fun BibliothequeSection(
         when {
             visibles == null -> Text("Chargement…", color = Dim, fontSize = 14.sp)
             visibles.isEmpty() -> Text(
-                if (rayon == FAVORIS) "Aucun favori : touche ☆ sur un modèle." else "Aucun modèle trouvé (voir Diagnostic).",
+                when (rayon) {
+                    FAVORIS -> "Aucun favori : touche ☆ sur un modèle."
+                    MES -> "Rien pour l'instant : crée un dessin ou un modèle dynamique avec les boutons ci-dessus."
+                    else -> "Aucun modèle trouvé (voir Diagnostic)."
+                },
                 color = Dim, fontSize = 14.sp,
             )
             else -> Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -184,6 +193,7 @@ fun BibliothequeSection(
                             }
                             CarteModele(
                                 nom = entree.nom,
+                                perso = entree.perso != null,
                                 modele = modele,
                                 actif = entree.id == actif?.id,
                                 animer = animer || entree.id == actif?.id,
@@ -305,6 +315,7 @@ private fun StatutToy(etat: EtatToy, onChoisirToy: () -> Unit) {
 @Composable
 private fun CarteModele(
     nom: String,
+    perso: Boolean,
     modele: Modele?,
     actif: Boolean,
     animer: Boolean,
@@ -331,6 +342,9 @@ private fun CarteModele(
             )
             if (modele?.estVivant == true) {
                 Text("▶", color = Dim, fontSize = 10.sp, modifier = Modifier.align(Alignment.TopEnd))
+            }
+            if (perso) {
+                Text("✎", color = Red, fontSize = 10.sp, modifier = Modifier.align(Alignment.TopStart))
             }
         }
         Spacer(Modifier.height(6.dp))
@@ -372,7 +386,7 @@ internal fun apercuAnime(modele: Modele): MatrixFrame = if (modele.dynamique != 
     var frame by remember(modele) { mutableStateOf(modele.frameDynamique()) }
     LaunchedEffect(modele) {
         while (true) {
-            delay(Horloge.msAvantProchaineMinute())
+            delay(modele.msAvantProchaineImage())
             frame = modele.frameDynamique()
         }
     }

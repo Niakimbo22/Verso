@@ -1,5 +1,7 @@
 package fr.niakimbo.verso.reglage
 
+import fr.niakimbo.verso.createur.MesModelesStore
+import fr.niakimbo.verso.createur.MoteurBlocs
 import fr.niakimbo.verso.generateur.Chargement
 import fr.niakimbo.verso.generateur.Coeur
 import fr.niakimbo.verso.generateur.Compteur
@@ -8,6 +10,7 @@ import fr.niakimbo.verso.generateur.Onde
 import fr.niakimbo.verso.generateur.Pluie
 import fr.niakimbo.verso.modele.Modele
 import fr.niakimbo.verso.modele.ModeleRepository
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Une version d'un modèle (V1, V2…) : ses réglages propres et la façon de le dessiner.
@@ -30,8 +33,10 @@ class EntreeCatalogue(
     val cache: Boolean = false,
     /** Rayon de la bibliothèque. */
     val categorie: String = AUTRES,
+    /** Modèle créé dans Verso (éditeur dessin ou blocs) : modifiable, exportable, supprimable. */
+    val perso: MesModelesStore.Perso? = null,
 ) {
-    fun avecCategorie(c: String?) = EntreeCatalogue(id, nom, versions, cache, c ?: AUTRES)
+    fun avecCategorie(c: String?) = EntreeCatalogue(id, nom, versions, cache, c ?: AUTRES, perso)
 
     companion object {
         const val AUTRES = "Autres"
@@ -42,21 +47,39 @@ class EntreeCatalogue(
 }
 
 /**
- * Tous les modèles disponibles : ceux calculés dans l'app (réglables en détail) et ceux
- * des fichiers JSON (réglages communs seulement).
+ * Tous les modèles disponibles : ceux calculés dans l'app (réglables en détail), ceux
+ * des fichiers JSON (réglages communs seulement) et ceux créés dans Verso (« Mes modèles »).
  */
 class Catalogue(
     private val repository: ModeleRepository,
     private val store: ReglagesStore,
+    private val mesModeles: MesModelesStore,
 ) {
     data class Contenu(val entrees: List<EntreeCatalogue>, val erreurs: List<String>) {
         fun parId(id: String) = entrees.firstOrNull { it.id == id }
     }
 
-    @Volatile
-    private var cache: Contenu? = null
+    /** Change quand un modèle est créé, modifié ou supprimé : la bibliothèque se recharge. */
+    val revision: StateFlow<Int> = mesModeles.revision
 
-    suspend fun contenu(): Contenu = cache ?: run {
+    @Volatile
+    private var integres: Contenu? = null
+
+    @Volatile
+    private var cache: Pair<Int, Contenu>? = null
+
+    suspend fun contenu(): Contenu {
+        val rev = mesModeles.revision.value
+        cache?.let { (r, c) -> if (r == rev) return c }
+        val base = integres ?: chargerIntegres().also { integres = it }
+        val persos = mesModeles.tous().map(::entreePerso)
+        // Les créations d'abord : sinon elles se perdent derrière les 90 modèles intégrés.
+        val contenu = Contenu(persos + base.entrees, base.erreurs + mesModeles.erreurs)
+        cache = rev to contenu
+        return contenu
+    }
+
+    private suspend fun chargerIntegres(): Contenu {
         val biblio = repository.bibliotheque()
         val calcules = listOf(HorlogeReglable.entree, Coeur.entree, Onde.entree, Pluie.entree, Chargement.entree, Compteur.entree)
             .associateBy { it.id }
@@ -67,7 +90,47 @@ class Catalogue(
                 versions = listOf(VersionModele("v1", "V1", "Dessin d'origine.", emptyList()) { m }),
             )).avecCategorie(m.categorie)
         } + calcules.values.filter { c -> biblio.modeles.none { it.id == c.id } }
-        Contenu(entrees, biblio.erreurs).also { cache = it }
+        return Contenu(entrees, biblio.erreurs)
+    }
+
+    private fun entreePerso(p: MesModelesStore.Perso): EntreeCatalogue = when (p) {
+        is MesModelesStore.Perso.Dessin -> EntreeCatalogue(
+            id = p.id, nom = p.nom, categorie = p.categorie, perso = p,
+            versions = listOf(VersionModele("v1", "V1", "Ton dessin.", emptyList()) { p.modele }),
+        )
+        is MesModelesStore.Perso.Blocs -> EntreeCatalogue(
+            id = p.id, nom = p.nom, categorie = p.categorie, perso = p,
+            versions = listOf(
+                VersionModele("v1", "V1", "Modèle par blocs, calculé en direct.", emptyList()) {
+                    MoteurBlocs.modele(p.def, ressources())
+                },
+            ),
+        )
+    }
+
+    /**
+     * Images des modèles qu'un bloc Dessin ou Effet peut reprendre : modèles intégrés et dessins créés,
+     * avec leurs réglages. Jamais un autre modèle par blocs (pas de boucle possible).
+     */
+    fun ressources(): MoteurBlocs.Ressources {
+        val memo = HashMap<String, List<Modele.Image>?>()
+        return MoteurBlocs.Ressources { id ->
+            synchronized(memo) {
+                memo.getOrPut(id) {
+                    val entree = (cache?.second ?: integres)?.parId(id)
+                        ?.takeIf { it.perso !is MesModelesStore.Perso.Blocs }
+                        ?: return@getOrPut null
+                    val m = resoudre(entree)
+                    if (m.dynamique != null) listOf(Modele.Image(m.frameDynamique(), 1000)) else m.images
+                }
+            }
+        }
+    }
+
+    /** Ressources à jour pour l'éditeur de blocs (catalogue chargé). */
+    suspend fun ressourcesEditeur(): MoteurBlocs.Ressources {
+        contenu()
+        return ressources()
     }
 
     /** Modèle prêt à jouer : version choisie, réglages propres puis réglages communs. */
