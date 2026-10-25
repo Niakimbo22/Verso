@@ -15,6 +15,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import fr.niakimbo.verso.toy.ChoixToy
 import fr.niakimbo.verso.toy.SurveillanceToy
+import fr.niakimbo.verso.widget.SectionWidgets
 import fr.niakimbo.verso.ui.EtatToy
 import fr.niakimbo.verso.ui.VersoScreen
 import kotlinx.coroutines.launch
@@ -49,6 +50,7 @@ class MainActivity : ComponentActivity() {
                 // toyLie change à chaque liaison/déliaison : les dates relues ici sont à jour.
                 etatToy = EtatToy.calculer(toyLie, app.store.derniereLiaison, app.store.dernierDeliement, app.store.contexteDeliement),
                 onChoisirToy = { app.journalToy.ajouter(ChoixToy.ouvrir(this)) },
+                sectionWidgets = { SectionWidgets(app) },
             )
         }
     }
