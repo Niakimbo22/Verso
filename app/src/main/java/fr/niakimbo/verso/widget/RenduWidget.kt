@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.view.View
 import android.widget.RemoteViews
+import fr.niakimbo.verso.MainActivity
 import fr.niakimbo.verso.R
 import fr.niakimbo.verso.matrix.MatrixFrame
 import fr.niakimbo.verso.modele.Modele
@@ -138,29 +139,39 @@ object RenduWidget {
             }
         }
         if (format.aListe) {
-            rv.setViewVisibility(R.id.btn_liste, boutons)
+            // Si le tap ouvre déjà la fenêtre de choix, ☰ ferait doublon.
+            val liste = style.boutons && style.tap != StyleWidget.ActionTap.CHOISIR
+            rv.setViewVisibility(R.id.btn_liste, if (liste) View.VISIBLE else View.GONE)
             rv.setTextColor(R.id.btn_liste, c.texteDiscret)
         }
 
         if (cliquable) {
-            rv.setOnClickPendingIntent(R.id.matrice, WidgetActions.intention(context, WidgetActions.SUIVANT))
+            rv.setOnClickPendingIntent(R.id.matrice, when (style.tap) {
+                StyleWidget.ActionTap.CHOISIR -> fenetreChoix(context)
+                StyleWidget.ActionTap.SUIVANT -> WidgetActions.intention(context, WidgetActions.SUIVANT)
+                StyleWidget.ActionTap.ONOFF -> WidgetActions.intention(context, WidgetActions.ONOFF)
+                StyleWidget.ActionTap.VERSO -> PendingIntent.getActivity(
+                    context, 1,
+                    Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                )
+            })
             if (format.aFleches) {
                 rv.setOnClickPendingIntent(R.id.btn_prec, WidgetActions.intention(context, WidgetActions.PRECEDENT))
                 rv.setOnClickPendingIntent(R.id.btn_suiv, WidgetActions.intention(context, WidgetActions.SUIVANT))
             }
             if (format.aListe) {
-                rv.setOnClickPendingIntent(
-                    R.id.btn_liste,
-                    PendingIntent.getActivity(
-                        context, 0,
-                        Intent(context, ChoixRapideActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-                    ),
-                )
+                rv.setOnClickPendingIntent(R.id.btn_liste, fenetreChoix(context))
             }
         }
         return rv
     }
+
+    private fun fenetreChoix(context: Context): PendingIntent = PendingIntent.getActivity(
+        context, 0,
+        Intent(context, ChoixRapideActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+    )
 
     /** Null = matrice éteinte (rien à afficher sous le masque). */
     fun sequence(modele: Modele?, anime: Boolean, budget: Int = BUDGET_OCTETS): Sequence? {

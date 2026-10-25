@@ -17,7 +17,16 @@ data class StyleWidget(
     val boutons: Boolean = true,
     /** Faux = première image seulement (solution de secours si l'animation rame). */
     val anime: Boolean = true,
+    /** Ce que fait un tap sur la matrice. */
+    val tap: ActionTap = ActionTap.CHOISIR,
 ) {
+    enum class ActionTap(val label: String, val aide: String) {
+        CHOISIR("Choisir", "ouvre la petite fenêtre pour choisir un modèle"),
+        SUIVANT("Suivant", "passe au favori suivant"),
+        ONOFF("On / Off", "éteint la matrice, puis rallume le dernier modèle"),
+        VERSO("Verso", "ouvre l'app Verso"),
+    }
+
     enum class Theme(val label: String) { SOMBRE("Sombre"), CLAIR("Clair") }
     enum class Fond(val label: String) { PLEIN("Plein"), TRANSPARENT("Transparent") }
     enum class Forme(val label: String) { ROND("Ronds"), CARRE("Carrés") }
@@ -25,7 +34,7 @@ data class StyleWidget(
 
     fun versJson(): String = JSONObject()
         .put("theme", theme.name).put("fond", fond.name).put("forme", forme.name).put("taille", taille.name)
-        .put("accent", accent).put("nom", nom).put("boutons", boutons).put("anime", anime)
+        .put("accent", accent).put("nom", nom).put("boutons", boutons).put("anime", anime).put("tap", tap.name)
         .toString()
 
     companion object {
@@ -49,6 +58,7 @@ data class StyleWidget(
                 nom = j.optBoolean("nom", d.nom),
                 boutons = j.optBoolean("boutons", d.boutons),
                 anime = j.optBoolean("anime", d.anime),
+                tap = e("tap", ActionTap.entries.toTypedArray(), d.tap),
             )
         }
     }

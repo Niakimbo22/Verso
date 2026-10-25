@@ -60,6 +60,7 @@ fun VersoScreen(
     journalToy: JournalToy,
     etatToy: EtatToy,
     onChoisirToy: () -> Unit,
+    sectionWidgets: @Composable () -> Unit = {},
 ) {
     val bibliotheque by produceState<Catalogue.Contenu?>(null, catalogue) {
         value = catalogue.contenu()
@@ -92,6 +93,9 @@ fun VersoScreen(
         UpdateSection(state, onUpdate, onRetry)
         Spacer(Modifier.height(28.dp))
         BibliothequeSection(bibliotheque?.entrees?.filter { !it.cache }, catalogue, reglages, matrix, player, favoris, etatToy, onChoisirToy)
+
+        Spacer(Modifier.height(36.dp))
+        sectionWidgets()
 
         Spacer(Modifier.height(36.dp))
         val erreurs = bibliotheque?.erreurs.orEmpty()

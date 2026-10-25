@@ -19,6 +19,7 @@ class WidgetActions : BroadcastReceiver() {
                 when (action) {
                     SUIVANT -> changer(app, +1)
                     PRECEDENT -> changer(app, -1)
+                    ONOFF -> basculer(app)
                     MINUTE -> WidgetMaj.majTous(app)
                 }
             } finally {
@@ -35,7 +36,23 @@ class WidgetActions : BroadcastReceiver() {
         WidgetMaj.majTous(app)
     }
 
+    /** Éteint la matrice, ou rallume le dernier modèle affiché (à défaut, le premier de la liste). */
+    private suspend fun basculer(app: VersoApp) {
+        val actif = app.store.modeleActif
+        if (actif != null) {
+            app.store.dernierModele = actif
+            app.player.eteindre()
+        } else {
+            val id = app.store.dernierModele ?: ordreDefilement(app).firstOrNull() ?: return
+            val modele = app.catalogue.resoudre(id) ?: return
+            app.matrix.connect()
+            app.player.jouer(modele)
+        }
+        WidgetMaj.majTous(app)
+    }
+
     companion object {
+        const val ONOFF = "fr.niakimbo.verso.widget.ONOFF"
         const val SUIVANT = "fr.niakimbo.verso.widget.SUIVANT"
         const val PRECEDENT = "fr.niakimbo.verso.widget.PRECEDENT"
         const val MINUTE = "fr.niakimbo.verso.widget.MINUTE"

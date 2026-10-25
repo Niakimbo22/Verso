@@ -150,20 +150,25 @@ private fun EcranConfig(app: VersoApp, format: Format, initial: StyleWidget, onV
         if (format.aNom) {
             Options("Nom du modèle", listOf(true to "Affiché", false to "Masqué"), style.nom) { style = style.copy(nom = it) }
         }
-        if (format.aFleches || format.aListe) {
+        Options(
+            "Tap sur la matrice",
+            StyleWidget.ActionTap.entries.map { it to it.label },
+            style.tap,
+            aide = "Tap = ${style.tap.aide}." +
+                if (style.tap == StyleWidget.ActionTap.SUIVANT) " Favoris dans l'ordre, ou toute la bibliothèque s'il n'y en a aucun." else "",
+        ) { style = style.copy(tap = it) }
+        val avecListe = format.aListe && style.tap != StyleWidget.ActionTap.CHOISIR
+        if (format.aFleches || avecListe) {
             Options(
                 "Boutons",
                 listOf(true to "Affichés", false to "Masqués"),
                 style.boutons,
-                aide = if (format.aFleches) "‹ › = précédent / suivant, ☰ = choisir un modèle." else "☰ = choisir un modèle.",
+                aide = listOfNotNull(
+                    "‹ › = précédent / suivant".takeIf { format.aFleches },
+                    "☰ = choisir un modèle".takeIf { avecListe },
+                ).joinToString(", ") + ".",
             ) { style = style.copy(boutons = it) }
         }
-
-        Spacer(Modifier.height(8.dp))
-        Text(
-            "Tap sur la matrice = favori suivant (toute la bibliothèque s'il n'y a aucun favori).",
-            color = Discret, fontSize = 12.sp,
-        )
         Spacer(Modifier.height(20.dp))
         Button(
             onClick = { onValider(style) },
