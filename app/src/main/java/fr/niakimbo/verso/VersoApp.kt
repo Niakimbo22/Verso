@@ -83,11 +83,18 @@ class VersoApp : Application() {
         android.os.Process.killProcess(android.os.Process.myPid())
     }
 
-    /** App fermée et liaison Glyph perdue : redémarrage automatique, au plus une fois toutes les 10 min. */
+    /**
+     * App fermée et liaison Glyph perdue alors qu'elle avait marché : redémarrage automatique,
+     * au plus une fois toutes les 10 min.
+     */
     private fun surveillerLiaison() {
+        // Matrice prête au moins une fois dans ce processus. Sinon (Glyph Interface coupée, horaire
+        // du coucher…), redémarrer ne servirait à rien et tournerait en boucle : on ne le fait pas.
+        val dejaPrete = java.util.concurrent.atomic.AtomicBoolean(false)
+        appScope.launch { matrix.state.collect { if (it == MatrixState.Ready) dejaPrete.set(true) } }
         appScope.launch {
             matrix.redemarrageConseille.collect { perdu ->
-                if (!perdu) return@collect
+                if (!perdu || !dejaPrete.get()) return@collect
                 val dernier = getSharedPreferences("verso", MODE_PRIVATE).getLong(CLE_DERNIER_REDEMARRAGE, 0L)
                 if (System.currentTimeMillis() - dernier < 10 * 60_000L) {
                     journalToy.ajouter("Liaison Glyph perdue, redémarrage automatique déjà tenté il y a moins de 10 min")
