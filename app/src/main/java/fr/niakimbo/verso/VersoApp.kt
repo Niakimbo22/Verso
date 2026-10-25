@@ -114,6 +114,9 @@ class VersoApp : Application() {
     @Volatile
     var essaiDemarrage: Job? = null
 
+    /** Démarrage de ce processus (le système met jusqu'à une minute à relier le Toy ensuite). */
+    val demarrage: Long = System.currentTimeMillis()
+
     /** Vrai tant que le système a lié le Glyph Toy de Verso (Verso choisi comme Toy). */
     val toyLie = MutableStateFlow(false)
 

@@ -327,6 +327,12 @@ sealed interface EtatToy {
     /** Lié la dernière fois, jamais délié depuis, mais pas relancé (ex. après un redémarrage). */
     data class ChoisiNonLance(val depuis: Long) : EtatToy
 
+    /**
+     * Verso vient de (re)démarrer (mise à jour, bouton Redémarrer…) : le système relance le Toy tout
+     * seul, mais il lui faut parfois jusqu'à une minute. Pas une erreur, on attend.
+     */
+    data object Relance : EtatToy
+
     /** Le système l'a délié : un autre Toy a sans doute été choisi. */
     data class Delie(val depuis: Long, val cause: String?) : EtatToy
 
@@ -334,9 +340,19 @@ sealed interface EtatToy {
     data object Jamais : EtatToy
 
     companion object {
-        fun calculer(lie: Boolean, derniereLiaison: Long, dernierDeliement: Long, cause: String? = null): EtatToy = when {
+        /** Délai laissé au système pour relancer le Toy après un démarrage de Verso. */
+        const val ATTENTE_RELANCE_MS = 3 * 60_000L
+
+        fun calculer(
+            lie: Boolean,
+            derniereLiaison: Long,
+            dernierDeliement: Long,
+            cause: String? = null,
+            depuisDemarrageMs: Long = Long.MAX_VALUE,
+        ): EtatToy = when {
             lie -> Lie
             derniereLiaison == 0L -> Jamais
+            dernierDeliement < derniereLiaison && depuisDemarrageMs < ATTENTE_RELANCE_MS -> Relance
             dernierDeliement < derniereLiaison -> ChoisiNonLance(derniereLiaison)
             else -> Delie(dernierDeliement, cause)
         }
@@ -355,6 +371,11 @@ private fun date(ms: Long): String =
 private fun StatutToy(etat: EtatToy, onChoisirToy: () -> Unit) {
     val (couleur, titre, texte) = when (etat) {
         EtatToy.Lie -> Triple(Vert, "Verso est ton Glyph Toy", "Le modèle choisi reste affiché app fermée.")
+        EtatToy.Relance -> Triple(
+            Dim,
+            "Relance du Glyph Toy…",
+            "Verso vient de redémarrer : le système relance le Toy tout seul (jusqu'à une minute). Rien à faire.",
+        )
         is EtatToy.ChoisiNonLance -> Triple(
             Ambre,
             "Verso est choisi, mais le système ne l'a pas lancé",
@@ -378,7 +399,7 @@ private fun StatutToy(etat: EtatToy, onChoisirToy: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .background(Panel, shape)
-            .border(1.dp, if (etat == EtatToy.Lie) Border else couleur, shape)
+            .border(1.dp, if (etat == EtatToy.Lie || etat == EtatToy.Relance) Border else couleur, shape)
             .padding(14.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -388,7 +409,7 @@ private fun StatutToy(etat: EtatToy, onChoisirToy: () -> Unit) {
         }
         Spacer(Modifier.height(6.dp))
         Text(texte, color = Dim, fontSize = 12.sp, lineHeight = 16.sp)
-        if (etat != EtatToy.Lie) {
+        if (etat != EtatToy.Lie && etat != EtatToy.Relance) {
             Spacer(Modifier.height(10.dp))
             Button(
                 onClick = onChoisirToy,
