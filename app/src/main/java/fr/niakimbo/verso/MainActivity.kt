@@ -11,6 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import fr.niakimbo.verso.toy.ChoixToy
@@ -35,6 +36,13 @@ class MainActivity : ComponentActivity() {
         setContent {
             val state by updates.state.collectAsStateWithLifecycle()
             val toyLie by app.toyLie.collectAsStateWithLifecycle()
+            // Relu toutes les 10 s : « Relance du Toy… » laisse la place au vrai statut après 3 min.
+            val maintenant by produceState(System.currentTimeMillis()) {
+                while (true) {
+                    kotlinx.coroutines.delay(10_000)
+                    value = System.currentTimeMillis()
+                }
+            }
             VersoScreen(
                 state = state,
                 onUpdate = ::onUpdateClicked,
@@ -48,7 +56,10 @@ class MainActivity : ComponentActivity() {
                 store = app.store,
                 journalToy = app.journalToy,
                 // toyLie change à chaque liaison/déliaison : les dates relues ici sont à jour.
-                etatToy = EtatToy.calculer(toyLie, app.store.derniereLiaison, app.store.dernierDeliement, app.store.contexteDeliement),
+                etatToy = EtatToy.calculer(
+                    toyLie, app.store.derniereLiaison, app.store.dernierDeliement, app.store.contexteDeliement,
+                    depuisDemarrageMs = maintenant - app.demarrage,
+                ),
                 onChoisirToy = { app.journalToy.ajouter(ChoixToy.ouvrir(this)) },
                 sectionWidgets = { SectionWidgets(app) },
             )
