@@ -40,8 +40,7 @@ class WidgetActions : BroadcastReceiver() {
     private suspend fun basculer(app: VersoApp) {
         val actif = app.store.modeleActif
         if (actif != null) {
-            app.store.dernierModele = actif
-            app.player.eteindre()
+            app.player.eteindre() // retient aussi le modèle pour le rallumer
         } else {
             val id = app.store.dernierModele ?: ordreDefilement(app).firstOrNull() ?: return
             val modele = app.catalogue.resoudre(id) ?: return

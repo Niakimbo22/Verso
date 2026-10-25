@@ -100,6 +100,12 @@ class VersoToyService : Service() {
     }
 
     private fun brancher() {
+        // Le Toy est là : l'essai « canal app » prévu après un démarrage n'a plus lieu d'être.
+        app.essaiDemarrage?.let {
+            if (it.isActive) app.journalToy.ajouter("Essai canal app annulé : le Toy vient d'être lié")
+            it.cancel()
+        }
+        app.essaiDemarrage = null
         app.store.derniereLiaison = System.currentTimeMillis()
         SurveillanceToy.surLiaison(this)
         app.toyLie.value = true
