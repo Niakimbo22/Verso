@@ -2,7 +2,6 @@ package fr.niakimbo.verso.modele
 
 import android.content.Context
 import android.os.PowerManager
-import android.os.SystemClock
 import fr.niakimbo.verso.reglage.Catalogue
 import fr.niakimbo.verso.matrix.MatrixController
 import fr.niakimbo.verso.matrix.MatrixFrame
@@ -48,13 +47,8 @@ class ModelePlayer(
         private set
     private var toyLie = false
 
-    private val power = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-
-    /** Dernier envoi d'une image de la boucle (horloge « uptime »), pour le débit écran éteint. */
-    private var dernierEnvoiBoucle = 0L
-
     private val wakeLock: PowerManager.WakeLock =
-        power
+        (context.getSystemService(Context.POWER_SERVICE) as PowerManager)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "verso:animation")
             .apply { setReferenceCounted(false) }
 
@@ -187,7 +181,6 @@ class ModelePlayer(
             if (modele.dynamique != null) {
                 while (isActive) {
                     delay(modele.msAvantProchaineImage())
-                    if (debitLimite()) continue
                     envoyer(modele.frameDynamique()) ?: return@launch
                     // Blocs rapides (texte défilant, secondes) : comme une animation.
                     if (modele.periodeMs != null) {
@@ -197,7 +190,7 @@ class ModelePlayer(
             } else {
                 while (isActive) {
                     for (image in modele.images) {
-                        if (!debitLimite()) envoyer(image.frame) ?: return@launch
+                        envoyer(image.frame) ?: return@launch
                         if (store.animationsEveillees) wakeLock.acquire(WAKE_LOCK_MS) else relacherEveil()
                         delay(image.dureeMs)
                     }
@@ -207,23 +200,11 @@ class ModelePlayer(
     }
 
     /**
-     * Écran éteint, au plus une image par seconde ([DEBIT_ECRAN_ETEINT_MS]) : l'animation garde sa
-     * vitesse mais saute des images. Constat du 25/10 (v0.1.41) : écran éteint, le service Glyph perd
-     * des images même à 2 i/s, et à ~9 i/s (Pluie) il se fige jusqu'à couper/rallumer Glyph.
-     * Vrai = cette image est sautée.
-     */
-    private fun debitLimite(): Boolean {
-        if (power.isInteractive) return false
-        return SystemClock.uptimeMillis() - dernierEnvoiBoucle < DEBIT_ECRAN_ETEINT_MS
-    }
-
-    /**
      * Envoie une image de la boucle, sous le même verrou que jouer()/eteindre() : une boucle
      * annulée ne peut plus glisser une image après celle qui l'a remplacée. Null = boucle annulée.
      */
     private fun CoroutineScope.envoyer(frame: MatrixFrame): Unit? = synchronized(this@ModelePlayer) {
         if (!isActive) return null
-        dernierEnvoiBoucle = SystemClock.uptimeMillis()
         dernierFrame = frame
         controller.show(frame, journal = false)
     }
@@ -241,8 +222,5 @@ class ModelePlayer(
     private companion object {
         /** Renouvelé à chaque image : se relâche tout seul 1 min après l'arrêt de l'animation. */
         const val WAKE_LOCK_MS = 60_000L
-
-        /** Écran éteint : écart minimal entre deux images envoyées par la boucle. */
-        const val DEBIT_ECRAN_ETEINT_MS = 1_000L
     }
 }
