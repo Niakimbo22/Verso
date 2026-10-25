@@ -53,22 +53,17 @@ fun SectionWidgets(app: VersoApp) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             widgets.forEachIndexed { i, (format, id) ->
                 val style = app.stylesWidget.lire(id, format)
-                val forme = RoundedCornerShape(14.dp)
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(forme)
-                        .background(Color(0xFF111111))
-                        .border(1.dp, Color(0xFF2A2A2A), forme)
-                        .clickable {
-                            context.startActivity(
-                                Intent(context, ConfigWidgetActivity::class.java)
-                                    .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id),
-                            )
-                        }
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                fr.niakimbo.verso.ui.verre.PanneauVerre(
+                    Modifier.fillMaxWidth(),
+                    forme = RoundedCornerShape(20.dp),
+                    onClick = {
+                        context.startActivity(
+                            Intent(context, ConfigWidgetActivity::class.java)
+                                .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id),
+                        )
+                    },
                 ) {
+                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("${format.label} n°${i + 1}", color = Color.White, fontSize = 14.sp)
                         Text(
@@ -77,6 +72,7 @@ fun SectionWidgets(app: VersoApp) {
                         )
                     }
                     Text("⚙", color = Color.White, fontSize = 18.sp)
+                }
                 }
             }
         }

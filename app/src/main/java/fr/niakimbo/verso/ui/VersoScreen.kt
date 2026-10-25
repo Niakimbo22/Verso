@@ -71,12 +71,14 @@ fun VersoScreen(
     }
     var diagnosticOuvert by rememberSaveable { mutableStateOf(false) }
 
+    val defilement = rememberScrollState()
+    // Liquid Glass : tout l'écran est posé sur le fond animé que le verre réfracte.
+    fr.niakimbo.verso.ui.verre.EcranVerre(defilement = defilement) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
             .safeDrawingPadding()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(defilement)
             .padding(24.dp),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -124,6 +126,7 @@ fun VersoScreen(
             })
         }
     }
+    }
 }
 
 @Composable
@@ -142,12 +145,7 @@ private fun UpdateSection(
                 fontSize = 16.sp,
             )
             Spacer(Modifier.height(12.dp))
-            Button(
-                onClick = { onUpdate(state) },
-                colors = ButtonDefaults.buttonColors(containerColor = NothingRed, contentColor = Color.White),
-            ) {
-                Text("Mettre à jour")
-            }
+            fr.niakimbo.verso.ui.verre.BoutonVerre("Mettre à jour", { onUpdate(state) }, principal = true)
             if (state.awaitingPermission) {
                 Spacer(Modifier.height(12.dp))
                 Note("Autorise l'installation d'apps depuis Verso, puis reviens ici.")

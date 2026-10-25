@@ -88,8 +88,8 @@ fun BarreCreer(onImporte: () -> Unit) {
     }
 
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        BoutonCreer("✎", "Créer un dessin", Modifier.weight(2f), principal = true) { CreateurActivity.ouvrir(context) }
-        BoutonCreer("⇩", "Importer", Modifier.weight(1f)) { menuImport = true }
+        fr.niakimbo.verso.ui.verre.BoutonVerre("✎  Créer un dessin", { CreateurActivity.ouvrir(context) }, Modifier.weight(2f), principal = true, taille = 14.sp)
+        fr.niakimbo.verso.ui.verre.BoutonVerre("⇩  Importer", { menuImport = true }, Modifier.weight(1f), taille = 14.sp)
     }
 
     if (menuImport) {

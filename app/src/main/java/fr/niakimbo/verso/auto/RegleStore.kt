@@ -27,6 +27,18 @@ class RegleStore(context: Context) {
         _actif.value = v
     }
 
+    private val _lieu = MutableStateFlow(lireLieu())
+
+    /** Ville pour le lever / coucher du soleil (null = pas encore choisie). */
+    val lieu: StateFlow<Lieu?> = _lieu
+
+    fun setLieu(l: Lieu?) {
+        prefs.edit().apply {
+            if (l == null) remove(CLE_LIEU) else putString(CLE_LIEU, JSONObject().put("nom", l.nom).put("lat", l.lat).put("lon", l.lon).toString())
+        }.apply()
+        _lieu.value = l
+    }
+
     @Synchronized
     fun enregistrer(r: Regle) {
         val liste = _regles.value.toMutableList()
@@ -45,7 +57,7 @@ class RegleStore(context: Context) {
         if (liste != _regles.value) ecrire(liste)
     }
 
-    fun nouvelId(): String = "regle-" + java.lang.Long.toString(System.currentTimeMillis(), 36)
+    fun nouvelId(): String = "regle-" + java.lang.Long.toString(System.nanoTime() xor System.currentTimeMillis(), 36).trimStart('-')
 
     // --- Mémoire du moteur (voir Decision) ---
 
@@ -65,10 +77,19 @@ class RegleStore(context: Context) {
                 .apply()
         }
 
-    /** Jour (epochDay) du dernier réveil déclenché : un seul par jour. */
-    var dernierReveil: Long
-        get() = prefs.getLong(CLE_REVEIL, -1)
-        set(v) = prefs.edit().putLong(CLE_REVEIL, v).apply()
+    /** Jour (epochDay) où chaque règle « moment » s'est déclenchée pour la dernière fois : une fois par jour. */
+    fun dernierMoment(id: String): Long = prefs.getLong(CLE_MOMENT + id, -1)
+    fun setDernierMoment(id: String, jour: Long) = prefs.edit().putLong(CLE_MOMENT + id, jour).apply()
+
+    /** Prochain changement de favori d'une règle « Défiler » (ms epoch, 0 = aucun). */
+    var prochainDefilement: Long
+        get() = prefs.getLong(CLE_DEFILER, 0L)
+        set(v) = prefs.edit().putLong(CLE_DEFILER, v).apply()
+
+    /** Appareils Bluetooth connectés (tenu à jour par [BluetoothRecepteur], même app fermée). */
+    var bluetooth: Set<String>
+        get() = prefs.getStringSet(CLE_BT, emptySet()).orEmpty()
+        set(v) = prefs.edit().putStringSet(CLE_BT, v).apply()
 
     private fun ecrire(liste: List<Regle>) {
         prefs.edit().putString(CLE_REGLES, JSONArray(liste.map(::versJson)).toString()).apply()
@@ -82,6 +103,12 @@ class RegleStore(context: Context) {
         emptyList()
     }
 
+    private fun lireLieu(): Lieu? = try {
+        prefs.getString(CLE_LIEU, null)?.let { JSONObject(it) }?.let { Lieu(it.getString("nom"), it.getDouble("lat"), it.getDouble("lon")) }
+    } catch (_: Exception) {
+        null
+    }
+
     companion object {
         private const val CLE_ACTIF = "actif"
         private const val CLE_REGLES = "regles"
@@ -89,56 +116,102 @@ class RegleStore(context: Context) {
         private const val CLE_EN_COURS_MODELE = "en_cours_modele"
         private const val CLE_EN_COURS_REVENIR = "en_cours_revenir"
         private const val CLE_BASE = "base"
-        private const val CLE_REVEIL = "dernier_reveil"
+        private const val CLE_MOMENT = "moment_"
+        private const val CLE_DEFILER = "prochain_defilement"
+        private const val CLE_LIEU = "lieu"
+        private const val CLE_BT = "bluetooth_connectes"
 
         /** Format documenté dans VERSO_SPEC §3.6. */
         fun versJson(r: Regle): JSONObject = JSONObject().apply {
             put("id", r.id)
             put("nom", r.nom)
-            put("modele", r.modele ?: JSONObject.NULL)
             put("active", r.active)
             put("revenir", r.revenir)
-            put("quand", JSONObject().apply {
-                put("type", r.quand.type)
-                when (val d = r.quand) {
-                    is Declencheur.Plage -> {
-                        put("debut", d.debut)
-                        put("fin", d.fin)
-                        put("jours", JSONArray(d.jours.sorted().map { it.value }))
-                    }
-                    is Declencheur.Reveil -> {
-                        put("debut", d.debut)
-                        put("fin", d.fin)
-                    }
-                    is Declencheur.BatterieFaible -> put("seuil", d.seuil)
-                    is Declencheur.Casque -> d.appareil?.let { put("appareil", it) }
-                    Declencheur.Charge, Declencheur.NePasDeranger -> Unit
+            put("toutes", r.toutes)
+            put("si", JSONArray(r.conditions.map(::declencheurJson)))
+            put("alors", JSONObject().apply {
+                when (val a = r.action) {
+                    is Action.Afficher -> put("type", "modele").put("modele", a.modele)
+                    Action.Eteindre -> put("type", "eteindre")
+                    Action.Hasard -> put("type", "hasard")
+                    is Action.Defiler -> put("type", "defiler").put("minutes", a.minutes)
                 }
             })
         }
 
-        fun depuisJson(o: JSONObject): Regle? {
-            val q = o.optJSONObject("quand") ?: return null
-            val quand: Declencheur = when (q.optString("type")) {
-                Declencheur.PLAGE -> Declencheur.Plage(
-                    q.optInt("debut", 22 * 60).coerceIn(0, 1439),
-                    q.optInt("fin", 7 * 60).coerceIn(0, 1439),
-                    q.optJSONArray("jours")?.let { a ->
-                        (0 until a.length()).mapNotNull { i -> a.optInt(i).takeIf { it in 1..7 }?.let(DayOfWeek::of) }.toSet()
-                    }?.takeIf { it.isNotEmpty() } ?: Declencheur.TOUS_LES_JOURS,
-                )
-                Declencheur.REVEIL -> Declencheur.Reveil(q.optInt("debut", 300).coerceIn(0, 1439), q.optInt("fin", 720).coerceIn(0, 1439))
-                Declencheur.CHARGE -> Declencheur.Charge
-                Declencheur.BATTERIE -> Declencheur.BatterieFaible(q.optInt("seuil", 20).coerceIn(1, 99))
-                Declencheur.CASQUE -> Declencheur.Casque(q.optString("appareil").takeIf { it.isNotBlank() })
-                Declencheur.DND -> Declencheur.NePasDeranger
-                else -> return null
+        private fun jours(j: Set<DayOfWeek>) = JSONArray(j.sorted().map { it.value })
+
+        private fun declencheurJson(d: Declencheur): JSONObject = JSONObject().apply {
+            put("type", d.type)
+            when (d) {
+                is Declencheur.Plage -> put("debut", d.debut).put("fin", d.fin).put("jours", jours(d.jours))
+                is Declencheur.AHeure -> put("minute", d.minute).put("jours", jours(d.jours))
+                is Declencheur.Reveil -> put("debut", d.debut).put("fin", d.fin)
+                is Declencheur.Soleil -> put("nuit", d.nuit).put("decalage", d.decalage)
+                is Declencheur.Date -> put("jour", d.jour).put("mois", d.mois)
+                is Declencheur.AvantAlarme -> put("minutes", d.minutes)
+                is Declencheur.Charge -> d.source?.let { put("source", it) }
+                is Declencheur.BatterieFaible -> put("seuil", d.seuil)
+                is Declencheur.BatteriePleine -> put("seuil", d.seuil)
+                is Declencheur.Ecran -> put("verrouille", d.verrouille)
+                is Declencheur.Sonnerie -> d.mode?.let { put("mode", it) }
+                is Declencheur.Casque -> d.appareil?.let { put("appareil", it) }
+                is Declencheur.Bluetooth -> d.appareil?.let { put("appareil", it) }
+                is Declencheur.Reseau -> put("reseau", d.type_)
+                Declencheur.Economie, Declencheur.NePasDeranger, Declencheur.Avion, Declencheur.Lampe -> Unit
             }
+        }
+
+        private fun lireJours(q: JSONObject): Set<DayOfWeek> =
+            q.optJSONArray("jours")?.let { a ->
+                (0 until a.length()).mapNotNull { i -> a.optInt(i).takeIf { it in 1..7 }?.let(DayOfWeek::of) }.toSet()
+            }?.takeIf { it.isNotEmpty() } ?: Declencheur.TOUS_LES_JOURS
+
+        private fun minute(q: JSONObject, cle: String, defaut: Int) = q.optInt(cle, defaut).coerceIn(0, 1439)
+        private fun texte(q: JSONObject, cle: String) = q.optString(cle).takeIf { it.isNotBlank() }
+
+        private fun depuisJsonDeclencheur(q: JSONObject): Declencheur? = when (q.optString("type")) {
+            Declencheur.PLAGE -> Declencheur.Plage(minute(q, "debut", 22 * 60), minute(q, "fin", 7 * 60), lireJours(q))
+            Declencheur.A_HEURE -> Declencheur.AHeure(minute(q, "minute", 18 * 60), lireJours(q))
+            Declencheur.REVEIL -> Declencheur.Reveil(minute(q, "debut", 300), minute(q, "fin", 720))
+            Declencheur.SOLEIL -> Declencheur.Soleil(q.optBoolean("nuit", true), q.optInt("decalage", 0).coerceIn(-180, 180))
+            Declencheur.DATE -> Declencheur.Date(q.optInt("jour", 1).coerceIn(1, 31), q.optInt("mois", 1).coerceIn(1, 12))
+            Declencheur.ALARME -> Declencheur.AvantAlarme(q.optInt("minutes", 30).coerceIn(1, 720))
+            Declencheur.CHARGE -> Declencheur.Charge(texte(q, "source"))
+            Declencheur.BATTERIE -> Declencheur.BatterieFaible(q.optInt("seuil", 20).coerceIn(1, 99))
+            Declencheur.PLEINE -> Declencheur.BatteriePleine(q.optInt("seuil", 100).coerceIn(50, 100))
+            Declencheur.ECONOMIE -> Declencheur.Economie
+            Declencheur.ECRAN -> Declencheur.Ecran(q.optBoolean("verrouille", true))
+            Declencheur.DND -> Declencheur.NePasDeranger
+            Declencheur.SONNERIE -> Declencheur.Sonnerie(texte(q, "mode"))
+            Declencheur.AVION -> Declencheur.Avion
+            Declencheur.LAMPE -> Declencheur.Lampe
+            Declencheur.CASQUE -> Declencheur.Casque(texte(q, "appareil"))
+            Declencheur.BLUETOOTH -> Declencheur.Bluetooth(texte(q, "appareil"))
+            Declencheur.RESEAU -> Declencheur.Reseau(texte(q, "reseau") ?: Declencheur.WIFI)
+            else -> null
+        }
+
+        fun depuisJson(o: JSONObject): Regle? {
+            val id = o.optString("id").takeIf { it.isNotBlank() } ?: return null
+            // Format v1 (partie 1) : une seule condition « quand » et un « modele ».
+            val conditions = o.optJSONArray("si")?.let { a -> (0 until a.length()).mapNotNull { depuisJsonDeclencheur(a.getJSONObject(it)) } }
+                ?: listOfNotNull(o.optJSONObject("quand")?.let(::depuisJsonDeclencheur))
+            if (conditions.isEmpty()) return null
+            val action = o.optJSONObject("alors")?.let { a ->
+                when (a.optString("type")) {
+                    "modele" -> texte(a, "modele")?.let { Action.Afficher(it) } ?: Action.Eteindre
+                    "hasard" -> Action.Hasard
+                    "defiler" -> Action.Defiler(a.optInt("minutes", 15).coerceIn(1, 1440))
+                    else -> Action.Eteindre
+                }
+            } ?: if (o.isNull("modele") || !o.has("modele")) Action.Eteindre else Action.Afficher(o.optString("modele"))
             return Regle(
-                id = o.optString("id").takeIf { it.isNotBlank() } ?: return null,
+                id = id,
                 nom = o.optString("nom"),
-                quand = quand,
-                modele = if (o.isNull("modele")) null else o.optString("modele"),
+                conditions = conditions,
+                action = action,
+                toutes = o.optBoolean("toutes", true),
                 active = o.optBoolean("active", true),
                 revenir = o.optBoolean("revenir", true),
             )

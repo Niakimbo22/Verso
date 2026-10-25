@@ -21,7 +21,7 @@ class ReglesTest {
     ) = Contexte(t(h, m, jour), charge, batterie, casques, dnd)
 
     private val nuit = Regle("nuit", "Nuit", Declencheur.Plage(22 * 60, 7 * 60), "lune")
-    private val charge = Regle("charge", "Charge", Declencheur.Charge, "chargement")
+    private val charge = Regle("charge", "Charge", Declencheur.Charge(), "chargement")
 
     @Test
     fun plageSimple() {
@@ -34,7 +34,7 @@ class ReglesTest {
 
     @Test
     fun plagePasseMinuit() {
-        val p = nuit.quand as Declencheur.Plage
+        val p = nuit.conditions[0] as Declencheur.Plage
         assertTrue(Evaluation.dansPlage(p, t(23)))
         assertTrue(Evaluation.dansPlage(p, t(2)))
         assertTrue(Evaluation.dansPlage(p, t(6, 59)))
@@ -75,9 +75,9 @@ class ReglesTest {
     @Test
     fun prochaineFrontiere() {
         val regles = listOf(nuit)
-        assertEquals(t(22), Evaluation.prochaineFrontiere(regles, t(12, 30)))
-        assertEquals(t(7, jour = 26), Evaluation.prochaineFrontiere(regles, t(22)))
-        assertNull(Evaluation.prochaineFrontiere(listOf(charge), t(12)))
+        assertEquals(t(22), Evaluation.prochaineFrontiere(regles, ctx(12, 30)))
+        assertEquals(t(7, jour = 26), Evaluation.prochaineFrontiere(regles, ctx(22)))
+        assertNull(Evaluation.prochaineFrontiere(listOf(charge), ctx(12)))
     }
 
     @Test
@@ -128,14 +128,14 @@ class ReglesTest {
     @Test
     fun regleModifieePendantQuelleSApplique_reappliquee() {
         val m = Decision.evaluer(Decision.Memoire(), nuit, "pluie").memoire
-        val r = Decision.evaluer(m, nuit.copy(modele = "etoile"), "lune")
+        val r = Decision.evaluer(m, nuit.copy(action = Action.Afficher("etoile")), "lune")
         assertEquals("etoile", r.afficher?.modele)
         assertEquals("pluie", r.memoire.base)
     }
 
     @Test
     fun eteindreEstUnModele() {
-        val dodo = nuit.copy(modele = null)
+        val dodo = nuit.copy(action = Action.Eteindre)
         val r = Decision.evaluer(Decision.Memoire(), dodo, "pluie")
         assertTrue(r.afficher != null)
         assertNull(r.afficher!!.modele)
@@ -153,5 +153,102 @@ class ReglesTest {
         val res = Decision.moment(m, "soleil", "chargement")
         assertEquals("soleil", res.afficher?.modele)
         assertEquals("soleil", Decision.evaluer(res.memoire, null, "soleil").memoire.base)
+    }
+
+    // ---------- Partie 1 bis : nouveaux déclencheurs, ET / OU, actions ----------
+
+    private val grenoble = Lieu("Grenoble", 45.188, 5.724)
+
+    @Test
+    fun soleil_grenoble() {
+        val zone = java.time.ZoneId.of("Europe/Paris")
+        val (lever, coucher) = Soleil.heures(java.time.LocalDate.of(2026, 10, 25), grenoble, zone)!!
+        // Vérifié : lever ~07:10, coucher ~17:30 (heure d'hiver).
+        assertTrue("lever $lever", lever.isAfter(java.time.LocalTime.of(6, 50)) && lever.isBefore(java.time.LocalTime.of(7, 30)))
+        assertTrue("coucher $coucher", coucher.isAfter(java.time.LocalTime.of(17, 10)) && coucher.isBefore(java.time.LocalTime.of(17, 50)))
+        val (eteLever, eteCoucher) = Soleil.heures(java.time.LocalDate.of(2026, 6, 21), grenoble, zone)!!
+        assertTrue("été $eteLever", eteLever.isBefore(java.time.LocalTime.of(6, 0)))
+        assertTrue("été $eteCoucher", eteCoucher.isAfter(java.time.LocalTime.of(21, 15)))
+    }
+
+    @Test
+    fun soleil_nuitEtJour() {
+        val zone = java.time.ZoneId.of("Europe/Paris")
+        fun c(h: Int) = Contexte(t(h), lieu = grenoble, zone = zone)
+        val nuit = Declencheur.Soleil(nuit = true)
+        assertTrue(Evaluation.vraie(nuit, c(22)))
+        assertTrue(Evaluation.vraie(nuit, c(5)))
+        assertFalse(Evaluation.vraie(nuit, c(12)))
+        assertTrue(Evaluation.vraie(Declencheur.Soleil(nuit = false), c(12)))
+        // Sans ville : jamais vrai.
+        assertFalse(Evaluation.vraie(nuit, Contexte(t(23))))
+        // Prochaine frontière à midi : le coucher du jour.
+        val f = Evaluation.prochaineFrontiere(listOf(Regle("s", "S", nuit, "lune")), c(12))!!
+        assertTrue("frontière $f", f.hour == 17)
+    }
+
+    @Test
+    fun combinaisons_etOu() {
+        val etNuitCharge = Regle("r", "R", listOf(nuit.conditions[0], Declencheur.Charge()), Action.Afficher("lune"), toutes = true)
+        assertFalse(Evaluation.vraie(etNuitCharge, ctx(23)))
+        assertTrue(Evaluation.vraie(etNuitCharge, ctx(23, charge = true)))
+        val ou = etNuitCharge.copy(toutes = false)
+        assertTrue(Evaluation.vraie(ou, ctx(23)))
+        assertTrue(Evaluation.vraie(ou, ctx(12, charge = true)))
+        assertFalse(Evaluation.vraie(ou, ctx(12)))
+    }
+
+    @Test
+    fun batterieTelephoneConnexions() {
+        val c = Contexte(t(12), enCharge = true, batterie = 100, sourceCharge = Declencheur.SANS_FIL)
+        assertTrue(Evaluation.vraie(Declencheur.BatteriePleine(), c))
+        assertTrue(Evaluation.vraie(Declencheur.Charge(Declencheur.SANS_FIL), c))
+        assertFalse(Evaluation.vraie(Declencheur.Charge(Declencheur.CABLE), c))
+        assertTrue(Evaluation.vraie(Declencheur.Sonnerie(), Contexte(t(12), sonnerie = Declencheur.VIBREUR)))
+        assertFalse(Evaluation.vraie(Declencheur.Sonnerie(Declencheur.SILENCIEUX), Contexte(t(12), sonnerie = Declencheur.VIBREUR)))
+        assertTrue(Evaluation.vraie(Declencheur.Ecran(verrouille = true), Contexte(t(12), verrouille = true)))
+        assertTrue(Evaluation.vraie(Declencheur.Reseau(Declencheur.AUCUN), Contexte(t(12), reseau = Declencheur.AUCUN)))
+        assertTrue(Evaluation.vraie(Declencheur.Bluetooth("Nothing Watch"), Contexte(t(12), bluetooth = listOf("nothing watch"))))
+        assertTrue(Evaluation.vraie(Declencheur.Date(25, 10), ctx(9)))
+        assertFalse(Evaluation.vraie(Declencheur.Date(31, 10), ctx(9)))
+    }
+
+    @Test
+    fun avantAlarme() {
+        val alarme = t(7, jour = 26)
+        val d = Declencheur.AvantAlarme(30)
+        assertTrue(Evaluation.vraie(d, Contexte(t(6, 45, 26), prochaineAlarme = alarme)))
+        assertFalse(Evaluation.vraie(d, Contexte(t(6, 20, 26), prochaineAlarme = alarme)))
+        assertFalse(Evaluation.vraie(d, Contexte(t(7, 0, 26), prochaineAlarme = alarme)))
+        val f = Evaluation.prochaineFrontiere(listOf(Regle("a", "A", d, "soleil")), Contexte(t(23), prochaineAlarme = alarme))
+        assertEquals(t(6, 30, 26), f)
+    }
+
+    @Test
+    fun momentAvecCondition() {
+        val aDixHuit = Declencheur.AHeure(18 * 60)
+        val r = Regle("m", "M", listOf(aDixHuit, Declencheur.Charge()), Action.Afficher("soleil"), toutes = true)
+        assertTrue(r.estMoment)
+        val c = ctx(18)
+        assertFalse(Evaluation.momentPret(r, c) { it == aDixHuit })
+        assertTrue(Evaluation.momentPret(r, ctx(18, charge = true)) { it == aDixHuit })
+        assertTrue(Evaluation.momentPret(r.copy(toutes = false), c) { it == aDixHuit })
+        assertFalse(Evaluation.momentPret(r, ctx(18, charge = true)) { false })
+        // Un moment ne compte jamais comme règle « pendant ».
+        assertNull(Evaluation.gagnante(listOf(r), ctx(18, charge = true)))
+        assertEquals(t(18), Evaluation.prochaineFrontiere(listOf(r), ctx(12)))
+    }
+
+    @Test
+    fun defilement() {
+        val r = Regle("d", "D", listOf(Declencheur.Charge()), Action.Defiler(10))
+        var m = Decision.evaluer(Decision.Memoire(), r, "coeur", "pluie").memoire
+        assertEquals("pluie", m.base)
+        val res = Decision.defiler(m, "etoile", "coeur")
+        assertEquals("etoile", res.afficher?.modele)
+        m = res.memoire
+        // Toujours la même règle : pas de réapplication.
+        assertNull(Decision.evaluer(m, r, "autre", "etoile").afficher)
+        assertEquals("pluie", Decision.evaluer(m, null, null, "etoile").afficher?.modele)
     }
 }
