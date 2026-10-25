@@ -142,10 +142,44 @@ Format JSON d'un modèle par blocs :
 ```
 Valeurs absentes = défauts ci-dessus ; un bloc qui déborde est ramené dans la grille.
 
+### 3.6 Règles automatiques (étape 9, partie 1)
+Le modèle change tout seul selon la situation. Carte **Automatique** sur l'écran principal (état, interrupteur général) → `AutomatiqueActivity` : « En ce moment », la liste des règles, **＋ Nouvelle règle**, et des **idées** ajoutées d'un tap (nuit → Lune, réveil → Soleil, charge → Chargement, batterie faible → Batterie, casque → Égaliseur, Ne pas déranger → Dodo).
+
+**Éditeur guidé** : 1 · SI… (6 tuiles avec picto dot-matrix) puis 2 · ALORS AFFICHER… (un modèle de la bibliothèque, ou « Éteindre la matrice »). Réglages simples visibles (heures, seuil de batterie) ; **▸ Plus d'options** replié : nom, jours, fenêtre du réveil, casque précis, « À la fin, revenir au modèle d'avant ».
+
+| Déclencheur | Famille | Comment Verso le sait | Permission |
+|---|---|---|---|
+| Horaire (de… à…, jours) | pendant | alarme exacte aux débuts / fins de plage (`AlarmeRegles`, réveille le téléphone) | aucune (`USE_EXACT_ALARM` déjà là) |
+| Au réveil | moment | 1er `USER_PRESENT` du jour dans la fenêtre (5h-12h par défaut), rattrapé au démarrage de Verso si déjà déverrouillé | aucune |
+| En charge | pendant | `BATTERY_CHANGED` (branché) | aucune |
+| Batterie faible (10/15/20/30 %) | pendant | `BATTERY_CHANGED`, hors charge | aucune |
+| Casque / écouteurs | pendant | sorties audio (`AudioDeviceCallback` : Bluetooth A2DP/LE, filaire, USB) ; nom précis en option | aucune |
+| Ne pas déranger | pendant | `ACTION_INTERRUPTION_FILTER_CHANGED` | aucune |
+
+**Comportement** (`Decision`, testé dans `ReglesTest`) :
+- **Priorité** : la règle « pendant » la plus haute dans la liste gagne (ordre par appui long + glisser).
+- Une règle s'applique **quand la gagnante change** (elle commence, une autre passe devant, ou elle est modifiée). Tant que la gagnante ne change pas, rien n'est imposé.
+- **Choix à la main** (app, widget, ☰) : il tient jusqu'au prochain changement automatique (« option A »). Pendant une règle, c'est lui qui revient à la fin.
+- **Fin d'une règle** : retour au modèle d'avant (ou au dernier choix à la main) ; option pour garder le modèle de la règle.
+- **Moment** (réveil) : affiche le modèle une fois par jour ; il devient le modèle à remettre après une règle en cours.
+- La mémoire du moteur (règle en cours, modèle à remettre, dernier réveil) est dans `verso_auto` : après un redémarrage du processus, rien ne se redéclenche si la situation n'a pas changé.
+- Le moteur ne touche jamais la matrice lui-même : `ModelePlayer.appliquerAuto`. App fermée et Toy pas lié, il **mémorise seulement** le modèle (le Toy le reprend à sa liaison) : il n'ouvre jamais la couche app de la matrice app fermée (§3.3).
+- Chaque changement est noté dans le journal du Toy (« Auto (raison) : « Nuit » → lune »).
+- ⚠️ L'« Horaire du coucher » de Glyph Interface éteint la matrice : une règle de nuit pendant cet horaire ne se voit pas.
+
+Format JSON d'une règle (`RegleStore`, ordre de la liste = priorité) :
+```json
+{ "id": "regle-mh3k2x1a", "nom": "Nuit", "modele": "lune", "active": true, "revenir": true,
+  "quand": { "type": "plage", "debut": 1320, "fin": 420, "jours": [1,2,3,4,5,6,7] } }
+```
+`modele` null = éteindre. Types : `plage` (`debut`, `fin` en minutes, `jours` 1 = lundi), `reveil` (`debut`, `fin`), `charge`, `batterie` (`seuil`), `casque` (`appareil` optionnel), `dnd`.
+
+**Parties suivantes** : 2 · notification d'une app (modèle quelques secondes puis **fondu de luminosité** vers le modèle d'avant) et musique en cours, avec l'« Accès aux notifications » ; 3 · météo réelle (Open-Meteo, ville saisie) et Wi-Fi par nom de réseau (localisation « Toujours » acceptée par Nico).
+
 ## 4. Feuille de route après la V1 (dans cet ordre)
 
 1. **Modèles dynamiques avancés** : minuteur, visualiseur musique, notifications, météo réelle.
-2. **Modèles automatiques** : changement de modèle selon des règles (heure, musique en cours, notification d'une app précise).
+2. **Modèles automatiques** : en cours (§3.6, étape 9).
 3. **Connexion Trame** : afficher la créature Trame au dos du téléphone. Pas urgent.
 4. **Intégration NCOS.**
 
@@ -178,3 +212,4 @@ Valeurs absentes = défauts ci-dessus ; un bloc qui déborde est ramené dans la
 6. Plein de modèles (90) + bibliothèque par rayons.
 7. Créateur de modèles : éditeur dessin (statique et animé), import/export JSON (§3.5). Refait en version simple le 25/10 ; le créateur par blocs a été retiré (trop compliqué).
 8. Ordre des favoris (glisser-déposer) + finitions : correctif de l'essai « canal app » au démarrage, bouton Rallumer, tap sur la grande matrice = réglages, vibrations, onglet « Mes » dans la fenêtre ☰. **V1 complète.**
+9. Règles automatiques (§3.6), en 3 parties testées une par une : 1 · moteur, menu, déclencheurs sans permission ; 2 · notifications (fondu) et musique ; 3 · météo et Wi-Fi.

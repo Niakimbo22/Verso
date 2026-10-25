@@ -64,10 +64,43 @@ class ModelePlayer(
         }
     }
 
-    /** Choix de l'utilisateur (app, plus tard widget) : affiche et mémorise. */
+    /** Prévenu de chaque choix fait à la main (id, null = éteint) : le moteur des règles automatiques s'en sert. */
+    @Volatile
+    var surChoixManuel: ((String?) -> Unit)? = null
+
+    /** Choix de l'utilisateur (app, widget, fenêtre ☰) : affiche et mémorise. */
     fun jouer(modele: Modele) {
         store.modeleActif = modele.id
         demarrer(modele)
+        surChoixManuel?.invoke(modele.id)
+    }
+
+    /**
+     * Changement décidé par une règle automatique ([modele] null = éteindre).
+     *
+     * Si personne ne peut voir la matrice (app fermée et Glyph Toy pas lié), on mémorise seulement :
+     * le Toy le reprendra à sa liaison. On n'ouvre jamais la couche app de la matrice app fermée
+     * (elle resterait collée devant le Toy, voir §3.3 de la spec).
+     */
+    @Synchronized
+    fun appliquerAuto(modele: Modele?) {
+        if (modele == null) {
+            store.modeleActif?.let { store.dernierModele = it }
+            store.modeleActif = null
+            arreterBoucle()
+            _actif.value = null
+            dernierFrame = null
+            if (doitTourner()) controller.clear()
+            return
+        }
+        store.modeleActif = modele.id
+        if (doitTourner()) {
+            demarrer(modele)
+        } else {
+            arreterBoucle()
+            _actif.value = modele
+            dernierFrame = imageInitiale(modele)
+        }
     }
 
     /** Relit le modèle mémorisé et le relance (Glyph Toy lié, retour dans l'app). */
@@ -115,6 +148,7 @@ class ModelePlayer(
         _actif.value = null
         dernierFrame = null
         controller.clear()
+        surChoixManuel?.invoke(null)
     }
 
     /**

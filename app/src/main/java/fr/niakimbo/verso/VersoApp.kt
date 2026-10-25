@@ -1,6 +1,7 @@
 package fr.niakimbo.verso
 
 import android.app.Application
+import fr.niakimbo.verso.auto.MoteurRegles
 import fr.niakimbo.verso.createur.Capteurs
 import fr.niakimbo.verso.createur.MesModelesStore
 import fr.niakimbo.verso.matrix.GlyphBackend
@@ -44,6 +45,9 @@ class VersoApp : Application() {
     val journalToy: JournalToy by lazy { JournalToy(this) }
     val favoris: FavorisStore by lazy { FavorisStore(this) }
     val stylesWidget: StylesWidgetStore by lazy { StylesWidgetStore(this) }
+
+    /** Règles automatiques (changement de modèle selon l'heure, la charge, le casque…). */
+    val moteurRegles: MoteurRegles by lazy { MoteurRegles(this) }
 
     @Volatile
     private var derniereRelance = 0L
@@ -127,6 +131,7 @@ class VersoApp : Application() {
         // Chaque (re)démarrage du processus est noté : on voit qui a réveillé Verso
         // (ouverture de l'app, liaison du Toy, démarrage du téléphone).
         journalToy.ajouter("Processus Verso démarré")
+        moteurRegles.demarrer()
 
         // Widgets : redessinés quand le modèle actif, ses réglages ou le style d'un widget changent.
         appScope.launch {

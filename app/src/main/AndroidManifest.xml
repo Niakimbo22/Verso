@@ -62,6 +62,22 @@
             android:name=".toy.SurveillanceToy"
             android:exported="false" />
 
+        <!-- Règles automatiques : début / fin d'une plage horaire, changement d'heure ou de fuseau -->
+        <receiver
+            android:name=".auto.AlarmeRegles"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Règles automatiques : liste, création guidée, recettes -->
+        <activity
+            android:name=".auto.AutomatiqueActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
         <receiver
             android:name=".toy.DemarrageReceiver"
             android:exported="true">
@@ -74,7 +90,8 @@
         <!--
             Glyph Toy « Verso » : à choisir dans
             Réglages › Glyph Interface › Flip to Glyph › Always-on Glyph Toy.
-            Un Toy passe devant l'affichage des apps : le modèle reste affiché app fermée.
+            Le Toy AOD est la couche la plus basse : la couche app passe devant (fermée par
+            closeAppMatrix au passage au Toy, voir VERSO_SPEC §3.3). Il garde le modèle affiché app fermée.
         -->
         <service
             android:name=".toy.VersoToyService"

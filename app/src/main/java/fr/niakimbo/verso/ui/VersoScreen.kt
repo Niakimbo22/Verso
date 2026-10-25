@@ -62,6 +62,7 @@ fun VersoScreen(
     etatToy: EtatToy,
     onChoisirToy: () -> Unit,
     sectionWidgets: @Composable () -> Unit = {},
+    sectionAuto: @Composable () -> Unit = {},
 ) {
     // Rechargée quand un modèle est créé, modifié ou supprimé (rayon « Mes modèles »).
     val revisionModeles by catalogue.revision.collectAsStateWithLifecycle()
@@ -96,6 +97,9 @@ fun VersoScreen(
         UpdateSection(state, onUpdate, onRetry)
         Spacer(Modifier.height(28.dp))
         BibliothequeSection(bibliotheque?.entrees?.filter { !it.cache }, catalogue, reglages, matrix, player, favoris, etatToy, onChoisirToy)
+
+        Spacer(Modifier.height(36.dp))
+        sectionAuto()
 
         Spacer(Modifier.height(36.dp))
         sectionWidgets()
