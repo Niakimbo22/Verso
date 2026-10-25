@@ -174,11 +174,13 @@ fun BibliothequeSection(
 
         TextButton(onClick = {
             vibreur.performHapticFeedback(HapticFeedbackType.LongPress)
-            app.relancerMatrice("bouton Relancer")
-        }) { Text("↻ Matrice figée ? Relancer", color = Dim, fontSize = 12.sp) }
+            // Redémarrer le processus = l'équivalent de « Forcer l'arrêt », le seul remède sûr.
+            app.redemarrer("bouton Matrice figée", rouvrir = true)
+        }) { Text("↻ Matrice figée ? Redémarrer Verso", color = Dim, fontSize = 12.sp) }
 
         // La matrice ne répond plus : on le dit ici (pas seulement dans Diagnostic) et on propose de relancer.
         val etatMatrice by controller.state.collectAsStateWithLifecycle()
+        val redemarrage by controller.redemarrageConseille.collectAsStateWithLifecycle()
         (etatMatrice as? MatrixState.Error)?.let { erreur ->
             Spacer(Modifier.height(14.dp))
             val forme = RoundedCornerShape(16.dp)
@@ -190,9 +192,12 @@ fun BibliothequeSection(
                 Text(erreur.message, color = Dim, fontSize = 12.sp, lineHeight = 16.sp)
                 Spacer(Modifier.height(8.dp))
                 Button(
-                    onClick = { app.relancerMatrice("bouton Reconnecter") },
+                    onClick = {
+                        if (redemarrage) app.redemarrer("bouton Redémarrer Verso", rouvrir = true)
+                        else app.relancerMatrice("bouton Reconnecter")
+                    },
                     colors = ButtonDefaults.buttonColors(containerColor = Red, contentColor = Color.White),
-                ) { Text("Reconnecter") }
+                ) { Text(if (redemarrage) "Redémarrer Verso" else "Reconnecter") }
             }
         }
 

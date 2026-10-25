@@ -41,7 +41,10 @@ class ModelePlayer(
     private var boucle: Job? = null
     private var dernierFrame: MatrixFrame? = null
 
-    private var appVisible = false
+    /** Vrai tant qu'un écran de Verso est au premier plan. */
+    @Volatile
+    var appVisible = false
+        private set
     private var toyLie = false
 
     private val wakeLock: PowerManager.WakeLock =

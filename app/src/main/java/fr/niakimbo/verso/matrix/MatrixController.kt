@@ -55,13 +55,16 @@ interface MatrixController {
     fun connect()
 
     /**
-     * Reconnexion complète au service Glyph (unInit, init, register), même si tout semble prêt.
-     *
-     * Constat du 25/10 (v0.1.28) : après que le système a délié puis relié le Glyph Toy, le SDK
-     * acceptait toujours les images mais la matrice restait figée sur la dernière. Une connexion
-     * faite avant la nouvelle liaison ne suffit pas : on la refait à chaque liaison du Toy.
+     * Se réenregistre auprès du service Glyph (sans unInit) : à chaque liaison du Toy, à l'ouverture
+     * de l'app, ou par le bouton « Relancer ».
      */
     fun relancer(raison: String)
+
+    /**
+     * Vrai quand la liaison au service Glyph est perdue pour de bon dans ce processus
+     * (le service ne répond plus) : seul un redémarrage de Verso la rétablit.
+     */
+    val redemarrageConseille: StateFlow<Boolean>
 
     /** Bascule vers le canal du Glyph Toy (lié par le système) ou revient au canal app. */
     fun setCanal(canal: Canal)

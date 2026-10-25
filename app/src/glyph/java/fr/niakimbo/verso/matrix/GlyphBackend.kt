@@ -28,8 +28,11 @@ internal object GlyphBackend {
  *
  * Tous les appels au SDK passent par un seul thread ([worker]) : pas d'appel IPC sur le
  * thread principal, et pas de course entre connexion, affichage et extinction.
- * Le GlyphMatrixManager est un singleton du processus, partagé par l'app et le Toy. Seul
- * [relancer] fait unInit(), juste avant un nouvel init() : jamais de matrice laissée sans connexion.
+ * Le GlyphMatrixManager est un singleton du processus, partagé par l'app et le Toy : on
+ * l'initialise une fois et on ne fait **jamais** unInit() (VERSO_SPEC §2). Constat du 25/10
+ * (v0.1.30) : après unInit(), un nouvel init() ne reçoit plus jamais de réponse du service Glyph.
+ * Si la liaison au service est perdue, seul un redémarrage du processus la rétablit
+ * ([redemarrageConseille]).
  *
  * Deux protections contre la matrice « figée » (constaté le 25/10, v0.1.28) :
  * - les images ne s'empilent jamais : seule la dernière commande (image ou extinction) attend
@@ -52,9 +55,16 @@ private class GlyphMatrixController(
     @Volatile
     private var serviceConnected = false
 
-    /** init() déjà appelé au moins une fois (sinon pas d'unInit() à faire avant une relance). */
+    /** init() déjà appelé au moins une fois dans ce processus. */
     @Volatile
     private var initialise = false
+
+    /** Tentatives de liaison au service Glyph restées sans réponse, d'affilée. */
+    @Volatile
+    private var liaisonsSansReponse = 0
+
+    private val _redemarrage = MutableStateFlow(false)
+    override val redemarrageConseille: StateFlow<Boolean> = _redemarrage
     private var connectTimeout: ScheduledFuture<*>? = null
 
     private val _state = MutableStateFlow<MatrixState>(MatrixState.Unavailable("Pas encore connecté"))
@@ -99,6 +109,8 @@ private class GlyphMatrixController(
         override fun onServiceConnected(name: ComponentName?) {
             executer("connexion") {
                 serviceConnected = true
+                liaisonsSansReponse = 0
+                _redemarrage.value = false
                 connectTimeout?.cancel(false)
                 log.ok("Service Glyph connecté")
                 registerDevice()
@@ -172,19 +184,11 @@ private class GlyphMatrixController(
         }
     }
 
+    /** Sans unInit() : on se réenregistre si le service est joint, sinon on tente de le joindre. */
     override fun relancer(raison: String) {
         executer("relance") {
-            log.info("Reconnexion complète au service Glyph ($raison)")
-            connectTimeout?.cancel(false)
-            if (initialise) {
-                try {
-                    manager.unInit()
-                } catch (t: Throwable) {
-                    log.warn("unInit refusé (${t.message}) : on continue")
-                }
-            }
-            serviceConnected = false
-            bindService()
+            log.info("Relance de la matrice ($raison)")
+            if (serviceConnected) registerDevice() else bindService()
         }
     }
 
@@ -296,8 +300,13 @@ private class GlyphMatrixController(
         }
         log.info("Connexion au service Glyph…")
         try {
-            manager.init(callback)
-            initialise = true
+            if (!initialise) {
+                manager.init(callback)
+                initialise = true
+            } else {
+                // Déjà initialisé : un second init() ne rebranche rien. On attend le rappel du service.
+                log.info("init() déjà fait : en attente du service Glyph")
+            }
         } catch (t: Throwable) {
             fail("Impossible de joindre le service Glyph", t)
             return
@@ -306,7 +315,12 @@ private class GlyphMatrixController(
         connectTimeout = try {
             worker.schedule({
                 if (!serviceConnected && _state.value == MatrixState.Connecting) {
-                    fail("Le service Glyph ne répond pas (système Nothing trop ancien ?)")
+                    liaisonsSansReponse++
+                    if (initialise && liaisonsSansReponse >= LIAISONS_AVANT_REDEMARRAGE) _redemarrage.value = true
+                    fail(
+                        if (_redemarrage.value) "Liaison au service Glyph perdue : il faut redémarrer Verso"
+                        else "Le service Glyph ne répond pas",
+                    )
                 }
             }, CONNECT_TIMEOUT_S, TimeUnit.SECONDS)
         } catch (_: RejectedExecutionException) {
@@ -347,6 +361,9 @@ private class GlyphMatrixController(
 
     private companion object {
         const val CONNECT_TIMEOUT_S = 6L
+
+        /** Après 2 attentes de 6 s sans réponse du service, on conseille de redémarrer le processus. */
+        const val LIAISONS_AVANT_REDEMARRAGE = 2
 
         /** Un appel IPC au service Glyph prend quelques ms : au-delà de 4 s, il est bloqué. */
         const val BLOCAGE_MS = 4_000L
