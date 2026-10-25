@@ -19,8 +19,9 @@ import kotlinx.coroutines.launch
  *
  * Le système lie ce service quand Verso est choisi dans
  * Réglages › Glyph Interface › Flip to Glyph › Always-on Glyph Toy, puis lui envoie
- * EVENT_AOD environ une fois par minute. Un Toy passe devant l'affichage des apps :
- * c'est ce qui permet au modèle de rester affiché app fermée.
+ * EVENT_AOD environ une fois par minute. Le Toy permet au modèle de rester affiché app fermée.
+ * Attention : sur le Phone (4a) Pro, le Toy AOD est la couche la plus basse ; la couche app passe
+ * devant, d'où la fermeture de cette couche à la liaison (GlyphBackend.fermerCoucheApp).
  *
  * Ce service ne parle jamais au SDK directement : il bascule le [fr.niakimbo.verso.matrix.MatrixController]
  * partagé sur le canal Toy et laisse le [fr.niakimbo.verso.modele.ModelePlayer] afficher le modèle mémorisé.

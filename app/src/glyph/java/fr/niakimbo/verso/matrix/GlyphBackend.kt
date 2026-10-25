@@ -35,6 +35,15 @@ internal object GlyphBackend {
  * Si la liaison au service est perdue, seul un redémarrage du processus la rétablit
  * ([redemarrageConseille]).
  *
+ * Couche « app » (constat du 25/10, v0.1.45, d'après le schéma de priorités officiel du SDK) :
+ * sur le Phone (4a) Pro, le Toy AOD est la couche la PLUS BASSE ; l'affichage d'une app
+ * (`setAppMatrixFrame`) passe devant lui. Cette couche garde sa dernière image tant qu'on
+ * n'appelle pas `closeAppMatrix()`, même Verso arrêté. Or chaque démarrage de Verso commence
+ * sur le canal app : la première image partait dans cette couche, puis le Toy se liait…
+ * et la matrice restait figée sur cette image pour toujours (seule la tuile Glyph off/on
+ * la vidait). D'où [fermerCoucheApp] : à la bascule vers le Toy et à chaque enregistrement
+ * en canal Toy (couche laissée par un processus précédent).
+ *
  * Deux protections contre la matrice « figée » (constaté le 25/10, v0.1.28) :
  * - les images ne s'empilent jamais : seule la dernière commande (image ou extinction) attend
  *   son tour, une animation ne peut donc pas prendre de retard sur le SDK ;
@@ -71,6 +80,13 @@ private class GlyphMatrixController(
 
     private val _canal = MutableStateFlow(Canal.APP)
     override val canal: StateFlow<Canal> = _canal
+
+    /**
+     * La couche app de la matrice contient peut-être une image (envoyée par ce processus, ou
+     * laissée par un processus précédent : d'où vrai au départ). Voir [fermerCoucheApp].
+     */
+    @Volatile
+    private var coucheAppOuverte = true
 
     private val _lastFrame = MutableStateFlow<MatrixFrame?>(null)
     override val lastFrame: StateFlow<MatrixFrame?> = _lastFrame
@@ -218,7 +234,12 @@ private class GlyphMatrixController(
             val couleurs = frame.toGlyphColors()
             // Canal Toy : setMatrixFrame (prioritaire, tient app fermée).
             // Canal app : setAppMatrixFrame (recommandé par Nothing hors Toy).
-            if (_canal.value == Canal.TOY) manager.setMatrixFrame(couleurs) else manager.setAppMatrixFrame(couleurs)
+            if (_canal.value == Canal.TOY) {
+                manager.setMatrixFrame(couleurs)
+            } else {
+                manager.setAppMatrixFrame(couleurs)
+                coucheAppOuverte = true
+            }
             compteur.incrementAndGet()
             if (journal) log.info("Image envoyée (${_canal.value}) : ${frame.litCount} LEDs allumées")
         } catch (e: GlyphException) {
@@ -245,6 +266,7 @@ private class GlyphMatrixController(
         }
         try {
             manager.closeAppMatrix()
+            coucheAppOuverte = false
             log.info("Matrice éteinte (closeAppMatrix)")
         } catch (t: Throwable) {
             // Système trop ancien pour closeAppMatrix : on envoie une image noire à la place.
@@ -265,6 +287,28 @@ private class GlyphMatrixController(
                 if (canal == Canal.TOY) "Canal Toy : Verso est le Glyph Toy actif (setMatrixFrame)"
                 else "Canal app : Verso n'est plus lié comme Toy (setAppMatrixFrame)",
             )
+            if (canal == Canal.TOY && _state.value == MatrixState.Ready && fermerCoucheApp("bascule vers le Toy")) {
+                // La couche app ne cache plus le Toy : on lui renvoie l'image en cours.
+                _lastFrame.value?.let { envoyer(it, journal = false) }
+            }
+        }
+    }
+
+    /**
+     * Vide la couche app de la matrice (`closeAppMatrix`) pour que le Toy, couche la plus basse
+     * sur le Phone (4a) Pro, redevienne visible. Sans effet si la couche est déjà vide.
+     * Vrai si la couche a été fermée.
+     */
+    private fun fermerCoucheApp(raison: String): Boolean {
+        if (!coucheAppOuverte) return false
+        return try {
+            manager.closeAppMatrix()
+            coucheAppOuverte = false
+            log.ok("Couche app fermée ($raison) : le Toy redevient visible")
+            true
+        } catch (t: Throwable) {
+            log.error("closeAppMatrix refusé ($raison)", t)
+            false
         }
     }
 
@@ -327,6 +371,8 @@ private class GlyphMatrixController(
             return
         }
         if (accepted) {
+            // Avant « prête » : l'image renvoyée ensuite par le ModelePlayer arrive après la fermeture.
+            if (_canal.value == Canal.TOY) fermerCoucheApp("enregistrement en canal Toy")
             _state.value = MatrixState.Ready
             history.recordSuccess()
             log.ok("Enregistré (${Glyph.DEVICE_25111p}) : matrice prête")

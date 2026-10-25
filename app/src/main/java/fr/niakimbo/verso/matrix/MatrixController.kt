@@ -20,10 +20,11 @@ sealed interface MatrixState {
 /**
  * Par où passent les images.
  *
- * - [APP] : `setAppMatrixFrame`, l'affichage d'une app. Il ne tient que tant que l'app est
- *   au premier plan, et n'importe quel Glyph Toy passe devant.
- * - [TOY] : `setMatrixFrame`, quand le système a lié le Glyph Toy de Verso. C'est le canal
- *   prioritaire : il reste affiché app fermée.
+ * - [APP] : `setAppMatrixFrame`, l'affichage d'une app. Sur le Phone (4a) Pro, cette couche passe
+ *   DEVANT le Toy AOD (schéma de priorités du SDK) et garde sa dernière image jusqu'à
+ *   `closeAppMatrix()`, même app fermée : il faut la fermer dès qu'on passe au Toy.
+ * - [TOY] : `setMatrixFrame`, quand le système a lié le Glyph Toy de Verso. Couche la plus basse
+ *   (sous les notifications, Flip to Glyph…), mais c'est elle qui tient app fermée.
  */
 enum class Canal { APP, TOY }
 
