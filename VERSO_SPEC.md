@@ -199,6 +199,7 @@ Vrai verre façon iOS, avec la bibliothèque **Backdrop** (`io.github.kyant0:bac
 - `EcranVerre` : fond animé (noir, lueurs rouge Nothing / blanche / rouge sombre qui dérivent à 20 images/s et suivent le défilement, grille de points façon matrice) + contenu en verre sur ce fond + éléments flottants (`dessus`) en verre sur le fond **et** le contenu qui défile dessous.
 - `Modifier.verre`, `PanneauVerre`, `BoutonVerre` (principal = teinté rouge), `PuceVerre`, `RondVerre`, effet d'appui qui enfonce le verre (ressort + vibration).
 - Partout sur l'écran principal (disque de la grande matrice, boutons, puces des rayons, statut du Toy, cartes Automatique et Widgets) et dans Automatique (barres et boutons flottants).
+- **Mini-lecteur** (`ui/MiniLecteur.kt`) : barre de verre flottante en bas de l'écran principal, toujours visible pendant le défilement : la matrice en direct (ce qui est vraiment envoyé), le nom du modèle, « Auto · « règle » » si une règle est en cours, ‹ › (favoris ou toute la bibliothèque, comme le widget), ⏻ / ▶ (éteindre / rallumer le dernier). Toucher la barre remonte à la grande matrice.
 - **Pas** de verre sur les 90 cartes de modèles (trop lourd à 90) : fond noir translucide qui laisse passer les lueurs.
 - Sans fond disponible (fenêtres qui ne sont pas dans un `EcranVerre`), `verre` retombe sur un panneau sombre classique.
 - Compose foundation/ui passent en 1.9.5 (exigé par Backdrop) ; Kotlin reste en 2.1.20.
