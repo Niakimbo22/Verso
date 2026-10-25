@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -92,13 +94,24 @@ fun DiagnosticToy(controller: MatrixController, journal: JournalToy, store: Mode
         Text("EXPÉRIENCES", color = Dim, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
         Spacer(Modifier.height(8.dp))
 
-        Text(
-            "Écran éteint : animation en pause, image fixe mise à jour chaque minute " +
-                "(le système Nothing fige la matrice si on l'anime écran éteint).",
-            color = Color.White,
-            fontSize = 12.sp,
-            lineHeight = 16.sp,
-        )
+        var eveil by remember { mutableStateOf(store.animationsEveillees) }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "Animations écran éteint (garde le processeur éveillé, consomme plus)",
+                color = Color.White,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                modifier = Modifier.weight(1f),
+            )
+            Switch(
+                checked = eveil,
+                onCheckedChange = {
+                    eveil = it
+                    store.animationsEveillees = it
+                },
+                colors = SwitchDefaults.colors(checkedTrackColor = Red),
+            )
+        }
 
         Spacer(Modifier.height(12.dp))
         var delai by remember { mutableStateOf(store.delaiExtinction) }

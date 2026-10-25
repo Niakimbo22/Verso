@@ -1,10 +1,8 @@
 package fr.niakimbo.verso.modele
 
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.os.PowerManager
+import android.os.SystemClock
 import fr.niakimbo.verso.reglage.Catalogue
 import fr.niakimbo.verso.matrix.MatrixController
 import fr.niakimbo.verso.matrix.MatrixFrame
@@ -24,11 +22,7 @@ import kotlinx.coroutines.launch
  * app fermée ou après un redémarrage.
  *
  * La boucle (animation / horloge) ne tourne que si quelqu'un peut la voir :
- * l'app est à l'écran, ou Verso est le Glyph Toy lié par le système — et **jamais écran éteint**.
- * Constat du 25/10 (v0.1.41 à 0.1.43) : écran éteint, le service Glyph du système perd des images
- * même à 1 i/s et finit par se figer (seule la tuile Glyph off/on du menu déroulant le débloque).
- * Écran éteint, la matrice garde donc une image fixe, redessinée à chaque EVENT_AOD (≈ 1/min),
- * comme l'horloge qui a toujours marché. L'animation repart au rallumage de l'écran.
+ * l'app est à l'écran, ou Verso est le Glyph Toy lié par le système.
  *
  * Tout ce qui s'affiche passe par ici, pour qu'une animation ne vienne jamais écraser
  * une image demandée ensuite (choix d'un autre modèle, image de test, extinction).
@@ -54,24 +48,17 @@ class ModelePlayer(
         private set
     private var toyLie = false
 
-    /** Écran du téléphone allumé (suivi par SCREEN_ON / SCREEN_OFF). */
-    @Volatile
-    private var ecranAllume =
-        (context.getSystemService(Context.POWER_SERVICE) as PowerManager).isInteractive
+    private val power = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+
+    /** Dernier envoi d'une image de la boucle (horloge « uptime »), pour le débit écran éteint. */
+    private var dernierEnvoiBoucle = 0L
+
+    private val wakeLock: PowerManager.WakeLock =
+        power
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "verso:animation")
+            .apply { setReferenceCounted(false) }
 
     init {
-        context.applicationContext.registerReceiver(object : BroadcastReceiver() {
-            override fun onReceive(c: Context?, intent: Intent?) {
-                when (intent?.action) {
-                    Intent.ACTION_SCREEN_ON -> setEcranAllume(true)
-                    Intent.ACTION_SCREEN_OFF -> setEcranAllume(false)
-                }
-            }
-        }, IntentFilter().apply {
-            addAction(Intent.ACTION_SCREEN_ON)
-            addAction(Intent.ACTION_SCREEN_OFF)
-        }, Context.RECEIVER_NOT_EXPORTED)
-
         // Si la matrice (re)devient prête, on renvoie tout de suite l'image en cours :
         // elle a pu être demandée avant la fin de la connexion.
         scope.launch {
@@ -161,15 +148,6 @@ class ModelePlayer(
     }
 
     @Synchronized
-    private fun setEcranAllume(allume: Boolean) {
-        ecranAllume = allume
-        if (!allume && boucle?.isActive == true) {
-            controller.log.info("Écran éteint : animation en pause, image fixe (MAJ chaque minute)")
-        }
-        actualiserBoucle()
-    }
-
-    @Synchronized
     fun setToyLie(lie: Boolean) {
         toyLie = lie
         actualiserBoucle()
@@ -194,7 +172,7 @@ class ModelePlayer(
     private fun imageInitiale(modele: Modele): MatrixFrame =
         if (modele.dynamique != null) modele.frameDynamique() else modele.apercu
 
-    private fun doitTourner() = ecranAllume && (appVisible || toyLie)
+    private fun doitTourner() = appVisible || toyLie
 
     private fun actualiserBoucle() {
         val modele = _actif.value ?: return
@@ -209,12 +187,18 @@ class ModelePlayer(
             if (modele.dynamique != null) {
                 while (isActive) {
                     delay(modele.msAvantProchaineImage())
+                    if (debitLimite()) continue
                     envoyer(modele.frameDynamique()) ?: return@launch
+                    // Blocs rapides (texte défilant, secondes) : comme une animation.
+                    if (modele.periodeMs != null) {
+                        if (store.animationsEveillees) wakeLock.acquire(WAKE_LOCK_MS) else relacherEveil()
+                    }
                 }
             } else {
                 while (isActive) {
                     for (image in modele.images) {
-                        envoyer(image.frame) ?: return@launch
+                        if (!debitLimite()) envoyer(image.frame) ?: return@launch
+                        if (store.animationsEveillees) wakeLock.acquire(WAKE_LOCK_MS) else relacherEveil()
                         delay(image.dureeMs)
                     }
                 }
@@ -223,11 +207,23 @@ class ModelePlayer(
     }
 
     /**
+     * Écran éteint, au plus une image par seconde ([DEBIT_ECRAN_ETEINT_MS]) : l'animation garde sa
+     * vitesse mais saute des images. Constat du 25/10 (v0.1.41) : écran éteint, le service Glyph perd
+     * des images même à 2 i/s, et à ~9 i/s (Pluie) il se fige jusqu'à couper/rallumer Glyph.
+     * Vrai = cette image est sautée.
+     */
+    private fun debitLimite(): Boolean {
+        if (power.isInteractive) return false
+        return SystemClock.uptimeMillis() - dernierEnvoiBoucle < DEBIT_ECRAN_ETEINT_MS
+    }
+
+    /**
      * Envoie une image de la boucle, sous le même verrou que jouer()/eteindre() : une boucle
      * annulée ne peut plus glisser une image après celle qui l'a remplacée. Null = boucle annulée.
      */
     private fun CoroutineScope.envoyer(frame: MatrixFrame): Unit? = synchronized(this@ModelePlayer) {
         if (!isActive) return null
+        dernierEnvoiBoucle = SystemClock.uptimeMillis()
         dernierFrame = frame
         controller.show(frame, journal = false)
     }
@@ -235,5 +231,18 @@ class ModelePlayer(
     private fun arreterBoucle() {
         boucle?.cancel()
         boucle = null
+        relacherEveil()
+    }
+
+    private fun relacherEveil() {
+        if (wakeLock.isHeld) wakeLock.release()
+    }
+
+    private companion object {
+        /** Renouvelé à chaque image : se relâche tout seul 1 min après l'arrêt de l'animation. */
+        const val WAKE_LOCK_MS = 60_000L
+
+        /** Écran éteint : écart minimal entre deux images envoyées par la boucle. */
+        const val DEBIT_ECRAN_ETEINT_MS = 1_000L
     }
 }
