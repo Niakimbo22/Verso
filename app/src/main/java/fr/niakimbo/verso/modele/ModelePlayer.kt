@@ -59,7 +59,6 @@ class ModelePlayer(
             controller.state.collect { state ->
                 if (state == MatrixState.Ready) {
                     synchronized(this@ModelePlayer) { dernierFrame }?.let { controller.show(it, journal = false) }
-                    store.delaiExtinction?.let(controller::setDelaiExtinction)
                 }
             }
         }
@@ -184,14 +183,14 @@ class ModelePlayer(
                     envoyer(modele.frameDynamique()) ?: return@launch
                     // Blocs rapides (texte défilant, secondes) : comme une animation.
                     if (modele.periodeMs != null) {
-                        if (store.animationsEveillees) wakeLock.acquire(WAKE_LOCK_MS) else relacherEveil()
+                        wakeLock.acquire(WAKE_LOCK_MS)
                     }
                 }
             } else {
                 while (isActive) {
                     for (image in modele.images) {
                         envoyer(image.frame) ?: return@launch
-                        if (store.animationsEveillees) wakeLock.acquire(WAKE_LOCK_MS) else relacherEveil()
+                        wakeLock.acquire(WAKE_LOCK_MS)
                         delay(image.dureeMs)
                     }
                 }
