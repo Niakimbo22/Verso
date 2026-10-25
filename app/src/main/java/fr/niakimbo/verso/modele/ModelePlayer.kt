@@ -104,8 +104,10 @@ class ModelePlayer(
         controller.show(frame)
     }
 
+    /** Éteint la matrice ; le modèle éteint est retenu pour « Rallumer » (app, widget On/Off). */
     @Synchronized
     fun eteindre() {
+        store.modeleActif?.let { store.dernierModele = it }
         store.modeleActif = null
         arreterBoucle()
         _actif.value = null

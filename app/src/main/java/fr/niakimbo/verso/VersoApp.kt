@@ -17,6 +17,7 @@ import fr.niakimbo.verso.widget.StylesWidgetStore
 import fr.niakimbo.verso.widget.WidgetMaj
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -42,6 +43,10 @@ class VersoApp : Application() {
     val journalToy: JournalToy by lazy { JournalToy(this) }
     val favoris: FavorisStore by lazy { FavorisStore(this) }
     val stylesWidget: StylesWidgetStore by lazy { StylesWidgetStore(this) }
+
+    /** Essai d'affichage par le canal app après un démarrage (DemarrageReceiver), annulé si le Toy se lie. */
+    @Volatile
+    var essaiDemarrage: Job? = null
 
     /** Vrai tant que le système a lié le Glyph Toy de Verso (Verso choisi comme Toy). */
     val toyLie = MutableStateFlow(false)

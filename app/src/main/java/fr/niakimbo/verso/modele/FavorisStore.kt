@@ -5,8 +5,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Modèles favoris, dans l'ordre où ils ont été ajoutés (l'ordre réglable viendra à l'étape 6).
- * Le widget fait défiler les favoris ; s'il n'y en a aucun, toute la bibliothèque.
+ * Modèles favoris, dans l'ordre choisi (glisser-déposer dans le rayon ★ ; un nouveau favori arrive à la fin).
+ * Le widget et la fenêtre ☰ suivent cet ordre ; sans favori, le widget fait défiler toute la bibliothèque.
  */
 class FavorisStore(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("verso", Context.MODE_PRIVATE)
@@ -22,6 +22,19 @@ class FavorisStore(context: Context) {
     fun basculer(id: String) {
         val liste = _ids.value.toMutableList()
         if (!liste.remove(id)) liste.add(id)
+        prefs.edit().putString(CLE, liste.joinToString(SEP)).apply()
+        _ids.value = liste
+    }
+
+    /**
+     * Nouvel ordre des favoris. Les favoris absents de [ordre] (ex. modèle pas encore chargé)
+     * gardent leur place relative, à la fin.
+     */
+    @Synchronized
+    fun ordonner(ordre: List<String>) {
+        val actuels = _ids.value
+        val liste = ordre.filter { it in actuels }.distinct() + actuels.filter { it !in ordre }
+        if (liste == actuels) return
         prefs.edit().putString(CLE, liste.joinToString(SEP)).apply()
         _ids.value = liste
     }

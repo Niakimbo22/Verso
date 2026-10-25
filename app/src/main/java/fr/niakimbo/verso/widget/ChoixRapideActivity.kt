@@ -45,6 +45,8 @@ import fr.niakimbo.verso.VersoApp
 import fr.niakimbo.verso.modele.Modele
 import fr.niakimbo.verso.ui.DotMatrix
 import fr.niakimbo.verso.ui.apercuAnime
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private val Rouge = Color(0xFFD71921)
 private val Discret = Color(0xFF8A8A8A)
@@ -83,7 +85,9 @@ class ChoixRapideActivity : ComponentActivity() {
     }
 }
 
-private class Choix(val id: String, val modele: Modele)
+private class Choix(val id: String, val modele: Modele, val perso: Boolean)
+
+private enum class Onglet { FAVORIS, MES, TOUS }
 
 @Composable
 private fun Fenetre(
@@ -95,9 +99,12 @@ private fun Fenetre(
 ) {
     val favorisIds by app.favoris.ids.collectAsStateWithLifecycle()
     val tous by produceState<List<Choix>?>(null) {
-        value = app.catalogue.contenu().entrees.filter { !it.cache }.map { Choix(it.id, app.catalogue.resoudre(it)) }
+        value = withContext(Dispatchers.Default) {
+            app.catalogue.contenu().entrees.filter { !it.cache }.map { Choix(it.id, app.catalogue.resoudre(it), it.perso != null) }
+        }
     }
-    var ongletFavoris by remember { mutableStateOf(favorisIds.isNotEmpty()) }
+    var onglet by remember { mutableStateOf(if (favorisIds.isNotEmpty()) Onglet.FAVORIS else Onglet.TOUS) }
+    val aDesCreations = tous?.any { it.perso } == true
     val actif = app.store.modeleActif
 
     // Voile : tap à côté de la carte = fermer.
@@ -123,12 +130,19 @@ private fun Fenetre(
                 .padding(16.dp),
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Onglet("★ Favoris", ongletFavoris, Modifier.weight(1f)) { ongletFavoris = true }
-                Onglet("Tous", !ongletFavoris, Modifier.weight(1f)) { ongletFavoris = false }
+                Onglet("★ Favoris", onglet == Onglet.FAVORIS, Modifier.weight(1f)) { onglet = Onglet.FAVORIS }
+                if (aDesCreations) Onglet("✎ Mes", onglet == Onglet.MES, Modifier.weight(1f)) { onglet = Onglet.MES }
+                Onglet("Tous", onglet == Onglet.TOUS, Modifier.weight(1f)) { onglet = Onglet.TOUS }
             }
             Spacer(Modifier.height(14.dp))
 
-            val liste = tous?.let { l -> if (ongletFavoris) favorisIds.mapNotNull { id -> l.firstOrNull { it.id == id } } else l }
+            val liste = tous?.let { l ->
+                when (onglet) {
+                    Onglet.FAVORIS -> favorisIds.mapNotNull { id -> l.firstOrNull { it.id == id } }
+                    Onglet.MES -> l.filter { it.perso }
+                    Onglet.TOUS -> l
+                }
+            }
             Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
                 when {
                     liste == null -> Text("Chargement…", color = Discret, fontSize = 13.sp)
@@ -139,7 +153,7 @@ private fun Fenetre(
                     else -> liste.chunked(COLONNES).forEach { ligne ->
                         Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             ligne.forEach { c ->
-                                Case(c, c.id == actif, animer = ongletFavoris || c.id == actif, Modifier.weight(1f)) { onChoisir(c.modele) }
+                                Case(c, c.id == actif, animer = onglet != Onglet.TOUS || c.id == actif, Modifier.weight(1f)) { onChoisir(c.modele) }
                             }
                             repeat(COLONNES - ligne.size) { Spacer(Modifier.weight(1f)) }
                         }

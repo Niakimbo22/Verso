@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +32,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.key
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,7 +53,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import fr.niakimbo.verso.VersoApp
 import fr.niakimbo.verso.createur.MesModelesStore
+import kotlinx.coroutines.launch
 import fr.niakimbo.verso.matrix.MatrixController
 import fr.niakimbo.verso.matrix.MatrixFrame
 import fr.niakimbo.verso.modele.FavorisStore
@@ -102,32 +119,56 @@ fun BibliothequeSection(
     var fiche by remember { mutableStateOf<EntreeCatalogue?>(null) }
     var rayon by rememberSaveable { mutableStateOf(TOUS) }
 
+    val context = LocalContext.current
+    val app = context.applicationContext as VersoApp
+    val vibreur = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
+    // Dernier modèle éteint depuis l'app ou le widget : le bouton propose de le rallumer.
+    val dernier = remember(affiche == null, actif) { app.store.dernierModele }
+    val entreeDernier = entrees?.firstOrNull { it.id == dernier }
+
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         DotMatrix(
             affiche,
             Modifier
                 .size(200.dp)
+                .clip(CircleShape)
                 .background(Color.Black, CircleShape)
                 .border(1.dp, Border, CircleShape)
+                // Tap sur la grande matrice = réglages du modèle affiché.
+                .clickable(enabled = actif != null) { fiche = entrees?.firstOrNull { it.id == actif?.id } }
                 .padding(12.dp),
         )
         Spacer(Modifier.height(10.dp))
         Text(
-            text = actif?.nom ?: if (affiche == null) "Matrice éteinte" else "Image de test",
+            text = actif?.nom ?: if (affiche == null) "Matrice éteinte" else "Aperçu",
             color = Color.White,
             fontSize = 16.sp,
         )
+        if (actif != null) {
+            Text("touche la matrice pour ses réglages", color = Dim, fontSize = 11.sp)
+        }
         Spacer(Modifier.height(12.dp))
-        Button(
-            onClick = player::eteindre,
-            enabled = affiche != null,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Red,
-                contentColor = Color.White,
-                disabledContainerColor = Panel,
-                disabledContentColor = Dim,
-            ),
-        ) { Text("Éteindre la matrice") }
+        if (affiche == null && entreeDernier != null) {
+            Button(
+                onClick = {
+                    vibreur.performHapticFeedback(HapticFeedbackType.LongPress)
+                    scope.launch { catalogue.resoudre(entreeDernier.id)?.let(player::jouer) }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Red, contentColor = Color.White),
+            ) { Text("Rallumer « ${entreeDernier.nom} »") }
+        } else {
+            Button(
+                onClick = player::eteindre,
+                enabled = affiche != null,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Red,
+                    contentColor = Color.White,
+                    disabledContainerColor = Panel,
+                    disabledContentColor = Dim,
+                ),
+            ) { Text("Éteindre la matrice") }
+        }
 
         Spacer(Modifier.height(20.dp))
         StatutToy(etatToy, onChoisirToy)
@@ -184,28 +225,52 @@ fun BibliothequeSection(
                 },
                 color = Dim, fontSize = 14.sp,
             )
-            else -> Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                visibles.chunked(COLONNES).forEach { ligne ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        ligne.forEach { entree ->
-                            val modele by produceState<Modele?>(null, entree, revision) {
-                                value = withContext(Dispatchers.Default) { catalogue.resoudre(entree) }
-                            }
-                            CarteModele(
-                                nom = entree.nom,
-                                perso = entree.perso != null,
-                                modele = modele,
-                                actif = entree.id == actif?.id,
-                                animer = animer || entree.id == actif?.id,
-                                favori = entree.id in favorisIds,
-                                onFavori = { favoris.basculer(entree.id) },
-                                onTap = { modele?.let(player::jouer) },
-                                onReglages = { fiche = entree },
-                                modifier = Modifier.weight(1f),
-                            )
+            else -> {
+                // Une carte de la grille ; dans ★, l'appui long sert à déplacer (⚙ ouvre toujours les réglages).
+                // Modèles résolus gardés ici : une carte déplacée (★) ne recalcule pas son aperçu.
+                val resolus = remember(entrees, revision) { mutableStateMapOf<String, Modele>() }
+                val carte: @Composable (EntreeCatalogue, Modifier, Boolean) -> Unit = { entree, mod, appuiLongReglages ->
+                    val modele = resolus[entree.id]
+                    if (modele == null) {
+                        LaunchedEffect(entree.id, revision) {
+                            resolus[entree.id] = withContext(Dispatchers.Default) { catalogue.resoudre(entree) }
                         }
-                        // Cases vides pour garder la grille alignée sur la dernière ligne.
-                        repeat(COLONNES - ligne.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                    CarteModele(
+                        nom = entree.nom,
+                        perso = entree.perso != null,
+                        modele = modele,
+                        actif = entree.id == actif?.id,
+                        animer = animer || entree.id == actif?.id,
+                        favori = entree.id in favorisIds,
+                        onFavori = { favoris.basculer(entree.id) },
+                        onTap = {
+                            modele?.let {
+                                vibreur.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                player.jouer(it)
+                            }
+                        },
+                        onReglages = { fiche = entree },
+                        appuiLongReglages = appuiLongReglages,
+                        modifier = mod,
+                    )
+                }
+                if (rayon == FAVORIS) {
+                    Text(
+                        "Appui long sur une carte puis glisse pour changer l'ordre : c'est celui du widget et de la fenêtre ☰.",
+                        color = Dim, fontSize = 11.sp, modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    GrilleReordonnable(visibles, onOrdre = { favoris.ordonner(it) }) { entree, mod -> carte(entree, mod, false) }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        visibles.chunked(COLONNES).forEach { ligne ->
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                ligne.forEach { entree -> carte(entree, Modifier.weight(1f), true) }
+                                // Cases vides pour garder la grille alignée sur la dernière ligne.
+                                repeat(COLONNES - ligne.size) { Spacer(Modifier.weight(1f)) }
+                            }
+                        }
                     }
                 }
             }
@@ -324,6 +389,7 @@ private fun CarteModele(
     onTap: () -> Unit,
     onReglages: () -> Unit,
     modifier: Modifier,
+    appuiLongReglages: Boolean = true,
 ) {
     val shape = RoundedCornerShape(16.dp)
     Column(
@@ -331,7 +397,7 @@ private fun CarteModele(
             .clip(shape)
             .background(Panel)
             .border(if (actif) 2.dp else 1.dp, if (actif) Red else Border, shape)
-            .combinedClickable(onClick = onTap, onLongClick = onReglages)
+            .combinedClickable(onClick = onTap, onLongClick = if (appuiLongReglages) onReglages else null)
             .padding(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -402,4 +468,104 @@ internal fun apercuAnime(modele: Modele): MatrixFrame = if (modele.dynamique != 
         }
     }
     modele.images[index % modele.images.size].frame
+}
+
+/**
+ * Grille des favoris qu'on réordonne au doigt : appui long sur une carte, puis glisser.
+ * Les autres cartes se décalent pendant le déplacement ; l'ordre est enregistré au lâcher.
+ *
+ * Les cases de la grille ont toutes la même taille et ne bougent pas : on suit l'index de la case
+ * survolée, ce qui évite de dépendre de la position (en cours de mise à jour) de la carte déplacée.
+ */
+@Composable
+private fun GrilleReordonnable(
+    entrees: List<EntreeCatalogue>,
+    onOrdre: (List<String>) -> Unit,
+    carte: @Composable (EntreeCatalogue, Modifier) -> Unit,
+) {
+    val idsRecus = entrees.map { it.id }
+    var ordre by remember(idsRecus) { mutableStateOf(idsRecus) }
+    var tire by remember { mutableStateOf<Int?>(null) }
+    var decalage by remember { mutableStateOf(Offset.Zero) }
+    val cases = remember { mutableStateMapOf<Int, Rect>() }
+    var conteneur by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    val vibreur = LocalHapticFeedback.current
+    val ordreActuel by rememberUpdatedState(ordre)
+    val parId = entrees.associateBy { it.id }
+
+    fun finir() {
+        if (tire != null) onOrdre(ordreActuel)
+        tire = null
+        decalage = Offset.Zero
+    }
+
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .onGloballyPositioned { conteneur = it }
+            .pointerInput(Unit) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { pos ->
+                        tire = cases.entries.firstOrNull { it.value.contains(pos) && it.key < ordreActuel.size }?.key
+                        decalage = Offset.Zero
+                        if (tire != null) vibreur.performHapticFeedback(HapticFeedbackType.LongPress)
+                    },
+                    onDrag = { change, delta ->
+                        val i = tire ?: return@detectDragGesturesAfterLongPress
+                        change.consume()
+                        decalage += delta
+                        val depart = cases[i] ?: return@detectDragGesturesAfterLongPress
+                        val centre = depart.center + decalage
+                        val j = cases.entries.firstOrNull { (k, r) -> k != i && k < ordreActuel.size && r.contains(centre) }?.key
+                            ?: return@detectDragGesturesAfterLongPress
+                        val arrivee = cases[j] ?: return@detectDragGesturesAfterLongPress
+                        ordre = ordreActuel.toMutableList().apply { add(j, removeAt(i)) }
+                        // La carte change de case : on compense pour qu'elle reste sous le doigt.
+                        decalage += depart.topLeft - arrivee.topLeft
+                        tire = j
+                        vibreur.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    },
+                    onDragEnd = ::finir,
+                    onDragCancel = ::finir,
+                )
+            },
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        ordre.chunked(COLONNES).forEachIndexed { r, ligne ->
+            val ligneTiree = tire?.let { it / COLONNES == r } == true
+            Row(
+                Modifier.fillMaxWidth().zIndex(if (ligneTiree) 1f else 0f),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                ligne.forEachIndexed { c, id ->
+                    val index = r * COLONNES + c
+                    val enMain = index == tire
+                    key(id) {
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .zIndex(if (enMain) 1f else 0f)
+                            .onGloballyPositioned { coord -> conteneur?.let { cases[index] = it.localBoundingBoxOf(coord) } },
+                    ) {
+                        parId[id]?.let { entree ->
+                            carte(
+                                entree,
+                                Modifier.fillMaxWidth().graphicsLayer {
+                                    if (enMain) {
+                                        translationX = decalage.x
+                                        translationY = decalage.y
+                                        scaleX = 1.07f
+                                        scaleY = 1.07f
+                                        alpha = 0.92f
+                                    }
+                                },
+                            )
+                        }
+                    }
+                    }
+                }
+                repeat(COLONNES - ligne.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+    }
 }
