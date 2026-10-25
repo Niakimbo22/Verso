@@ -64,7 +64,7 @@ Remplace les apps du Play Store (bugs, features payantes, réglages compliqués)
 - Le modèle actif est mémorisé (`ModeleStore`) ; le Toy le relit à chaque liaison.
 - Le `MatrixController` est unique et bascule de canal : Toy quand le système a lié le service, app sinon.
 - Le `ModelePlayer` joue les animations / l'horloge tant que l'app est à l'écran ou que le Toy est lié, et redessine à chaque `EVENT_AOD`.
-- **Écran éteint : au plus 1 image/s** (v0.1.42). L'animation garde sa vitesse mais saute des images. Constat du 25/10 : écran éteint, le service Glyph perd des images même à 2 i/s, et à ~9 i/s (Pluie) il se fige complètement (même Verso tué ou l'interrupteur Glyph Interface des réglages coupé ; seule la tuile Glyph du menu déroulant off/on le débloque).
+- **Écran éteint : pas d'animation** (v0.1.44). La boucle s'arrête à SCREEN_OFF ; la matrice garde une image fixe, renvoyée (et l'horloge redessinée) à chaque `EVENT_AOD` ≈ 1/min, et l'animation repart à SCREEN_ON. Constat du 25/10 : écran éteint, le service Glyph perd des images même à 1-2 i/s, et à ~9 i/s (Pluie) il se fige complètement (même Verso tué ou l'interrupteur Glyph Interface des réglages coupé ; seule la tuile Glyph du menu déroulant off/on le débloque). L'expérience « Animations écran éteint » (wake lock) est retirée.
 - Journal du Toy gardé sur le téléphone (liaisons, AOD, écran allumé/éteint, nombre d'images envoyées) pour savoir ce qui se passe app fermée.
 - Démarrage du téléphone / mise à jour de Verso (`DemarrageReceiver`) : si le Toy n'est toujours pas lié 60 s après, essai d'affichage par le canal app (noté dans le journal). L'essai est annulé dès que le Toy se lie, et écarté si le Toy a été lié dans les 2 min avant l'événement ou si le canal est déjà Toy (bug de l'étape 8 : il se lançait juste après une liaison).
 - Le système délie parfois le Toy tout seul (constaté le 25/10 à 01:44, rien touché) : au déliement, l'état du téléphone est noté (écran, économie de batterie, Ne pas déranger, batterie, AOD) et la cause probable s'affiche dans l'app ; s'il n'est pas relancé 2 min après, une notification « La matrice ne s'affiche plus » ouvre directement le choix du Glyph Toy (`SurveillanceToy`). Verso ne peut pas se re-choisir lui-même (réglage système protégé).
@@ -172,7 +172,7 @@ Valeurs absentes = défauts ci-dessus ; un bloc qui déborde est ramené dans la
 1. Squelette Compose + CI + récupération de l'AAR dans la CI.
 2. `MatrixController` + test : afficher un pixel, puis une image, sur le vrai téléphone. Vérifier la question des 48 h du mode debug.
 3. Format des modèles + bibliothèque intégrée + écran liste avec aperçus. Les animations tournent dans l'app tant qu'elle est ouverte (`ModelePlayer`) ; l'écran de test devient « Diagnostic » (repliable).
-4. Glyph Toy AOD : affichage app fermée, horloge réelle, animations, restauration au redémarrage (le système relance le Toy). Tester si les animations tournent écran éteint (journal du Toy + expérience « wake lock »).
+4. Glyph Toy AOD : affichage app fermée, horloge réelle, animations, restauration au redémarrage (le système relance le Toy). Écran éteint : image fixe, MAJ chaque minute (§3.3).
 5. Widget écran d'accueil (+ favoris simples).
 6. Plein de modèles (90) + bibliothèque par rayons.
 7. Créateur de modèles : éditeur dessin (statique et animé), import/export JSON (§3.5). Refait en version simple le 25/10 ; le créateur par blocs a été retiré (trop compliqué).
