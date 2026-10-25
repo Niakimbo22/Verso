@@ -14,4 +14,9 @@
     <string name="widget_suivant">Modèle suivant</string>
     <string name="widget_precedent">Modèle précédent</string>
     <string name="widget_liste">Choisir un modèle</string>
+    <string name="tuile_nom">Verso</string>
+    <string name="raccourci_suivant">Modèle suivant</string>
+    <string name="raccourci_aleatoire">Au hasard</string>
+    <string name="raccourci_basculer">Éteindre / rallumer</string>
+    <string name="raccourci_auto">Automatique</string>
 </resources>

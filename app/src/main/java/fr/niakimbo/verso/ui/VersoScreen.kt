@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -78,9 +79,18 @@ fun VersoScreen(
     val defilement = rememberScrollState()
     // Liquid Glass : tout l'écran est posé sur le fond animé que le verre réfracte.
     val portee = androidx.compose.runtime.rememberCoroutineScope()
+    val filtre = androidx.compose.runtime.remember { FiltreBibliotheque() }
+    val hautCollant = with(androidx.compose.ui.platform.LocalDensity.current) { 110.dp.toPx() }
     fr.niakimbo.verso.ui.verre.EcranVerre(
         defilement = defilement,
         dessus = {
+            // Puces des rayons + recherche, collées en haut quand on a défilé sous elles.
+            androidx.compose.animation.AnimatedVisibility(
+                visible = filtre.basPuces < hautCollant,
+                modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
+                enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically { -it },
+                exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically { -it },
+            ) { BarreRayonsCollante(filtre) }
             miniLecteur(
                 Modifier
                     .align(Alignment.BottomCenter)
@@ -115,7 +125,7 @@ fun VersoScreen(
         Spacer(Modifier.height(16.dp))
         UpdateSection(state, onUpdate, onRetry)
         Spacer(Modifier.height(28.dp))
-        BibliothequeSection(bibliotheque?.entrees?.filter { !it.cache }, catalogue, reglages, matrix, player, favoris, etatToy, onChoisirToy)
+        BibliothequeSection(bibliotheque?.entrees?.filter { !it.cache }, catalogue, reglages, matrix, player, favoris, etatToy, onChoisirToy, filtre)
 
         Spacer(Modifier.height(36.dp))
         sectionAuto()

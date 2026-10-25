@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Appui long sur l'icône Verso : actions d'un geste (RaccourciActivity). -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="suivant" android:enabled="true" android:icon="@drawable/ic_notif_verso"
+        android:shortcutShortLabel="@string/raccourci_suivant">
+        <intent android:action="fr.niakimbo.verso.SUIVANT"
+            android:targetPackage="fr.niakimbo.verso" android:targetClass="fr.niakimbo.verso.rapide.RaccourciActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="aleatoire" android:enabled="true" android:icon="@drawable/ic_notif_verso"
+        android:shortcutShortLabel="@string/raccourci_aleatoire">
+        <intent android:action="fr.niakimbo.verso.ALEATOIRE"
+            android:targetPackage="fr.niakimbo.verso" android:targetClass="fr.niakimbo.verso.rapide.RaccourciActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="basculer" android:enabled="true" android:icon="@drawable/ic_notif_verso"
+        android:shortcutShortLabel="@string/raccourci_basculer">
+        <intent android:action="fr.niakimbo.verso.BASCULER"
+            android:targetPackage="fr.niakimbo.verso" android:targetClass="fr.niakimbo.verso.rapide.RaccourciActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="auto" android:enabled="true" android:icon="@drawable/ic_notif_verso"
+        android:shortcutShortLabel="@string/raccourci_auto">
+        <intent android:action="fr.niakimbo.verso.AUTOMATIQUE"
+            android:targetPackage="fr.niakimbo.verso" android:targetClass="fr.niakimbo.verso.rapide.RaccourciActivity" />
+    </shortcut>
+</shortcuts>

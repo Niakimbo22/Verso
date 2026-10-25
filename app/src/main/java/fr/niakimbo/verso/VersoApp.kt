@@ -44,6 +44,7 @@ class VersoApp : Application() {
     val player: ModelePlayer by lazy { ModelePlayer(this, matrix, catalogue, store, appScope) }
     val journalToy: JournalToy by lazy { JournalToy(this) }
     val favoris: FavorisStore by lazy { FavorisStore(this) }
+    val recents: fr.niakimbo.verso.modele.RecentsStore by lazy { fr.niakimbo.verso.modele.RecentsStore(this) }
     val stylesWidget: StylesWidgetStore by lazy { StylesWidgetStore(this) }
 
     /** Règles automatiques (changement de modèle selon l'heure, la charge, le casque…). */
@@ -132,6 +133,19 @@ class VersoApp : Application() {
         // (ouverture de l'app, liaison du Toy, démarrage du téléphone).
         journalToy.ajouter("Processus Verso démarré")
         moteurRegles.demarrer()
+        fr.niakimbo.verso.rapide.ActionsRapides.lireVeille(this)
+        // Rayon « Récents » et tuile des réglages rapides : suivent le modèle affiché.
+        appScope.launch {
+            player.actif.collect { m ->
+                m?.id?.let(recents::ajouter)
+                try {
+                    android.service.quicksettings.TileService.requestListeningState(
+                        this@VersoApp, android.content.ComponentName(this@VersoApp, fr.niakimbo.verso.rapide.TuileVerso::class.java),
+                    )
+                } catch (_: Exception) {
+                }
+            }
+        }
 
         // Widgets : redessinés quand le modèle actif, ses réglages ou le style d'un widget changent.
         appScope.launch {

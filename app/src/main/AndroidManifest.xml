@@ -51,7 +51,40 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Appui long sur la tuile Verso des réglages rapides : ouvre l'app -->
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/raccourcis" />
         </activity>
+
+        <!-- Raccourcis de l'icône : écran invisible qui fait l'action et se ferme -->
+        <activity
+            android:name=".rapide.RaccourciActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="fr.niakimbo.verso.raccourci"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <!-- Tuile « Verso » des réglages rapides : tap = modèle suivant -->
+        <service
+            android:name=".rapide.TuileVerso"
+            android:exported="true"
+            android:icon="@drawable/ic_notif_verso"
+            android:label="@string/tuile_nom"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <!-- Minuteur de veille : éteint la matrice à l'heure choisie -->
+        <receiver
+            android:name=".rapide.MinuteurVeille"
+            android:exported="false" />
 
         <!-- Créateur de modèles (éditeur dessin, éditeur par blocs) -->
         <activity

@@ -43,6 +43,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.Alignment
@@ -82,12 +83,7 @@ private val Panel = Color(0xFF0E0E0E).copy(alpha = 0.72f)
 private val Border = Color(0xFF2A2A2A)
 
 private const val COLONNES = 3
-private const val TOUS = "Tous"
-private const val FAVORIS = "★"
-private const val MES = MesModelesStore.RAYON
 
-@Composable
-private fun Puce(texte: String, actif: Boolean, onTap: () -> Unit) = PuceVerre(texte, actif, onClick = onTap)
 
 /**
  * Bibliothèque (étape 3) : aperçu de ce qui est sur la matrice, grille des modèles,
@@ -103,16 +99,18 @@ fun BibliothequeSection(
     favoris: FavorisStore,
     etatToy: EtatToy,
     onChoisirToy: () -> Unit,
+    filtre: FiltreBibliotheque = remember { FiltreBibliotheque() },
 ) {
     val actif by player.actif.collectAsStateWithLifecycle()
     val affiche by controller.lastFrame.collectAsStateWithLifecycle()
     val revision by reglages.revision.collectAsStateWithLifecycle()
     val favorisIds by favoris.ids.collectAsStateWithLifecycle()
     var fiche by remember { mutableStateOf<EntreeCatalogue?>(null) }
-    var rayon by rememberSaveable { mutableStateOf(TOUS) }
+    var rayon by filtre::rayon
 
     val context = LocalContext.current
     val app = context.applicationContext as VersoApp
+    val recentsIds by app.recents.ids.collectAsStateWithLifecycle()
     val vibreur = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     // Dernier modèle éteint depuis l'app ou le widget : le bouton propose de le rallumer.
@@ -189,30 +187,34 @@ fun BibliothequeSection(
         Spacer(Modifier.height(12.dp))
 
         if (!entrees.isNullOrEmpty()) {
-            val rayons = listOf(TOUS, FAVORIS, MES) + entrees.map { it.categorie }.distinct().filter { it != MES }
-            Row(
-                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                rayons.forEach { r ->
-                    val n = when (r) {
-                        TOUS -> entrees.size
-                        FAVORIS -> favorisIds.count { id -> entrees.any { it.id == id } }
-                        MES -> entrees.count { it.perso != null }
-                        else -> entrees.count { it.categorie == r }
-                    }
-                    Puce("$r $n", r == rayon) { rayon = r }
+            val rayons = listOf(TOUS, FAVORIS, RECENTS, MES) + entrees.map { it.categorie }.distinct().filter { it != MES }
+            filtre.rayons = rayons.map { r ->
+                r to when (r) {
+                    TOUS -> entrees.size
+                    FAVORIS -> favorisIds.count { id -> entrees.any { it.id == id } }
+                    RECENTS -> recentsIds.count { id -> entrees.any { it.id == id } }
+                    MES -> entrees.count { it.perso != null }
+                    else -> entrees.count { it.categorie == r }
                 }
-            }
+            }.filter { (r, n) -> n > 0 || r == TOUS || r == FAVORIS }
+            // Les puces de la page ; hors de vue, la barre collante en verre prend le relais (VersoScreen).
+            LignePuces(filtre, Modifier.onGloballyPositioned { filtre.basPuces = it.positionInWindow().y + it.size.height })
             Spacer(Modifier.height(12.dp))
         }
+        val cherche = FiltreBibliotheque.simple(filtre.recherche)
         val visibles = entrees?.let { l ->
-            when (rayon) {
-                TOUS -> l
-                FAVORIS -> favorisIds.mapNotNull { id -> l.firstOrNull { it.id == id } }
-                MES -> l.filter { it.perso != null }
+            when {
+                cherche.isNotEmpty() -> l.filter { FiltreBibliotheque.simple(it.nom).contains(cherche) || FiltreBibliotheque.simple(it.categorie).contains(cherche) }
+                rayon == TOUS -> l
+                rayon == FAVORIS -> favorisIds.mapNotNull { id -> l.firstOrNull { it.id == id } }
+                rayon == RECENTS -> recentsIds.mapNotNull { id -> l.firstOrNull { it.id == id } }
+                rayon == MES -> l.filter { it.perso != null }
                 else -> l.filter { it.categorie == rayon }
             }
+        }
+        if (cherche.isNotEmpty() && visibles != null) {
+            Text("${visibles.size} résultat${if (visibles.size > 1) "s" else ""} pour « ${filtre.recherche.trim()} »", color = Dim, fontSize = 12.sp, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(10.dp))
         }
         // Toutes les cartes s'animent, mais seulement quand elles sont à l'écran (voir CarteModele).
         val animer = true
@@ -220,9 +222,11 @@ fun BibliothequeSection(
         when {
             visibles == null -> Text("Chargement…", color = Dim, fontSize = 14.sp)
             visibles.isEmpty() -> Text(
-                when (rayon) {
-                    FAVORIS -> "Aucun favori : touche ☆ sur un modèle."
-                    MES -> "Rien pour l'instant : crée un dessin ou un modèle dynamique avec les boutons ci-dessus."
+                when {
+                    cherche.isNotEmpty() -> "Aucun modèle ne correspond."
+                    rayon == RECENTS -> "Rien d'affiché récemment."
+                    rayon == FAVORIS -> "Aucun favori : touche ☆ sur un modèle."
+                    rayon == MES -> "Rien pour l'instant : crée un dessin avec le bouton ci-dessus."
                     else -> "Aucun modèle trouvé (voir Diagnostic)."
                 },
                 color = Dim, fontSize = 14.sp,
@@ -257,7 +261,7 @@ fun BibliothequeSection(
                         modifier = mod,
                     )
                 }
-                if (rayon == FAVORIS) {
+                if (rayon == FAVORIS && cherche.isEmpty()) {
                     Text(
                         "Appui long sur une carte puis glisse pour changer l'ordre : c'est celui du widget et de la fenêtre ☰.",
                         color = Dim, fontSize = 11.sp, modifier = Modifier.fillMaxWidth(),
