@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import fr.niakimbo.verso.MainActivity
 import fr.niakimbo.verso.VersoApp
+import kotlinx.coroutines.launch
 import fr.niakimbo.verso.modele.Modele
 import fr.niakimbo.verso.ui.DotMatrix
 import fr.niakimbo.verso.ui.apercuAnime
@@ -73,7 +74,7 @@ class ChoixRapideActivity : ComponentActivity() {
                     finish()
                 },
                 onEteindre = {
-                    app.player.eteindre()
+                    app.appScope.launch { fr.niakimbo.verso.rapide.ActionsRapides.eteindre(app) }
                     finish()
                 },
                 onOuvrirVerso = {

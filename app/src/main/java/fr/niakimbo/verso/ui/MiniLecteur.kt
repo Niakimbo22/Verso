@@ -157,7 +157,9 @@ fun MiniLecteur(app: VersoApp, modifier: Modifier = Modifier, onRemonter: () -> 
                     }
                 }
                 Bouton("‹") { scope.launch { ActionsRapides.changer(app, -1) } }
-                Bouton(if (actif != null) "⏻" else "▶", couleur = if (actif != null) Color.White else Rouge) {
+                val glyph by fr.niakimbo.verso.glyph.BoutonGlyph.allume.collectAsStateWithLifecycle()
+                val allume = actif != null && glyph != false
+                Bouton(if (allume) "⏻" else "▶", couleur = if (allume) Color.White else Rouge) {
                     scope.launch { ActionsRapides.basculer(app) }
                 }
                 Bouton("›") { scope.launch { ActionsRapides.changer(app, 1) } }

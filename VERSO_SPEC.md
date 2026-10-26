@@ -208,6 +208,25 @@ Vrai verre façon iOS, avec la bibliothèque **Backdrop** (`io.github.kyant0:bac
 - Sans fond disponible (fenêtres qui ne sont pas dans un `EcranVerre`), `verre` retombe sur un panneau sombre classique.
 - Compose foundation/ui passent en 1.9.5 (exigé par Backdrop) ; Kotlin reste en 2.1.20.
 
+### 3.8 Le vrai bouton Glyph (26/10)
+Demande de Nico : quand la Glyph Interface est coupée (tuile « Glyph » du menu déroulant), ⏻ dans Verso ne servait à rien. Il veut que ⏻ appuie **réellement** sur ce bouton.
+
+**Analyse** : Nothing ne donne aucun moyen aux apps d'allumer / éteindre la Glyph Interface. Le SDK ne fait qu'afficher (`setMatrixFrame`, `setAppMatrixFrame`, `closeAppMatrix`), et le réglage système est protégé (`WRITE_SECURE_SETTINGS`, ADB seulement, abandonné par Nico).
+
+**Solution** : service d'accessibilité **« Verso · bouton Glyph »** (`glyph/BoutonGlyph`, `res/xml/bouton_glyph.xml`, limité à `com.android.systemui`). Il ne réagit à aucun évènement de lui-même ; quand Verso le lui demande, il :
+1. ouvre le menu déroulant (`GLOBAL_ACTION_QUICK_SETTINGS`) ;
+2. cherche la tuile dont le nom commence par « Glyph » (pas la lampe / torche, ni le Toy, ni la tuile Verso), en faisant défiler les pages de tuiles si besoin (~2,5 s max) ;
+3. lit son état (case cochée, ou « Activé / Désactivé ») et n'appuie que s'il faut changer ;
+4. relit l'état, puis referme le menu (`GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE`). Chaque appui est noté dans le journal du Toy.
+
+**Branchements** (`rapide/ActionsRapides`) : ⏻ partout (bouton de l'app, mini-lecteur, widget On/Off, fenêtre ☰, tuile Verso, raccourci de l'icône, fin du minuteur de veille) = **éteindre le modèle ET la Glyph Interface**, ou **rallumer la Glyph Interface puis le dernier modèle**. Si le Glyph est connu éteint, ⏻ rallume même si un modèle est choisi. Les règles automatiques « Éteindre » ne touchent **pas** au Glyph système (sinon elles couperaient aussi les notifications Glyph sans prévenir).
+
+**État connu** : lu à chaque appui ; « allumé » quand le Toy de Verso est lié (le système ne le lie que Glyph allumé) ; « inconnu » quand le Toy est délié (coupé à la main ?).
+
+**Interface** : carte sous la grande matrice. Si le service n'est pas activé, elle donne un guide en 3 étapes : fiche de Verso › ⋮ › « Autoriser les paramètres restreints » (app installée hors Play Store), puis Accessibilité › « Verso · bouton Glyph ». Une fois activé, elle montre l'état (● allumé / éteint) et un bouton Allumer / Éteindre. Sans le service, ⏻ fait comme avant (modèle seulement).
+
+**Limites** : le menu déroulant s'ouvre et se ferme en un éclair ; si Nothing renomme ou déplace la tuile dans une mise à jour, il faudra adapter la recherche. La logique de la matrice (`closeAppMatrix` au passage au Toy) est inchangée.
+
 ## 4. Feuille de route après la V1 (dans cet ordre)
 
 1. **Modèles dynamiques avancés** : minuteur, visualiseur musique, notifications, météo réelle.

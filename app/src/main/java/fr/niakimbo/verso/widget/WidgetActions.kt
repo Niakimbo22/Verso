@@ -36,17 +36,9 @@ class WidgetActions : BroadcastReceiver() {
         WidgetMaj.majTous(app)
     }
 
-    /** Éteint la matrice, ou rallume le dernier modèle affiché (à défaut, le premier de la liste). */
+    /** ⏻ : le vrai bouton Glyph (voir ActionsRapides.basculer). */
     private suspend fun basculer(app: VersoApp) {
-        val actif = app.store.modeleActif
-        if (actif != null) {
-            app.player.eteindre() // retient aussi le modèle pour le rallumer
-        } else {
-            val id = app.store.dernierModele ?: ordreDefilement(app).firstOrNull() ?: return
-            val modele = app.catalogue.resoudre(id) ?: return
-            app.matrix.connect()
-            app.player.jouer(modele)
-        }
+        fr.niakimbo.verso.rapide.ActionsRapides.basculer(app)
         WidgetMaj.majTous(app)
     }
 

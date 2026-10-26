@@ -138,11 +138,13 @@ fun BibliothequeSection(
         Spacer(Modifier.height(12.dp))
         if (affiche == null && entreeDernier != null) {
             BoutonVerre("Rallumer « ${entreeDernier.nom} »", {
-                scope.launch { catalogue.resoudre(entreeDernier.id)?.let(player::jouer) }
+                scope.launch { fr.niakimbo.verso.rapide.ActionsRapides.rallumer(app) }
             }, principal = true)
         } else if (affiche != null) {
-            BoutonVerre("Éteindre la matrice", player::eteindre, principal = true)
+            BoutonVerre("Éteindre la matrice", { scope.launch { fr.niakimbo.verso.rapide.ActionsRapides.eteindre(app) } }, principal = true)
         }
+        Spacer(Modifier.height(12.dp))
+        fr.niakimbo.verso.glyph.CarteBoutonGlyph()
 
         TextButton(onClick = {
             vibreur.performHapticFeedback(HapticFeedbackType.LongPress)

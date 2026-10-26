@@ -93,6 +93,7 @@ class VersoToyService : Service() {
         val contexte = SurveillanceToy.surDeliement(this)
         app.journalToy.ajouter("Délié par le système · $contexte · ${bilanImages()}")
         app.toyLie.value = false
+        fr.niakimbo.verso.glyph.BoutonGlyph.oublier()
         app.matrix.setCanal(Canal.APP)
         app.player.setToyLie(false)
         // false : le système rappellera onBind() la prochaine fois (comme l'exemple officiel).
@@ -119,6 +120,8 @@ class VersoToyService : Service() {
         app.store.derniereLiaison = System.currentTimeMillis()
         SurveillanceToy.surLiaison(this)
         app.toyLie.value = true
+        // Le système ne lie le Toy que si la Glyph Interface est allumée.
+        fr.niakimbo.verso.glyph.BoutonGlyph.noterAllume()
         app.matrix.setCanal(Canal.TOY)
         // Indispensable : l'enregistrement (register) doit être fait APRÈS la liaison du Toy.
         // Sinon le SDK accepte les images mais la matrice reste figée (25/10 : v0.1.28 et v0.1.35
