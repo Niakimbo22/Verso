@@ -67,14 +67,12 @@ object RenduPerso {
                         matrice(context, w, b, etat.modele, cliquable, budget)
                     }
                 }
-                WidgetPerso.Type.HEURE -> horloge(context, R.layout.perso_heure, couleur(b), when (b.taille) {
-                    WidgetPerso.Taille.S -> 26f; WidgetPerso.Taille.M -> 42f; WidgetPerso.Taille.L -> 62f
-                }, gravite)
-                WidgetPerso.Type.DATE -> horloge(context, R.layout.perso_date, couleur(b), taille(b, 11f, 13f, 17f), gravite)
-                WidgetPerso.Type.NOM -> texte(context, (etat.modele?.nom ?: "Matrice éteinte").uppercase(), couleur(b), taille(b, 10f, 12f, 16f), gravite)
-                WidgetPerso.Type.BATTERIE -> texte(context, (if (etat.enCharge) "⚡ " else "") + "${etat.batterie} %", couleur(b), taille(b, 11f, 14f, 20f), gravite)
-                WidgetPerso.Type.AUTO -> etat.regleAuto?.let { texte(context, "AUTO · ${it.uppercase()}", couleur(b), taille(b, 9f, 11f, 14f), gravite) }
-                WidgetPerso.Type.TEXTE -> b.texte.takeIf { it.isNotBlank() }?.let { texte(context, it, couleur(b), taille(b, 12f, 15f, 20f), gravite) }
+                WidgetPerso.Type.HEURE -> horloge(context, R.layout.perso_heure, couleur(b), taille(b, 24f, 36f, 56f, 84f), gravite)
+                WidgetPerso.Type.DATE -> horloge(context, R.layout.perso_date, couleur(b), taille(b, 11f, 13f, 16f, 20f), gravite)
+                WidgetPerso.Type.NOM -> texte(context, (etat.modele?.nom ?: "Matrice éteinte").uppercase(), couleur(b), taille(b, 10f, 13f, 17f, 22f), gravite)
+                WidgetPerso.Type.BATTERIE -> texte(context, (if (etat.enCharge) "⚡" else "") + "${etat.batterie}%", couleur(b), taille(b, 18f, 26f, 34f, 52f), gravite)
+                WidgetPerso.Type.AUTO -> etat.regleAuto?.let { texte(context, "AUTO · ${it.uppercase()}", couleur(b), taille(b, 9f, 11f, 13f, 15f), gravite) }
+                WidgetPerso.Type.TEXTE -> b.texte.takeIf { it.isNotBlank() }?.let { texte(context, it, couleur(b), taille(b, 11f, 15f, 20f, 28f), gravite) }
                 WidgetPerso.Type.BOUTONS -> boutons(context, couleur(b), etat, cliquable, gravite)
                 WidgetPerso.Type.ESPACE -> RemoteViews(context.packageName, R.layout.perso_espace)
             }
@@ -85,8 +83,8 @@ object RenduPerso {
         return rv
     }
 
-    private fun taille(b: WidgetPerso.Bloc, s: Float, m: Float, l: Float) = when (b.taille) {
-        WidgetPerso.Taille.S -> s; WidgetPerso.Taille.M -> m; WidgetPerso.Taille.L -> l
+    private fun taille(b: WidgetPerso.Bloc, s: Float, m: Float, l: Float, xl: Float) = when (b.taille) {
+        WidgetPerso.Taille.S -> s; WidgetPerso.Taille.M -> m; WidgetPerso.Taille.L -> l; WidgetPerso.Taille.XL -> xl
     }
 
     private fun texte(context: Context, t: String, couleur: Int, sp: Float, gravite: Int): RemoteViews =
@@ -109,6 +107,7 @@ object RenduPerso {
             WidgetPerso.Taille.S -> R.layout.perso_matrice_s
             WidgetPerso.Taille.M -> R.layout.perso_matrice_m
             WidgetPerso.Taille.L -> R.layout.perso_matrice_l
+            WidgetPerso.Taille.XL -> R.layout.perso_matrice_xl
         }
         // On reprend le style des widgets classiques pour les couleurs et le masque des points.
         val style = StyleWidget(

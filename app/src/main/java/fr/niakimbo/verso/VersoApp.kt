@@ -138,7 +138,7 @@ class VersoApp : Application() {
         // Bloc Batterie des widgets perso : redessinés quand le niveau ou la charge change (s'ils ont changé).
         registerReceiver(object : android.content.BroadcastReceiver() {
             override fun onReceive(c: android.content.Context, i: android.content.Intent) {
-                if (widgetsPerso.tous.value.none { w -> w.blocs.any { it.type == fr.niakimbo.verso.widget.perso.WidgetPerso.Type.BATTERIE } }) return
+                if (!widgetsPerso.avecBatterie(this@VersoApp)) return
                 appScope.launch { WidgetMaj.majTous(this@VersoApp) }
             }
         }, android.content.IntentFilter().apply {

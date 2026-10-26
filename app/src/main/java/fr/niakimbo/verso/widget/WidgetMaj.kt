@@ -25,7 +25,7 @@ object WidgetMaj {
     suspend fun majTous(app: VersoApp, forcer: Boolean = false) = verrou.withLock {
         val manager = AppWidgetManager.getInstance(app)
         val parFormat = Format.entries.associateWith { manager.getAppWidgetIds(ComponentName(app, it.classe)) }
-        val persos = manager.getAppWidgetIds(ComponentName(app, fr.niakimbo.verso.widget.perso.WidgetPersoProvider::class.java))
+        val persos = app.widgetsPerso.poses(app)
         if (parFormat.values.all { it.isEmpty() } && persos.isEmpty()) {
             annulerMinute(app)
             return@withLock
@@ -45,15 +45,14 @@ object WidgetMaj {
             }
         }
 
-        // Widgets perso (Mes widgets).
+        // Widgets de la galerie (une taille par fournisseur).
         if (persos.isNotEmpty()) {
             val etat = etatPerso(app, modele)
-            for (w in persos) {
-                // Aucun widget créé : on affiche le modèle « Horloge + matrice » en attendant.
-                val design = app.widgetsPerso.pour(w) ?: fr.niakimbo.verso.widget.perso.WidgetPerso.modeles { "defaut" }.first()
-                val signature = "perso|${design.versJson()}|$id|$revision|$minute|${etat.batterie}|${etat.enCharge}|${etat.regleAuto}|${etat.glyphEteint}"
+            for ((w, taille) in persos) {
+                val reglage = app.widgetsPerso.pour(w, taille)
+                val signature = "galerie|${reglage.versJson()}|$id|$revision|$minute|${etat.batterie}|${etat.enCharge}|${etat.regleAuto}|${etat.glyphEteint}"
                 if (!forcer && signatures[w] == signature) continue
-                if (envoyerPerso(app, manager, w, design, etat)) signatures[w] = signature
+                if (envoyerPerso(app, manager, w, reglage.plan(), etat)) signatures[w] = signature
             }
         }
 
@@ -91,7 +90,7 @@ object WidgetMaj {
                 return true
             } catch (e: RuntimeException) {
                 if (budget < 40_000) {
-                    app.journalToy.ajouter("Widget perso « ${design.nom} » : envoi refusé par le lanceur (${e.javaClass.simpleName})")
+                    app.journalToy.ajouter("Widget « ${design.nom} » : envoi refusé par le lanceur (${e.javaClass.simpleName})")
                     return false
                 }
                 budget /= 2
