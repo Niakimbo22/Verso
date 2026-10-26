@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import fr.niakimbo.verso.VersoApp
+import fr.niakimbo.verso.glyph.BoutonGlyph
 import fr.niakimbo.verso.modele.Navigation
 import fr.niakimbo.verso.reglage.Personnalisation
 import fr.niakimbo.verso.reglage.ReglagesStore
@@ -36,15 +37,26 @@ object ActionsRapides {
         app.catalogue.resoudre(id)?.let(app.player::jouer)
     }
 
-    /** Éteint, ou rallume le dernier modèle éteint. */
-    suspend fun basculer(app: VersoApp) {
-        if (app.store.modeleActif != null) {
-            app.player.eteindre()
-            return
-        }
-        val id = app.store.dernierModele ?: WidgetActions.ordreDefilement(app).firstOrNull() ?: return
+    /**
+     * ⏻ de Verso = le vrai bouton Glyph : éteint le modèle ET la Glyph Interface (tuile du menu déroulant),
+     * ou rallume la Glyph Interface puis le dernier modèle. Sans le service d'accessibilité « bouton Glyph »,
+     * seul le modèle de Verso s'éteint / se rallume (comme avant).
+     */
+    suspend fun basculer(app: VersoApp): BoutonGlyph.Resultat =
+        if (app.store.modeleActif != null && BoutonGlyph.allume.value != false) eteindre(app) else rallumer(app)
+
+    /** Résultat du vrai bouton Glyph (Indisponible = service d'accessibilité pas activé). */
+    suspend fun eteindre(app: VersoApp): BoutonGlyph.Resultat {
+        app.player.eteindre()
+        return BoutonGlyph.regler(app, voulu = false)
+    }
+
+    suspend fun rallumer(app: VersoApp): BoutonGlyph.Resultat {
+        val r = BoutonGlyph.regler(app, voulu = true)
+        val id = app.store.dernierModele ?: WidgetActions.ordreDefilement(app).firstOrNull() ?: return r
         app.matrix.connect()
         app.catalogue.resoudre(id)?.let(app.player::jouer)
+        return r
     }
 
     /** Luminosité (10-100 %) du modèle affiché : enregistrée dans ses réglages et appliquée tout de suite. */
@@ -103,7 +115,7 @@ class MinuteurVeille : BroadcastReceiver() {
             try {
                 ActionsRapides.veilleFinie(app)
                 app.journalToy.ajouter("Minuteur de veille terminé : matrice éteinte")
-                app.player.eteindre()
+                ActionsRapides.eteindre(app)
             } finally {
                 fin.finish()
             }
