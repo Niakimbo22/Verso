@@ -26,17 +26,67 @@ data class WidgetVerso(
     val genre: Genre,
     val taille: TailleW,
     val style: Style = Style.VERRE,
-    /** Matrice et texte principal en rouge Nothing. */
+    /** Ancien réglage « Rouge Nothing » (relu pour les widgets déjà posés) : voir [couleur]. */
     val rouge: Boolean = false,
     /** Texte du genre « Message ». */
     val texte: String = "",
+    /** Couleur des LEDs allumées et du texte principal. */
+    val couleur: CouleurW = if (rouge) CouleurW.ROUGE else CouleurW.BLANC,
+    /** Modèle épinglé sur ce widget (null = il suit la matrice au dos). */
+    val modele: String? = null,
+    val points: Points = Points.RONDS,
+    /** LEDs éteintes visibles (comme la vraie matrice) ou cachées (seules les LEDs allumées se voient). */
+    val ledsEteintes: Boolean = true,
+    val anime: Boolean = true,
+    val tap: TapW = TapW.CHOISIR,
+    /** Ce que le widget montre en plus de la matrice (quand la taille le permet). */
+    val nom: Boolean = true,
+    val boutons: Boolean = true,
+    val regle: Boolean = true,
+    /** Pastille d'état : Glyph allumé / éteint, Toy au dos. */
+    val etatGlyph: Boolean = false,
 ) {
     enum class Style(val label: String) { VERRE("Verre"), SOMBRE("Sombre"), CLAIR("Clair"), AUCUN("Sans fond") }
 
+    /** [argb] null = blanc (noir sur fond clair). */
+    enum class CouleurW(val label: String, val argb: Int?) {
+        BLANC("Blanc", null),
+        ROUGE("Rouge Nothing", 0xFFD71921.toInt()),
+        AMBRE("Ambre", 0xFFFFB300.toInt()),
+        GLACE("Bleu glace", 0xFF7FD4FF.toInt()),
+        VERT("Vert", 0xFF3DDC84.toInt()),
+        ROSE("Rose", 0xFFFF6FAE.toInt()),
+    }
+
+    enum class Points(val label: String) { RONDS("Ronds"), CARRES("Carrés") }
+
+    enum class TapW(val label: String, val tap: WidgetPerso.Tap) {
+        CHOISIR("Fenêtre de choix", WidgetPerso.Tap.CHOISIR),
+        SUIVANT("Modèle suivant", WidgetPerso.Tap.SUIVANT),
+        ONOFF("⏻ On / Off", WidgetPerso.Tap.ONOFF),
+        VERSO("Ouvrir Verso", WidgetPerso.Tap.VERSO),
+        AFFICHER("Afficher ce modèle au dos", WidgetPerso.Tap.AFFICHER),
+    }
+
+    /** Ce que la taille choisie montre, avant les réglages « afficher » (pour ne proposer que ce qui existe). */
+    fun blocsDeBase(): List<Bloc> = genre.contenu(taille, Couleur.PRINCIPALE, texte.ifBlank { "Bonne journée" }).second
+
     /** Le plan de dessin pour [RenduPerso]. */
     fun plan(): WidgetPerso {
-        val principal = if (rouge) Couleur.ROUGE else Couleur.NORMALE
-        val (disposition, blocs) = genre.contenu(taille, principal, texte.ifBlank { "Bonne journée" })
+        val (disposition, base) = genre.contenu(taille, Couleur.PRINCIPALE, texte.ifBlank { "Bonne journée" })
+        val blocs = base.filter {
+            when (it.type) {
+                Type.NOM -> nom
+                Type.BOUTONS -> boutons
+                Type.AUTO -> regle
+                else -> true
+            }
+        }.toMutableList()
+        if (etatGlyph) {
+            // Après le nom (ou en fin), avant les boutons.
+            val i = blocs.indexOfFirst { it.type == Type.BOUTONS }.takeIf { it >= 0 } ?: blocs.size
+            blocs.add(i, Bloc(Type.GLYPH, Taille.S))
+        }
         return WidgetPerso(
             nom = genre.titre,
             blocs = blocs,
@@ -48,23 +98,52 @@ data class WidgetVerso(
             },
             theme = if (style == Style.CLAIR) WidgetPerso.Theme.CLAIR else WidgetPerso.Theme.SOMBRE,
             alignement = if (disposition == Disposition.LIGNE || (taille.l >= 4 && taille.h == 1)) WidgetPerso.Alignement.GAUCHE else WidgetPerso.Alignement.CENTRE,
-            ledsRouges = rouge,
+            ledsRouges = couleur == CouleurW.ROUGE,
+            pointsCarres = points == Points.CARRES,
+            accent = couleur.argb,
+            ledsEteintes = ledsEteintes,
+            anime = anime,
+            tap = if (tap == TapW.AFFICHER && modele == null) WidgetPerso.Tap.CHOISIR else tap.tap,
+            modeleFixe = modele,
         )
     }
 
+    /** Résumé lisible (liste « Sur ton écran d'accueil »). */
+    fun resume(): String = buildList {
+        add(style.label)
+        if (couleur != CouleurW.BLANC) add(couleur.label.lowercase())
+        if (modele != null) add("modèle épinglé")
+        if (points == Points.CARRES) add("points carrés")
+        if (!anime) add("fixe")
+    }.joinToString(" · ")
+
     fun versJson(): String = JSONObject()
-        .put("genre", genre.name).put("taille", taille.name).put("style", style.name).put("rouge", rouge).put("texte", texte)
+        .put("genre", genre.name).put("taille", taille.name).put("style", style.name).put("rouge", couleur == CouleurW.ROUGE).put("texte", texte)
+        .put("couleur", couleur.name).put("modele", modele ?: JSONObject.NULL).put("points", points.name)
+        .put("eteintes", ledsEteintes).put("anime", anime).put("tap", tap.name)
+        .put("nom", nom).put("boutons", boutons).put("regle", regle).put("glyph", etatGlyph)
         .toString()
 
     companion object {
         fun depuisJson(s: String?): WidgetVerso? = try {
             val o = JSONObject(s ?: return null)
+            val rouge = o.optBoolean("rouge", false)
             WidgetVerso(
                 genre = Genre.valueOf(o.getString("genre")),
                 taille = TailleW.valueOf(o.getString("taille")),
                 style = Style.entries.firstOrNull { it.name == o.optString("style") } ?: Style.VERRE,
-                rouge = o.optBoolean("rouge", false),
+                rouge = rouge,
                 texte = o.optString("texte").take(40),
+                couleur = CouleurW.entries.firstOrNull { it.name == o.optString("couleur") } ?: if (rouge) CouleurW.ROUGE else CouleurW.BLANC,
+                modele = if (o.isNull("modele")) null else o.optString("modele").ifBlank { null },
+                points = Points.entries.firstOrNull { it.name == o.optString("points") } ?: Points.RONDS,
+                ledsEteintes = o.optBoolean("eteintes", true),
+                anime = o.optBoolean("anime", true),
+                tap = TapW.entries.firstOrNull { it.name == o.optString("tap") } ?: TapW.CHOISIR,
+                nom = o.optBoolean("nom", true),
+                boutons = o.optBoolean("boutons", true),
+                regle = o.optBoolean("regle", true),
+                etatGlyph = o.optBoolean("glyph", false),
             )
         } catch (_: Exception) {
             null

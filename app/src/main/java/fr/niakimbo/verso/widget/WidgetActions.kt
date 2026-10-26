@@ -21,6 +21,7 @@ class WidgetActions : BroadcastReceiver() {
                     PRECEDENT -> changer(app, -1)
                     ONOFF -> basculer(app)
                     MINUTE -> WidgetMaj.majTous(app)
+                    AFFICHER -> intent.getStringExtra(EXTRA_MODELE)?.let { afficher(app, it) }
                 }
             } finally {
                 attente.finish()
@@ -31,6 +32,14 @@ class WidgetActions : BroadcastReceiver() {
     private suspend fun changer(app: VersoApp, pas: Int) {
         val suivant = Navigation.voisin(ordreDefilement(app), app.store.modeleActif, pas) ?: return
         val modele = app.catalogue.resoudre(suivant) ?: return
+        app.matrix.connect()
+        app.player.jouer(modele)
+        WidgetMaj.majTous(app)
+    }
+
+    /** Widget avec un modèle épinglé : l'afficher au dos (choix « à la main », comme un tap dans l'app). */
+    private suspend fun afficher(app: VersoApp, id: String) {
+        val modele = app.catalogue.resoudre(id) ?: return
         app.matrix.connect()
         app.player.jouer(modele)
         WidgetMaj.majTous(app)
@@ -47,6 +56,18 @@ class WidgetActions : BroadcastReceiver() {
         const val SUIVANT = "fr.niakimbo.verso.widget.SUIVANT"
         const val PRECEDENT = "fr.niakimbo.verso.widget.PRECEDENT"
         const val MINUTE = "fr.niakimbo.verso.widget.MINUTE"
+        const val AFFICHER = "fr.niakimbo.verso.widget.AFFICHER"
+        private const val EXTRA_MODELE = "modele"
+
+        /** Une intention par modèle (l'adresse les distingue : sinon Android les confondrait). */
+        fun afficher(context: Context, modele: String): PendingIntent = PendingIntent.getBroadcast(
+            context,
+            ("afficher:$modele").hashCode(),
+            Intent(context, WidgetActions::class.java).setAction(AFFICHER)
+                .setData(android.net.Uri.parse("verso://afficher/${android.net.Uri.encode(modele)}"))
+                .putExtra(EXTRA_MODELE, modele),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
 
         fun intention(context: Context, action: String): PendingIntent = PendingIntent.getBroadcast(
             context,

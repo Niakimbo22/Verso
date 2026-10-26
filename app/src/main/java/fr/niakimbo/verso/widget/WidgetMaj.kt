@@ -46,17 +46,23 @@ object WidgetMaj {
         }
 
         // Widgets de la galerie (une taille par fournisseur).
+        var horlogeEpinglee = false
         if (persos.isNotEmpty()) {
             val etat = etatPerso(app, modele)
+            val epingles = HashMap<String, Modele?>()
             for ((w, taille) in persos) {
                 val reglage = app.widgetsPerso.pour(w, taille)
-                val signature = "galerie|${reglage.versJson()}|$id|$revision|$minute|${etat.batterie}|${etat.enCharge}|${etat.regleAuto}|${etat.glyphEteint}"
+                // Modèle épinglé : ce widget montre toujours le même, quel que soit celui au dos.
+                val m = reglage.modele?.let { e -> epingles.getOrPut(e) { app.catalogue.resoudre(e) } } ?: modele
+                if (m?.dynamique != null && reglage.modele != null) horlogeEpinglee = true
+                val min = if (m?.dynamique != null) LocalTime.now().truncatedTo(ChronoUnit.MINUTES).toString() else ""
+                val signature = "galerie|${reglage.versJson()}|$id|$revision|$min|${etat.batterie}|${etat.enCharge}|${etat.regleAuto}|${etat.glyphEteint}|${etat.toyLie}"
                 if (!forcer && signatures[w] == signature) continue
-                if (envoyerPerso(app, manager, w, reglage.plan(), etat)) signatures[w] = signature
+                if (envoyerPerso(app, manager, w, reglage.plan(), etat.copy(modele = m))) signatures[w] = signature
             }
         }
 
-        if (modele?.dynamique != null) programmerMinute(app) else annulerMinute(app)
+        if (modele?.dynamique != null || horlogeEpinglee) programmerMinute(app) else annulerMinute(app)
     }
 
     /** Ce que les widgets perso affichent en ce moment. */
@@ -73,7 +79,37 @@ object WidgetMaj {
         return fr.niakimbo.verso.widget.perso.RenduPerso.Etat(
             modele = modele, batterie = niveau, enCharge = enCharge, regleAuto = regle,
             glyphEteint = fr.niakimbo.verso.glyph.BoutonGlyph.allume.value == false,
+            toyLie = app.toyLie.value,
         )
+    }
+
+    /**
+     * Aperçus de la liste des widgets du lanceur (Android 15+, `setWidgetPreview`) : le vrai rendu
+     * de chaque taille, au lieu d'une image fixe. API limitée par le système (~2 appels par heure) :
+     * une fois par version de Verso, et au plus une fois par jour.
+     */
+    suspend fun publierApercus(app: VersoApp) {
+        if (android.os.Build.VERSION.SDK_INT < 35) return
+        val prefs = app.getSharedPreferences("verso_widgets_galerie", Context.MODE_PRIVATE)
+        val cle = "${fr.niakimbo.verso.BuildConfig.VERSION_CODE}"
+        val maintenant = System.currentTimeMillis()
+        if (prefs.getString("apercus_version", null) == cle && maintenant - prefs.getLong("apercus_quand", 0) < 24 * 3600_000L) return
+        val modele = app.store.modeleActif?.let { app.catalogue.resoudre(it) }
+            ?: app.catalogue.contenu().entrees.firstOrNull { !it.cache }?.let(app.catalogue::resoudre)
+        val etat = etatPerso(app, modele)
+        val manager = AppWidgetManager.getInstance(app)
+        var ok = 0
+        for (t in fr.niakimbo.verso.widget.perso.TailleW.entries) {
+            try {
+                val plan = fr.niakimbo.verso.widget.perso.WidgetVerso.parDefaut(t).copy(genre = fr.niakimbo.verso.widget.perso.Genre.MATRICE).plan().copy(anime = false)
+                val rv = fr.niakimbo.verso.widget.perso.RenduPerso.construire(app, plan, etat, cliquable = false, budget = 60_000)
+                if (manager.setWidgetPreview(ComponentName(app, t.classe), android.appwidget.AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN, rv)) ok++
+            } catch (e: Exception) {
+                app.journalToy.ajouter("Aperçu du widget ${t.label} pour le lanceur impossible : ${e.javaClass.simpleName}")
+            }
+        }
+        prefs.edit().putString("apercus_version", cle).putLong("apercus_quand", maintenant).apply()
+        app.journalToy.ajouter("Aperçus des widgets envoyés au lanceur : $ok / ${fr.niakimbo.verso.widget.perso.TailleW.entries.size}")
     }
 
     private fun envoyerPerso(
