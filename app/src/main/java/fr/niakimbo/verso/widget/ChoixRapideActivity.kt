@@ -188,10 +188,7 @@ private fun Case(c: Choix, actif: Boolean, modifier: Modifier, onTap: () -> Unit
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         val m = c.modele
-        DotMatrix(
-            if (animer) apercuAnime(m) else if (m.dynamique != null) m.frameDynamique() else m.apercu,
-            Modifier.fillMaxWidth().aspectRatio(1f),
-        )
+        fr.niakimbo.verso.ui.ApercuModele(m, animer, Modifier.fillMaxWidth().aspectRatio(1f))
         Spacer(Modifier.height(4.dp))
         Text(
             c.modele.nom, color = Color.White, fontSize = 10.sp, fontFamily = FontFamily.Monospace,

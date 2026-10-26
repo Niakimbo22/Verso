@@ -121,9 +121,9 @@ fun FicheModele(
         ) {
             Text(entree.nom, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(14.dp))
-            DotMatrix(
-                apercu?.let { apercuAnime(it) },
-                Modifier
+            ApercuModele(
+                apercu, animer = true,
+                modifier = Modifier
                     .size(170.dp)
                     .background(Color.Black, CircleShape)
                     .border(1.dp, Border, CircleShape)

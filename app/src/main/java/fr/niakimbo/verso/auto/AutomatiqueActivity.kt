@@ -195,7 +195,7 @@ private fun ListeRegles(app: VersoApp, contenu: Catalogue.Contenu?, onFermer: ()
             val regleEnCours = regles.firstOrNull { it.id == enCours }?.takeIf { actif }
             PanneauVerre(Modifier.fillMaxWidth(), actif = regleEnCours != null) {
                 Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-                    DotMatrix(modeleActif?.let { apercuAnime(it) }, Modifier.size(92.dp))
+                    fr.niakimbo.verso.ui.ApercuModele(modeleActif, animer = true, modifier = Modifier.size(92.dp))
                     Spacer(Modifier.width(16.dp))
                     Column(Modifier.weight(1f)) {
                         Etiquette("EN CE MOMENT", couleur = if (regleEnCours != null) Rouge else Discret)
@@ -311,10 +311,7 @@ private fun ApercuAction(app: VersoApp, action: Action, contenu: Catalogue.Conte
         is Action.Afficher -> {
             val entree = contenu?.parId(action.modele)
             val modele = remember(entree) { entree?.let { app.catalogue.resoudre(it) } }
-            DotMatrix(
-                modele?.let { if (anime) apercuAnime(it) else if (it.dynamique != null) it.frameDynamique() else it.apercu },
-                modifier,
-            )
+            fr.niakimbo.verso.ui.ApercuModele(modele, anime, modifier)
         }
         Action.Eteindre -> DotMatrix(null, modifier)
         Action.Hasard, is Action.Defiler -> Box(modifier, contentAlignment = Alignment.Center) {

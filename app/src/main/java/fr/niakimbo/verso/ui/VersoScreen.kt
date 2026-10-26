@@ -182,6 +182,7 @@ fun VersoScreen(
             }
         },
     ) {
+        androidx.compose.runtime.CompositionLocalProvider(LocalFige provides (bibliothequeOuverte && !ModePerf.ancien)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -268,6 +269,7 @@ fun VersoScreen(
                     }
                 }
             }
+        }
         }
     }
 

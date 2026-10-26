@@ -17,6 +17,12 @@ import kotlinx.coroutines.delay
 private val LedOff = Color(0xFF1E1E1E)
 
 /**
+ * Vrai quand l'écran est caché derrière une feuille (bibliothèque ouverte) : ses aperçus et sa grande
+ * matrice gardent leur image, sinon le verre flouté de la feuille se recalculerait à chaque image.
+ */
+val LocalFige = androidx.compose.runtime.compositionLocalOf { false }
+
+/**
  * Prévient quand l'élément entre ou sort de l'écran (en défilant) : utile dans une liste qui n'est
  * pas « paresseuse » (les listes paresseuses ne composent déjà que ce qui est à l'écran).
  */

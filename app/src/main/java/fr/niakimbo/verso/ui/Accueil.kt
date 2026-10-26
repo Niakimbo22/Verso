@@ -88,6 +88,9 @@ internal fun Heros(app: VersoApp, entrees: List<EntreeCatalogue>?, onFiche: (Ent
     // L'image est lue au dessin : la matrice se redessine seule, l'écran ne se recompose pas à chaque image.
     val frame = app.matrix.lastFrame.collectAsStateWithLifecycle()
     val eteinte by remember { derivedStateOf { frame.value == null } }
+    // Bibliothèque ouverte par-dessus : la grande matrice garde son image (le mini-lecteur reste en direct).
+    val fige = LocalFige.current
+    val imageFigee = remember(fige) { frame.value }
     val actif by app.player.actif.collectAsStateWithLifecycle()
     val glyph by BoutonGlyph.allume.collectAsStateWithLifecycle()
     val favorisIds by app.favoris.ids.collectAsStateWithLifecycle()
@@ -117,7 +120,7 @@ internal fun Heros(app: VersoApp, entrees: List<EntreeCatalogue>?, onFiche: (Ent
     Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         // Disque de verre ; tap = réglages du modèle affiché.
         PanneauVerre(Modifier.size(236.dp), forme = CircleShape, onClick = { entreeActive?.let(onFiche) }) {
-            DotMatrix({ frame.value }, Modifier.size(236.dp).padding(23.dp))
+            DotMatrix({ if (fige) imageFigee else frame.value }, Modifier.size(236.dp).padding(23.dp))
         }
         Spacer(Modifier.height(14.dp))
         Text(
@@ -313,7 +316,7 @@ private fun TuileModele(app: VersoApp, entree: EntreeCatalogue, cache: CacheMode
             .padding(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        ApercuModele(modele, animer = true, modifier = Modifier.size(76.dp))
+        ApercuModele(modele, animer = !LocalFige.current, modifier = Modifier.size(76.dp))
         Spacer(Modifier.height(6.dp))
         Text(
             entree.nom, color = Color.White, fontSize = 11.sp, fontFamily = FontFamily.Monospace,
