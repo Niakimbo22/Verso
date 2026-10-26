@@ -232,6 +232,38 @@
             android:name=".widget.WidgetActions"
             android:exported="false" />
 
+        <!-- Widgets perso (Mes widgets) : créés dans Verso, posés avec « Verso · Perso » -->
+        <receiver
+            android:name=".widget.perso.WidgetPersoProvider"
+            android:exported="false"
+            android:label="@string/widget_perso">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_perso" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.perso.PoseRecepteur"
+            android:exported="false" />
+
+        <activity
+            android:name=".widget.perso.EditeurWidgetActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".widget.perso.ConfigWidgetPersoActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:taskAffinity="">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <activity
             android:name=".widget.ConfigWidgetActivity"
             android:exported="true"

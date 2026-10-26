@@ -22,4 +22,6 @@
     <string name="bouton_glyph_nom">Verso · bouton Glyph</string>
     <string name="bouton_glyph_resume">Permet au bouton ⏻ de Verso d\'allumer et d\'éteindre vraiment la Glyph Interface.</string>
     <string name="bouton_glyph_description">Quand tu touches ⏻ dans Verso (app, mini-lecteur, widget, tuile, raccourci), Verso ouvre le menu déroulant, appuie sur la tuile Glyph à ta place et referme le menu. Il ne fait rien d\'autre, ne lit que le menu déroulant et n\'envoie rien hors du téléphone.</string>
+    <string name="widget_perso">Verso · Perso</string>
+    <string name="widget_desc_perso">Ton widget à toi : matrice, heure, date, batterie, texte, boutons… créé dans Verso.</string>
 </resources>

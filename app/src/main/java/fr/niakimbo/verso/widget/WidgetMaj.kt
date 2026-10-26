@@ -25,7 +25,8 @@ object WidgetMaj {
     suspend fun majTous(app: VersoApp, forcer: Boolean = false) = verrou.withLock {
         val manager = AppWidgetManager.getInstance(app)
         val parFormat = Format.entries.associateWith { manager.getAppWidgetIds(ComponentName(app, it.classe)) }
-        if (parFormat.values.all { it.isEmpty() }) {
+        val persos = manager.getAppWidgetIds(ComponentName(app, fr.niakimbo.verso.widget.perso.WidgetPersoProvider::class.java))
+        if (parFormat.values.all { it.isEmpty() } && persos.isEmpty()) {
             annulerMinute(app)
             return@withLock
         }
@@ -44,7 +45,58 @@ object WidgetMaj {
             }
         }
 
+        // Widgets perso (Mes widgets).
+        if (persos.isNotEmpty()) {
+            val etat = etatPerso(app, modele)
+            for (w in persos) {
+                // Aucun widget créé : on affiche le modèle « Horloge + matrice » en attendant.
+                val design = app.widgetsPerso.pour(w) ?: fr.niakimbo.verso.widget.perso.WidgetPerso.modeles { "defaut" }.first()
+                val signature = "perso|${design.versJson()}|$id|$revision|$minute|${etat.batterie}|${etat.enCharge}|${etat.regleAuto}|${etat.glyphEteint}"
+                if (!forcer && signatures[w] == signature) continue
+                if (envoyerPerso(app, manager, w, design, etat)) signatures[w] = signature
+            }
+        }
+
         if (modele?.dynamique != null) programmerMinute(app) else annulerMinute(app)
+    }
+
+    /** Ce que les widgets perso affichent en ce moment. */
+    fun etatPerso(app: VersoApp, modele: Modele?): fr.niakimbo.verso.widget.perso.RenduPerso.Etat {
+        val b = app.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
+        val niveau = b?.let {
+            val n = it.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1)
+            val max = it.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100)
+            if (n < 0 || max <= 0) null else n * 100 / max
+        } ?: 100
+        val enCharge = (b?.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, 0) ?: 0) != 0
+        val regles = app.moteurRegles.store
+        val regle = if (regles.actif.value) regles.regles.value.firstOrNull { it.id == app.moteurRegles.enCours.value }?.nom else null
+        return fr.niakimbo.verso.widget.perso.RenduPerso.Etat(
+            modele = modele, batterie = niveau, enCharge = enCharge, regleAuto = regle,
+            glyphEteint = fr.niakimbo.verso.glyph.BoutonGlyph.allume.value == false,
+        )
+    }
+
+    private fun envoyerPerso(
+        app: VersoApp,
+        manager: AppWidgetManager,
+        id: Int,
+        design: fr.niakimbo.verso.widget.perso.WidgetPerso,
+        etat: fr.niakimbo.verso.widget.perso.RenduPerso.Etat,
+    ): Boolean {
+        var budget = RenduWidget.BUDGET_OCTETS
+        while (true) {
+            try {
+                manager.updateAppWidget(id, fr.niakimbo.verso.widget.perso.RenduPerso.construire(app, design, etat, budget = budget))
+                return true
+            } catch (e: RuntimeException) {
+                if (budget < 40_000) {
+                    app.journalToy.ajouter("Widget perso « ${design.nom} » : envoi refusé par le lanceur (${e.javaClass.simpleName})")
+                    return false
+                }
+                budget /= 2
+            }
+        }
     }
 
     fun oublier(id: Int) {

@@ -59,6 +59,17 @@ Remplace les apps du Play Store (bugs, features payantes, réglages compliqués)
 - **Horloge** : une image, renvoyée à chaque minute pile par une alarme RTC qui ne réveille pas le téléphone (`USE_EXACT_ALARM`) ; écran éteint, elle attend le réveil.
 - Mises à jour (`WidgetMaj`) quand le modèle actif, ses réglages ou le style d'un widget changent ; un widget inchangé n'est pas renvoyé.
 
+### 3.2 bis Mes widgets (widgets perso, 26/10)
+Demande de Nico : pouvoir créer plusieurs widgets et les modifier facilement (« mettre un peu ce qu'on veut »).
+- Section **MES WIDGETS** sur l'écran principal : « ＋ Créer un widget » puis la liste de mes widgets (toucher = modifier).
+- **Création** : on part d'un modèle (Horloge + matrice, Lecteur, Infos, Matrice, Vide) avec son aperçu, puis l'éditeur.
+- **Éditeur** (`widget/perso/EditeurWidget`, en Liquid Glass) : aperçu réel (mêmes RemoteViews que sur l'écran d'accueil) sur un faux fond d'écran, en 2×2 / 4×2 / 4×1 ; nom ; **contenu** = blocs de haut en bas (appui long + glisser pour l'ordre, toucher pour régler, ✕ pour retirer, « ＋ Ajouter un bloc ») ; **style** : disposition (empilé / matrice à gauche), fond (plein / verre translucide / aucun), thème, alignement, LEDs et points de la matrice ; « ⊕ Poser sur l'écran d'accueil » (`requestPinAppWidget`, puis `PoseRecepteur` attribue le design au widget posé) ; supprimer.
+- **Blocs** : Matrice (une seule, animée par le lanceur, tap = fenêtre ☰), Heure et Date (`TextClock` : tenues à jour par le téléphone, sans Verso), Nom du modèle, Batterie (⚡ en charge), Règle auto en cours, Texte libre (40 caractères), Boutons ‹ ⏻ › (⏻ = vrai bouton Glyph, §3.8), Espace. Taille Petit / Moyen / Grand, couleur Normale / Rouge / Discrète.
+- **Pose** : fournisseur « Verso · Perso » (`WidgetPersoProvider`). Depuis la liste des widgets du lanceur, `ConfigWidgetPersoActivity` demande lequel afficher (ou d'en créer un) ; « Paramètres du widget » permet d'en changer. Plusieurs widgets posés peuvent afficher le même design ou des designs différents. Sans aucun design créé, il affiche le modèle « Horloge + matrice ».
+- **Mises à jour** (`WidgetMaj`) : comme les autres widgets (modèle, réglages, minute des modèles dynamiques), plus la batterie (récepteur de `VersoApp`, seulement si un widget a un bloc Batterie), la règle auto en cours et l'état du Glyph. Un widget inchangé n'est pas renvoyé.
+- Stockage `WidgetsPersoStore` (`verso_widgets_perso`) : liste des designs en JSON + design de chaque widget posé.
+- Le vrai flou n'existe pas dans un widget : « Verre » = fond translucide avec liseré clair.
+
 ### 3.3 Glyph Toy « Verso » (affichage permanent)
 - Verso déclare un **Glyph Toy AOD** (`VersoToyService`). Une fois choisi dans les réglages Glyph (bouton dans l'app), il affiche le modèle actif **app fermée**, et le système le relance tout seul après un redémarrage.
 - Le modèle actif est mémorisé (`ModeleStore`) ; le Toy le relit à chaque liaison.

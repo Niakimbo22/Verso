@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:configure="fr.niakimbo.verso.widget.perso.ConfigWidgetPersoActivity"
+    android:description="@string/widget_desc_perso"
+    android:initialLayout="@layout/widget_perso_apercu"
+    android:minWidth="110dp"
+    android:minHeight="50dp"
+    android:minResizeWidth="60dp"
+    android:minResizeHeight="40dp"
+    android:previewLayout="@layout/widget_perso_apercu"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable|configuration_optional" />

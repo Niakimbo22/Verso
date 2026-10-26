@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rangee"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center"
+    android:orientation="horizontal">
+
+    <TextView
+        android:id="@+id/btn_prec"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:contentDescription="@string/widget_precedent"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="4dp"
+        android:text="‹"
+        android:textColor="#FFFFFFFF"
+        android:textSize="24sp" />
+
+    <TextView
+        android:id="@+id/btn_onoff"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:contentDescription="@string/raccourci_basculer"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="4dp"
+        android:text="⏻"
+        android:textColor="#FFFFFFFF"
+        android:textSize="20sp" />
+
+    <TextView
+        android:id="@+id/btn_suiv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:contentDescription="@string/widget_suivant"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="4dp"
+        android:text="›"
+        android:textColor="#FFFFFFFF"
+        android:textSize="24sp" />
+</LinearLayout>
