@@ -255,7 +255,7 @@ internal fun RangeeRapide(
     val actif by app.player.actif.collectAsStateWithLifecycle()
     var onglet by rememberSaveable { mutableStateOf(FAVORIS) }
     val parId = remember(entrees) { entrees.orEmpty().associateBy { it.id } }
-    val liste = (if (onglet == FAVORIS) favorisIds else recentsIds).mapNotNull { parId[it] }
+    val liste = (if (onglet == FAVORIS) favorisIds else recentsIds).distinct().mapNotNull { parId[it] }
 
     Column(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {

@@ -243,8 +243,8 @@ fun FeuilleBibliotheque(
                     when {
                         cherche.isNotEmpty() -> l.filter { FiltreBibliotheque.simple(it.nom).contains(cherche) || FiltreBibliotheque.simple(it.categorie).contains(cherche) }
                         rayon == TOUS -> l
-                        rayon == FAVORIS -> favorisIds.mapNotNull { id -> l.firstOrNull { it.id == id } }
-                        rayon == RECENTS -> recentsIds.mapNotNull { id -> l.firstOrNull { it.id == id } }
+                        rayon == FAVORIS -> favorisIds.distinct().mapNotNull { id -> l.firstOrNull { it.id == id } }
+                        rayon == RECENTS -> recentsIds.distinct().mapNotNull { id -> l.firstOrNull { it.id == id } }
                         rayon == MES -> l.filter { it.perso != null }
                         else -> l.filter { it.categorie == rayon }
                     }
