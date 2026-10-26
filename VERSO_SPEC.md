@@ -36,7 +36,7 @@ Remplace les apps du Play Store (bugs, features payantes, réglages compliqués)
 ### 3.1 Bibliothèque de modèles
 - Une liste de modèles avec un aperçu dot-matrix 13×13 qui reproduit la forme ronde de la vraie matrice.
 - Deux types de modèles : **statique** (une seule image) et **animé** (plusieurs images + durée de chaque image).
-- 90 modèles intégrés (étape 6), rangés par rayon : Effets, Météo, Icônes, Émotions, Persos (originaux, aucun personnage protégé), Formes, Fêtes, Texte, Infos. Puces en haut de la bibliothèque : Tous, ★, puis chaque rayon. Tous les aperçus sont animés, partout (bibliothèque, fenêtre ☰), mais seulement quand la carte est à l'écran : on peut faire défiler 90 modèles sans ralentir l'app.
+- 90 modèles intégrés (étape 6), rangés par rayon : Effets, Météo, Icônes, Émotions, Persos (originaux, aucun personnage protégé), Formes, Fêtes, Texte, Infos. La bibliothèque complète n'est **plus affichée en permanence** (26/10) : carte « ▦ Tous les modèles » sur l'écran principal → **feuille de verre** qui monte du bas (façon iOS, §3.9). Puces en haut de la feuille : 🔍, Tous, ★, ◷ Récents, Mes modèles, puis chaque rayon ; « Tous » est rangé par rayons avec un titre par rayon. Grille **paresseuse** (`LazyVerticalGrid`) : seules les cartes à l'écran existent et s'animent.
 - Tap sur un modèle → il s'affiche **immédiatement** sur la matrice.
 - Un bouton « Éteindre la matrice » ; matrice éteinte, il devient « Rallumer « X » » (dernier modèle éteint, depuis l'app, le widget ou la fenêtre ☰). Toucher la grande matrice ouvre les réglages du modèle affiché.
 - Favoris : ☆/★ sur chaque carte (`FavorisStore`) ; un nouveau favori arrive à la fin. **Ordre réglable** (étape 8) : dans le rayon ★, appui long sur une carte puis glisser (les autres cartes se décalent, petite vibration à chaque changement de place, ⚙ ouvre toujours les réglages). Cet ordre est celui du widget (‹ ›, tap « Suivant ») et de la fenêtre ☰.
@@ -207,16 +207,19 @@ Types `si` : `plage` (`debut`, `fin` en minutes, `jours` 1 = lundi), `aheure` (`
 
 ### 3.7 Liquid Glass (interface)
 Vrai verre façon iOS, avec la bibliothèque **Backdrop** (`io.github.kyant0:backdrop:1.0.1`, Kyant, Apache 2.0) : réfraction des bords (shader AGSL `lens`, avec profondeur), flou, vibrance, reflet (`Highlight`) et ombre. Code dans `ui/verre/Verre.kt` :
-- `EcranVerre` : fond animé (noir, lueurs rouge Nothing / blanche / rouge sombre qui dérivent à 20 images/s et suivent le défilement, grille de points façon matrice) + contenu en verre sur ce fond + éléments flottants (`dessus`) en verre sur le fond **et** le contenu qui défile dessous.
+- `EcranVerre` : fond (noir, lueurs rouge Nothing / blanche / rouge sombre qui suivent le défilement — et dérivent à 20 images/s si « Fond animé » est activé —, grille de points façon matrice) + contenu en verre sur ce fond + éléments flottants (`dessus`) en verre sur le fond **et** le contenu qui défile dessous.
 - `Modifier.verre`, `PanneauVerre`, `BoutonVerre` (principal = teinté rouge), `PuceVerre`, `RondVerre`, effet d'appui qui enfonce le verre (ressort + vibration).
-- Réglages (26/10, renforcés à la demande de Nico) : flou léger (7 dp) pour un verre plus transparent, réfraction forte des bords (22 dp) avec irisation (`chromaticAberration`), reflet plus marqué, lueurs du fond plus vives.
+- Réglages (26/10, renforcés à la demande de Nico) : flou léger (7 dp) pour un verre plus transparent, réfraction forte des bords (22 dp) avec irisation (`chromaticAberration`, retirée des petites puces où elle ne se voit pas), reflet plus marqué, lueurs du fond plus vives.
+- **Fond** : les lueurs suivent le défilement mais ne dérivent plus toutes seules ; interrupteur **Plus › Fond animé** (coupé par défaut) pour remettre la dérive à 20 i/s.
 - Partout sur l'écran principal (disque de la grande matrice, boutons, puces des rayons, statut du Toy, cartes Automatique et Widgets) et dans Automatique (barres et boutons flottants).
-- **Mini-lecteur** (`ui/MiniLecteur.kt`) : barre de verre flottante en bas de l'écran principal, toujours visible : matrice en direct, nom du modèle, règle auto en cours ou minuteur de veille, ‹ › et **glisser à gauche / droite** (favoris ou toute la bibliothèque, comme le widget), ⏻ / ▶ (éteindre / rallumer le dernier). Toucher = remonter à la grande matrice. **Appui long** = panneau de verre : luminosité du modèle affiché (enregistrée dans ses réglages), minuteur de veille 15 / 30 / 60 min (alarme exacte `MinuteurVeille`, marche app fermée), 🎲 un favori au hasard.
-- **Barre des rayons collante** (`ui/FiltreBibliotheque.kt`) : quand les puces de la bibliothèque passent sous le haut de l'écran, une barre de verre les remplace en haut. Puce 🔍 = recherche par nom ou rayon, sans accents ni majuscules, dans toute la bibliothèque. Rayon **◷ Récents** : les 12 derniers modèles affichés (`RecentsStore`, à la main ou par une règle).
+- **Mini-lecteur** (`ui/MiniLecteur.kt`) : barre de verre flottante en bas de l'écran principal, visible **dès que la grande matrice sort de l'écran et quand la bibliothèque est ouverte** (comme le mini-lecteur de Musique sur iPhone) : matrice en direct, nom du modèle, règle auto en cours ou minuteur de veille, ‹ › et **glisser à gauche / droite** (favoris ou toute la bibliothèque, comme le widget), ⏻ / ▶ (éteindre / rallumer le dernier). Toucher = remonter à la grande matrice. **Appui long** = panneau de verre : luminosité du modèle affiché (enregistrée dans ses réglages), minuteur de veille 15 / 30 / 60 min (alarme exacte `MinuteurVeille`, marche app fermée), 🎲 un favori au hasard.
+- **Puces des rayons** (`ui/FiltreBibliotheque.kt`) : fixes en haut de la feuille Bibliothèque (la barre collante de l'écran principal n'a plus lieu d'être). Puce 🔍 = recherche par nom ou rayon, sans accents ni majuscules, dans toute la bibliothèque. Rayon **◷ Récents** : les 12 derniers modèles affichés (`RecentsStore`, à la main ou par une règle).
 - **Tuile des réglages rapides** « Verso » (`rapide/TuileVerso`) : sous-titre = modèle en cours ; tap = modèle suivant (rallume si éteinte) ; appui long = ouvre Verso.
 - **Raccourcis de l'icône** (appui long sur l'icône, `res/xml/raccourcis.xml` → `RaccourciActivity` invisible) : Modèle suivant, Au hasard, Éteindre / rallumer, Automatique.
 - Toutes ces actions passent par `ModelePlayer.jouer / eteindre` (`rapide/ActionsRapides`), comme un tap dans l'app : pour les règles automatiques, ce sont des choix à la main.
-- **Pas** de verre sur les 90 cartes de modèles (trop lourd à 90) : fond noir translucide qui laisse passer les lueurs.
+- **Pas** de verre sur les 90 cartes de modèles (trop lourd à 90) : fond noir translucide qui laisse passer les lueurs. Les tuiles de la rangée « Accès rapide » (une dizaine à l'écran) sont, elles, en verre.
+- **Appui façon iOS 26** (`PressionVerre`, 26/10) sur tous les boutons, puces, cartes et tuiles de verre : le verre gonfle un peu, s'étire vers le doigt (élastique) et une lueur suit le doigt (shader AGSL). Aucun évènement consommé : clic et défilement inchangés ; si le doigt part en défilement, l'effet se relâche.
+- **Feuille de verre** (bibliothèque) : verre plein écran très flouté posé sur l'écran principal ; il **exporte** son rendu (`exportedBackdrop` de Backdrop) pour que les puces et boutons posés dessus réfractent la feuille. Couches de `EcranVerre` : fond → contenu → feuille → éléments flottants.
 - Sans fond disponible (fenêtres qui ne sont pas dans un `EcranVerre`), `verre` retombe sur un panneau sombre classique.
 - Compose foundation/ui passent en 1.9.5 (exigé par Backdrop) ; Kotlin reste en 2.1.20.
 
@@ -238,6 +241,33 @@ Demande de Nico : quand la Glyph Interface est coupée (tuile « Glyph » du men
 **Interface** : carte sous la grande matrice. Si le service n'est pas activé, elle donne un guide en 3 étapes : fiche de Verso › ⋮ › « Autoriser les paramètres restreints » (app installée hors Play Store), puis Accessibilité › « Verso · bouton Glyph ». Une fois activé, elle montre l'état (● allumé / éteint) et un bouton Allumer / Éteindre. Sans le service, ⏻ fait comme avant (modèle seulement).
 
 **Limites** : le menu déroulant s'ouvre et se ferme en un éclair ; si Nothing renomme ou déplace la tuile dans une mise à jour, il faudra adapter la recherche. La logique de la matrice (`closeAppMatrix` au passage au Toy) est inchangée.
+
+### 3.9 Écran principal et performance (26/10)
+Demande de Nico : l'app rame un peu ; les 90 modèles prennent toute la place ; écran plus lisible et plus interactif **sans supprimer aucune option** ; preuves mesurées, pas de « c'est plus fluide ».
+
+**Organisation** (`ui/VersoScreen.kt`, `ui/Accueil.kt`) :
+1. En-tête : « Verso », version et état des mises à jour (bouton « Mettre à jour » seulement s'il y en a une).
+2. **La matrice** (disque de verre ; tap = réglages du modèle), nom, règle auto ou minuteur ; **‹ ⏻ ›** ; puces **☆ Favori**, **⚙ Réglages**, **◐ Options** (luminosité, minuteur de veille, 🎲 au hasard — les mêmes que l'appui long sur le mini-lecteur).
+3. **Deux pastilles d'état** : Glyph Toy (vert / ambre / rouge) et bouton Glyph. Toucher = détails (carte du Toy + carte du vrai bouton Glyph avec son guide d'activation). Les détails du Toy s'ouvrent tout seuls s'il y a un problème. La carte « La matrice ne répond pas » reste toujours visible quand il le faut.
+4. **Accès rapide** : ★ Favoris / ◷ Récents en une rangée de tuiles de verre qui défile (tap = afficher, appui long = réglages), « Ordre › / Tout voir › » ; carte **▦ Tous les modèles** → feuille Bibliothèque.
+5. **Automatique** (inchangé).
+6. **Réglages** repliés : **Widgets** (galerie + widgets posés + anciens widgets) et **Plus** (Fond animé, « ↻ Matrice figée ? Redémarrer Verso », Diagnostic avec le banc de fluidité).
+
+**Feuille Bibliothèque** (`FeuilleBibliotheque`) : monte du bas avec un ressort, poignée à tirer vers le bas, ✕ ou retour Android pour fermer. Dedans : rayons, 🔍, ✎ Créer un dessin / ⇩ Importer, réordonner ★ (appui long + glisser), ⚙ et appui long = fiche du modèle. Rayon et recherche gardés entre deux ouvertures.
+
+**Causes de lenteur trouvées dans le code (v0.1.67)** et correctifs :
+| Cause | Effet | Correctif |
+|---|---|---|
+| Fond redessiné 20×/s (≈ 1 200 cercles) | chaque verre de l'écran recalcule flou + réfraction 20×/s, même sans toucher | fond fixe au repos (parallaxe gardée), grille en une seule commande `drawPoints`, option Fond animé |
+| Image de la matrice lue tout en haut de la bibliothèque | les 90 cartes recomposées à chaque image (~14×/s avec Pluie) | `DotMatrix({ … })` lit l'image **au dessin** : seule la matrice se redessine |
+| 90 cartes composées d'un coup + 90 modèles calculés à l'ouverture | ouverture lente, défilement lourd | grille paresseuse + modèles calculés à l'affichage (`CacheModeles`) |
+| Aperçus animés qui recomposent la carte entière | texte, ★, ⚙ recalculés à chaque image | `rememberApercu` + dessin seul (aussi fiche du modèle, fenêtre ☰, Automatique) |
+| Lambdas de `Modifier.verre` neuves à chaque recomposition | Backdrop compare ses paramètres et reconstruit flou + shader à chaque fois | lambdas mémorisées |
+| Calques englobants (`layerBackdrop`) qui redessinent tout | tout l'écran rejoué pour chaque calque | fond et contenu dans leur propre calque, réutilisés |
+| Barre collante recalculée à chaque pixel de défilement | recompositions pendant le défilement | supprimée (puces fixes dans la feuille) |
+| Écran principal animé derrière la feuille | flou plein écran recalculé à chaque image | grande matrice et tuiles figées tant que la feuille est ouverte (`LocalFige`) |
+
+**Banc de fluidité** (Plus › Diagnostic › FLUIDITÉ, `ui/Perf.kt`) : ~35 s sans toucher, le même parcours deux fois — **ancien moteur** (`ModePerf.ancien` reproduit les causes ci-dessus : fond animé point par point, effets du verre recréés, grille non paresseuse, recompositions à chaque image) puis **nouveau**. Trois scènes : repos 3 s, défilement de l'écran principal, défilement de la bibliothèque (90). Mesure avec l'API officielle `Window.addOnFrameMetricsAvailableListener` : nombre d'images réellement dessinées (et par seconde), durée médiane et 95 % d'une image, temps GPU médian, % d'images **en retard** (au-delà de l'échéance `FrameMetrics.DEADLINE`), plus le temps d'ouverture de la bibliothèque et de l'app (lancement à froid). Le rapport est gardé (relisible après coup). Limite : l'« ancien » est reproduit dans la nouvelle mise en page (la bibliothèque y est dans la feuille), pas la v0.1.67 à l'identique.
 
 ## 4. Feuille de route après la V1 (dans cet ordre)
 

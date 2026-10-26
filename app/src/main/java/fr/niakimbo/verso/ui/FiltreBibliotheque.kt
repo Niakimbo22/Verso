@@ -12,7 +12,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -34,16 +33,12 @@ internal const val RECENTS = "◷ Récents"
 internal const val MES = MesModelesStore.RAYON
 
 /**
- * Rayon choisi et recherche de la bibliothèque, partagés entre les puces dans la page et
- * la barre collante en verre qui apparaît en haut quand on a défilé plus bas.
+ * Rayon choisi et recherche de la bibliothèque (gardés quand on la ferme et la rouvre).
  */
 class FiltreBibliotheque {
     var rayon by mutableStateOf(TOUS)
     var recherche by mutableStateOf("")
     var chercher by mutableStateOf(false)
-
-    /** Bas des puces de la page dans la fenêtre (px) : remontées sous le haut de l'écran, la barre collante prend le relais. */
-    var basPuces by mutableFloatStateOf(Float.MAX_VALUE)
 
     /** Rayons proposés et nombre de modèles dans chacun (remplis par la bibliothèque). */
     var rayons by mutableStateOf<List<Pair<String, Int>>>(emptyList())
@@ -92,13 +87,5 @@ fun LignePuces(filtre: FiltreBibliotheque, modifier: Modifier = Modifier) {
                 )
             }
         }
-    }
-}
-
-/** Barre collante en verre, en haut de l'écran principal, quand les puces de la page ont défilé hors de vue. */
-@Composable
-fun BarreRayonsCollante(filtre: FiltreBibliotheque, modifier: Modifier = Modifier) {
-    PanneauVerre(modifier.fillMaxWidth(), forme = RoundedCornerShape(26.dp)) {
-        LignePuces(filtre, Modifier.padding(horizontal = 10.dp, vertical = 10.dp))
     }
 }

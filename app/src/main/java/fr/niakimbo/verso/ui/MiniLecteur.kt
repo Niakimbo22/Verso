@@ -67,7 +67,10 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MiniLecteur(app: VersoApp, modifier: Modifier = Modifier, onRemonter: () -> Unit) {
-    val frame by app.matrix.lastFrame.collectAsStateWithLifecycle()
+    // L'image de la matrice est lue au dessin : une nouvelle image ne recompose pas toute la barre.
+    val frame = app.matrix.lastFrame.collectAsStateWithLifecycle()
+    val eteinte by remember { androidx.compose.runtime.derivedStateOf { frame.value == null } }
+    if (ModePerf.ancien) frame.value.hashCode() // banc : ancien comportement (recomposé à chaque image)
     val actif by app.player.actif.collectAsStateWithLifecycle()
     val enCours by app.moteurRegles.enCours.collectAsStateWithLifecycle()
     val regles by app.moteurRegles.store.regles.collectAsStateWithLifecycle()
@@ -137,11 +140,11 @@ fun MiniLecteur(app: VersoApp, modifier: Modifier = Modifier, onRemonter: () -> 
                         ),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    DotMatrix(frame, Modifier.size(48.dp))
+                    DotMatrix({ frame.value }, Modifier.size(48.dp))
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
-                            actif?.nom ?: if (frame == null) "Matrice éteinte" else "Aperçu",
+                            actif?.nom ?: if (eteinte) "Matrice éteinte" else "Aperçu",
                             color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
                             maxLines = 1, overflow = TextOverflow.Ellipsis,
                         )
@@ -170,7 +173,7 @@ fun MiniLecteur(app: VersoApp, modifier: Modifier = Modifier, onRemonter: () -> 
 
 /** Options de l'appui long : luminosité du modèle affiché, au hasard, minuteur de veille. */
 @Composable
-private fun Options(app: VersoApp, allume: Boolean, resteVeille: Int, onFermer: () -> Unit) {
+internal fun Options(app: VersoApp, allume: Boolean, resteVeille: Int, onFermer: () -> Unit) {
     val scope = rememberCoroutineScope()
     val actifId by app.player.actif.collectAsStateWithLifecycle()
     var lum by remember(actifId?.id) { mutableFloatStateOf(ActionsRapides.luminositeActuelle(app)) }

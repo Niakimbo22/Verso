@@ -424,16 +424,18 @@ private fun PageGenre(
 
 /** « ＋ Ajouter un widget » (galerie) et les widgets Verso posés (toucher = modifier). */
 @Composable
-fun SectionMesWidgets(app: VersoApp) {
+fun SectionMesWidgets(app: VersoApp, titre: Boolean = true) {
     val context = LocalContext.current
     val revision by app.widgetsPerso.revision.collectAsStateWithLifecycle()
     val poses = remember(revision) { app.widgetsPerso.poses(context) }
     Column(Modifier.fillMaxWidth()) {
-        Text(
-            "WIDGETS", color = Discret, fontSize = 12.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp,
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-        )
-        Spacer(Modifier.height(12.dp))
+        if (titre) {
+            Text(
+                "WIDGETS", color = Discret, fontSize = 12.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            )
+            Spacer(Modifier.height(12.dp))
+        }
         BoutonVerre("＋  Ajouter un widget", { GalerieActivity.ouvrir(context) }, Modifier.fillMaxWidth(), principal = true)
         if (poses.isNotEmpty()) {
             Spacer(Modifier.height(12.dp))
