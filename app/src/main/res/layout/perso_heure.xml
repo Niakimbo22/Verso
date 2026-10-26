@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- TextClock : le téléphone tient l'heure à jour lui-même, sans réveiller Verso. -->
+<TextClock xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/horloge"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:fontFamily="sans-serif-thin"
+    android:format12Hour="HH:mm"
+    android:format24Hour="HH:mm"
+    android:includeFontPadding="false"
+    android:maxLines="1"
+    android:textColor="#FFFFFFFF"
+    android:textSize="44sp" />

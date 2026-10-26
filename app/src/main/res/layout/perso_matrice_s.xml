@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bloc Matrice du widget perso (56dp) : mêmes calques que les autres widgets (RenduWidget). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/matrice"
+    android:layout_width="56dp"
+    android:layout_height="56dp"
+    android:contentDescription="@string/widget_liste">
+
+    <ImageView
+        android:id="@+id/disque"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitCenter"
+        android:src="@drawable/widget_disque"
+        android:tint="#FF1E1E1E" />
+
+    <ViewFlipper
+        android:id="@+id/flipper"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:autoStart="true"
+        android:flipInterval="1000"
+        android:measureAllChildren="false" />
+
+    <ImageView
+        android:id="@+id/masque"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitCenter"
+        android:src="@drawable/widget_masque_rond_moyen"
+        android:tint="#FF000000" />
+</FrameLayout>

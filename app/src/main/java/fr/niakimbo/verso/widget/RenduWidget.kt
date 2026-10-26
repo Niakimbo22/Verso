@@ -67,7 +67,7 @@ object RenduWidget {
         }
     }
 
-    private fun masque(style: StyleWidget): Int = when (style.forme) {
+    internal fun masque(style: StyleWidget): Int = when (style.forme) {
         StyleWidget.Forme.ROND -> when (style.taille) {
             StyleWidget.Taille.PETIT -> R.drawable.widget_masque_rond_petit
             StyleWidget.Taille.MOYEN -> R.drawable.widget_masque_rond_moyen

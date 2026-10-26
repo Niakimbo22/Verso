@@ -1,5 +1,7 @@
 package fr.niakimbo.verso
 
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.unit.dp
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -62,7 +64,13 @@ class MainActivity : ComponentActivity() {
                     depuisDemarrageMs = maintenant - app.demarrage,
                 ),
                 onChoisirToy = { app.journalToy.ajouter(ChoixToy.ouvrir(this)) },
-                sectionWidgets = { SectionWidgets(app) },
+                sectionWidgets = {
+                    androidx.compose.foundation.layout.Column {
+                        fr.niakimbo.verso.widget.perso.SectionMesWidgets(app)
+                        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(28.dp))
+                        SectionWidgets(app)
+                    }
+                },
                 sectionAuto = { SectionAuto(app) },
                 miniLecteur = { m, remonter -> fr.niakimbo.verso.ui.MiniLecteur(app, m, remonter) },
             )

@@ -46,6 +46,7 @@ class VersoApp : Application() {
     val favoris: FavorisStore by lazy { FavorisStore(this) }
     val recents: fr.niakimbo.verso.modele.RecentsStore by lazy { fr.niakimbo.verso.modele.RecentsStore(this) }
     val stylesWidget: StylesWidgetStore by lazy { StylesWidgetStore(this) }
+    val widgetsPerso: fr.niakimbo.verso.widget.perso.WidgetsPersoStore by lazy { fr.niakimbo.verso.widget.perso.WidgetsPersoStore(this) }
 
     /** Règles automatiques (changement de modèle selon l'heure, la charge, le casque…). */
     val moteurRegles: MoteurRegles by lazy { MoteurRegles(this) }
@@ -134,6 +135,17 @@ class VersoApp : Application() {
         journalToy.ajouter("Processus Verso démarré")
         moteurRegles.demarrer()
         fr.niakimbo.verso.rapide.ActionsRapides.lireVeille(this)
+        // Bloc Batterie des widgets perso : redessinés quand le niveau ou la charge change (s'ils ont changé).
+        registerReceiver(object : android.content.BroadcastReceiver() {
+            override fun onReceive(c: android.content.Context, i: android.content.Intent) {
+                if (widgetsPerso.tous.value.none { w -> w.blocs.any { it.type == fr.niakimbo.verso.widget.perso.WidgetPerso.Type.BATTERIE } }) return
+                appScope.launch { WidgetMaj.majTous(this@VersoApp) }
+            }
+        }, android.content.IntentFilter().apply {
+            addAction(android.content.Intent.ACTION_BATTERY_CHANGED)
+            addAction(android.content.Intent.ACTION_POWER_CONNECTED)
+            addAction(android.content.Intent.ACTION_POWER_DISCONNECTED)
+        }, RECEIVER_NOT_EXPORTED)
         // Rayon « Récents » et tuile des réglages rapides : suivent le modèle affiché.
         appScope.launch {
             player.actif.collect { m ->
@@ -149,7 +161,12 @@ class VersoApp : Application() {
 
         // Widgets : redessinés quand le modèle actif, ses réglages ou le style d'un widget changent.
         appScope.launch {
-            combine(player.actif, reglages.revision, stylesWidget.revision, mesModeles.revision) { actif, r, w, m -> listOf(actif?.id, r, w, m) }
+            combine(
+                listOf(
+                    player.actif, reglages.revision, stylesWidget.revision, mesModeles.revision,
+                    widgetsPerso.revision, moteurRegles.enCours, fr.niakimbo.verso.glyph.BoutonGlyph.allume,
+                ),
+            ) { valeurs -> valeurs.map { (it as? fr.niakimbo.verso.modele.Modele)?.id ?: it } }
                 .collectLatest { WidgetMaj.majTous(this@VersoApp) }
         }
     }
