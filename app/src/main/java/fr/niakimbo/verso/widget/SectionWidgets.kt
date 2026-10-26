@@ -34,7 +34,7 @@ import fr.niakimbo.verso.VersoApp
  * « Paramètres du widget » dans le menu du lanceur. Rien ne s'affiche s'il n'y a aucun widget.
  */
 @Composable
-fun SectionWidgets(app: VersoApp) {
+fun SectionWidgets(app: VersoApp, titre: String = "WIDGETS") {
     val context = LocalContext.current
     val revision by app.stylesWidget.revision.collectAsStateWithLifecycle()
     val widgets = remember(revision) {
@@ -45,7 +45,7 @@ fun SectionWidgets(app: VersoApp) {
 
     Column(Modifier.fillMaxWidth()) {
         Text(
-            "WIDGETS", color = Color(0xFF8A8A8A), fontSize = 12.sp,
+            titre, color = Color(0xFF8A8A8A), fontSize = 12.sp,
             fontFamily = FontFamily.Monospace, letterSpacing = 2.sp,
             modifier = Modifier.align(Alignment.CenterHorizontally),
         )

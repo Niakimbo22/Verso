@@ -38,6 +38,11 @@ class MainActivity : ComponentActivity() {
         ouvrirChoixToySiDemande(intent)
         setContent {
             val state by updates.state.collectAsStateWithLifecycle()
+            // Temps d'ouverture (Diagnostic › Fluidité) : jusqu'à la première image affichée.
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                androidx.compose.runtime.withFrameNanos { }
+                fr.niakimbo.verso.ui.Demarrage.premiereImage()
+            }
             val toyLie by app.toyLie.collectAsStateWithLifecycle()
             // Relu toutes les 10 s : « Relance du Toy… » laisse la place au vrai statut après 3 min.
             val maintenant by produceState(System.currentTimeMillis()) {
@@ -66,9 +71,9 @@ class MainActivity : ComponentActivity() {
                 onChoisirToy = { app.journalToy.ajouter(ChoixToy.ouvrir(this)) },
                 sectionWidgets = {
                     androidx.compose.foundation.layout.Column {
-                        fr.niakimbo.verso.widget.perso.SectionMesWidgets(app)
-                        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(28.dp))
-                        SectionWidgets(app)
+                        fr.niakimbo.verso.widget.perso.SectionMesWidgets(app, titre = false)
+                        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(24.dp))
+                        SectionWidgets(app, titre = "ANCIENS WIDGETS")
                     }
                 },
                 sectionAuto = { SectionAuto(app) },
