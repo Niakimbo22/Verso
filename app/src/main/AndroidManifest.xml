@@ -232,11 +232,35 @@
             android:name=".widget.WidgetActions"
             android:exported="false" />
 
-        <!-- Widgets perso (Mes widgets) : créés dans Verso, posés avec « Verso · Perso » -->
+        <!-- Widgets Verso de la galerie : un fournisseur par taille, pour qu'un 4 × 2 se pose vraiment en 4 × 2 -->
+        <receiver
+            android:name=".widget.perso.Verso1x1"
+            android:exported="false"
+            android:label="@string/widget_verso_1x1">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_verso_1x1" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.perso.Verso2x1"
+            android:exported="false"
+            android:label="@string/widget_verso_2x1">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_verso_2x1" />
+        </receiver>
+
         <receiver
             android:name=".widget.perso.WidgetPersoProvider"
             android:exported="false"
-            android:label="@string/widget_perso">
+            android:label="@string/widget_verso_2x2">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -246,11 +270,71 @@
         </receiver>
 
         <receiver
+            android:name=".widget.perso.Verso3x2"
+            android:exported="false"
+            android:label="@string/widget_verso_3x2">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_verso_3x2" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.perso.Verso4x1"
+            android:exported="false"
+            android:label="@string/widget_verso_4x1">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_verso_4x1" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.perso.Verso4x2"
+            android:exported="false"
+            android:label="@string/widget_verso_4x2">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_verso_4x2" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.perso.Verso4x3"
+            android:exported="false"
+            android:label="@string/widget_verso_4x3">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_verso_4x3" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.perso.Verso4x4"
+            android:exported="false"
+            android:label="@string/widget_verso_4x4">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_verso_4x4" />
+        </receiver>
+
+        <receiver
             android:name=".widget.perso.PoseRecepteur"
             android:exported="false" />
 
         <activity
-            android:name=".widget.perso.EditeurWidgetActivity"
+            android:name=".widget.perso.GalerieActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 

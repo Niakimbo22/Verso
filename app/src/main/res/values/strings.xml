@@ -22,6 +22,20 @@
     <string name="bouton_glyph_nom">Verso · bouton Glyph</string>
     <string name="bouton_glyph_resume">Permet au bouton ⏻ de Verso d\'allumer et d\'éteindre vraiment la Glyph Interface.</string>
     <string name="bouton_glyph_description">Quand tu touches ⏻ dans Verso (app, mini-lecteur, widget, tuile, raccourci), Verso ouvre le menu déroulant, appuie sur la tuile Glyph à ta place et referme le menu. Il ne fait rien d\'autre, ne lit que le menu déroulant et n\'envoie rien hors du téléphone.</string>
-    <string name="widget_perso">Verso · Perso</string>
-    <string name="widget_desc_perso">Ton widget à toi : matrice, heure, date, batterie, texte, boutons… créé dans Verso.</string>
+    <string name="widget_verso_1x1">Verso · Mini 1 × 1</string>
+    <string name="widget_desc_verso_1x1">Horloge, matrice, batterie, tout-en-un ou message, au choix, en 1 × 1.</string>
+    <string name="widget_verso_2x1">Verso · Bandeau 2 × 1</string>
+    <string name="widget_desc_verso_2x1">Horloge, matrice, batterie, tout-en-un ou message, au choix, en 2 × 1.</string>
+    <string name="widget_verso_2x2">Verso · Petit 2 × 2</string>
+    <string name="widget_desc_verso_2x2">Horloge, matrice, batterie, tout-en-un ou message, au choix, en 2 × 2.</string>
+    <string name="widget_verso_3x2">Verso · Moyen 3 × 2</string>
+    <string name="widget_desc_verso_3x2">Horloge, matrice, batterie, tout-en-un ou message, au choix, en 3 × 2.</string>
+    <string name="widget_verso_4x1">Verso · Barre 4 × 1</string>
+    <string name="widget_desc_verso_4x1">Horloge, matrice, batterie, tout-en-un ou message, au choix, en 4 × 1.</string>
+    <string name="widget_verso_4x2">Verso · Large 4 × 2</string>
+    <string name="widget_desc_verso_4x2">Horloge, matrice, batterie, tout-en-un ou message, au choix, en 4 × 2.</string>
+    <string name="widget_verso_4x3">Verso · Haut 4 × 3</string>
+    <string name="widget_desc_verso_4x3">Horloge, matrice, batterie, tout-en-un ou message, au choix, en 4 × 3.</string>
+    <string name="widget_verso_4x4">Verso · Grand 4 × 4</string>
+    <string name="widget_desc_verso_4x4">Horloge, matrice, batterie, tout-en-un ou message, au choix, en 4 × 4.</string>
 </resources>

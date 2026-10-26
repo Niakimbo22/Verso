@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget Verso 3 × 2 (galerie). targetCell = la vraie taille posée. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:configure="fr.niakimbo.verso.widget.perso.ConfigWidgetPersoActivity"
+    android:description="@string/widget_desc_verso_3x2"
+    android:initialLayout="@layout/widget_perso_apercu"
+    android:minWidth="203dp"
+    android:minHeight="130dp"
+    android:minResizeWidth="40dp"
+    android:minResizeHeight="40dp"
+    android:previewLayout="@layout/widget_perso_apercu"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="3"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable|configuration_optional" />

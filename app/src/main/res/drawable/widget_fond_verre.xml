@@ -1,7 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Fond « Verre » des widgets perso : translucide avec un liseré clair (le lanceur ne permet pas le vrai flou). -->
-<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="#33FFFFFF" />
-    <stroke android:width="1dp" android:color="#55FFFFFF" />
-    <corners android:radius="@android:dimen/system_app_widget_background_radius" />
-</shape>
+<!--
+    Fond « Verre » des widgets Verso. Un widget ne peut pas flouter le fond d'écran (le lanceur ne le
+    permet pas) : on imite le Liquid Glass avec un voile clair en dégradé, un reflet en haut,
+    un liseré lumineux et un léger assombrissement en bas.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Voile : plus clair en haut, presque transparent en bas. -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient android:angle="270" android:startColor="#47FFFFFF" android:centerColor="#22FFFFFF" android:endColor="#18FFFFFF" />
+            <corners android:radius="@android:dimen/system_app_widget_background_radius" />
+        </shape>
+    </item>
+    <!-- Reflet : bande lumineuse en haut, qui s'efface. -->
+    <item android:gravity="top" android:height="44dp">
+        <shape android:shape="rectangle">
+            <gradient android:angle="270" android:startColor="#3DFFFFFF" android:endColor="#00FFFFFF" />
+            <corners
+                android:topLeftRadius="@android:dimen/system_app_widget_background_radius"
+                android:topRightRadius="@android:dimen/system_app_widget_background_radius" />
+        </shape>
+    </item>
+    <!-- Ombre intérieure en bas, pour l'épaisseur du verre. -->
+    <item android:gravity="bottom" android:height="36dp">
+        <shape android:shape="rectangle">
+            <gradient android:angle="90" android:startColor="#22000000" android:endColor="#00000000" />
+            <corners
+                android:bottomLeftRadius="@android:dimen/system_app_widget_background_radius"
+                android:bottomRightRadius="@android:dimen/system_app_widget_background_radius" />
+        </shape>
+    </item>
+    <!-- Liseré lumineux. -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#00000000" />
+            <stroke android:width="1.2dp" android:color="#73FFFFFF" />
+            <corners android:radius="@android:dimen/system_app_widget_background_radius" />
+        </shape>
+    </item>
+</layer-list>

@@ -46,6 +46,7 @@ import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 import com.kyant.backdrop.highlight.Highlight
+import com.kyant.backdrop.highlight.HighlightStyle
 import com.kyant.backdrop.shadow.Shadow
 import kotlin.math.cos
 import kotlin.math.sin
@@ -109,9 +110,9 @@ private fun FondAnime(defilement: ScrollState?, modifier: Modifier) {
         )
         val w = size.width
         val h = size.height
-        lueur(w * (0.85f + 0.06f * sin(t * 0.21f)), h * 0.12f - d * 0.25f + 40f * cos(t * 0.17f), w * 0.75f, Rouge.copy(alpha = 0.55f))
-        lueur(w * (0.08f + 0.05f * cos(t * 0.13f)), h * 0.48f - d * 0.12f + 60f * sin(t * 0.11f), w * 0.65f, Color.White.copy(alpha = 0.13f))
-        lueur(w * (0.55f + 0.1f * sin(t * 0.09f)), h * 0.92f - d * 0.18f, w * 0.8f, Color(0xFF7A0C10).copy(alpha = 0.6f))
+        lueur(w * (0.85f + 0.06f * sin(t * 0.21f)), h * 0.12f - d * 0.25f + 40f * cos(t * 0.17f), w * 0.8f, Rouge.copy(alpha = 0.7f))
+        lueur(w * (0.08f + 0.05f * cos(t * 0.13f)), h * 0.48f - d * 0.12f + 60f * sin(t * 0.11f), w * 0.7f, Color.White.copy(alpha = 0.18f))
+        lueur(w * (0.55f + 0.1f * sin(t * 0.09f)), h * 0.92f - d * 0.18f, w * 0.85f, Color(0xFF9A1018).copy(alpha = 0.7f))
         // Grille de points (comme une matrice éteinte géante).
         val pas = 18.dp.toPx()
         val r = 1.1.dp.toPx()
@@ -136,9 +137,9 @@ private fun FondAnime(defilement: ScrollState?, modifier: Modifier) {
 @Composable
 fun Modifier.verre(
     forme: CornerBasedShape = RoundedCornerShape(24.dp),
-    teinte: Color = Color.White.copy(alpha = 0.06f),
-    flou: Dp = 12.dp,
-    refraction: Dp = 16.dp,
+    teinte: Color = Color.White.copy(alpha = 0.05f),
+    flou: Dp = 7.dp,
+    refraction: Dp = 22.dp,
     ombre: Boolean = true,
 ): Modifier {
     val fond = LocalFond.current
@@ -149,11 +150,12 @@ fun Modifier.verre(
         effects = {
             vibrancy()
             blur(flou.toPx())
-            lens(refraction.toPx(), refraction.toPx() * 2f, depthEffect = true)
+            // Réfraction forte sur les bords + légère irisation (comme le Liquid Glass d'iOS).
+            lens(refraction.toPx(), refraction.toPx() * 2.6f, depthEffect = true, chromaticAberration = true)
         },
-        highlight = { Highlight.Default },
-        shadow = if (ombre) ({ Shadow(radius = 18.dp, color = Color.Black.copy(alpha = 0.4f)) }) else null,
-        onDrawSurface = { drawRect(Color.Black.copy(alpha = 0.22f)); drawRect(teinte) },
+        highlight = { Highlight(width = 1.dp, style = HighlightStyle.Default(intensity = 0.85f)) },
+        shadow = if (ombre) ({ Shadow(radius = 22.dp, color = Color.Black.copy(alpha = 0.45f)) }) else null,
+        onDrawSurface = { drawRect(Color.Black.copy(alpha = 0.10f)); drawRect(teinte) },
     )
 }
 
