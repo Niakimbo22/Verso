@@ -81,6 +81,8 @@ object Journal {
         val date: String,
         val titre: String,
         val sert: String,
+        /** 2 à 5 points très courts, avec emoji : ce qu'on lit d'un coup d'œil. */
+        val essentiel: List<String>,
         val sections: List<Section>,
         val tester: List<String>,
     )
@@ -96,6 +98,7 @@ object Journal {
             val o = a.getJSONObject(i)
             val secs = o.optJSONArray("sections") ?: JSONArray()
             val tester = o.optJSONArray("tester") ?: JSONArray()
+            val essentiel = o.optJSONArray("essentiel") ?: JSONArray()
             Entree(
                 pr = o.optInt("pr"),
                 // Tête sans version = celle qu'on vient d'installer.
@@ -103,6 +106,7 @@ object Journal {
                 date = o.optString("date"),
                 titre = o.optString("titre"),
                 sert = o.optString("sert"),
+                essentiel = (0 until essentiel.length()).map { essentiel.getString(it) },
                 sections = (0 until secs.length()).map { j ->
                     val s = secs.getJSONObject(j)
                     val pts = s.optJSONArray("points") ?: JSONArray()
@@ -195,13 +199,13 @@ internal fun FeuilleVerre(
 internal fun FeuilleJournal(onFermer: () -> Unit) {
     val context = LocalContext.current
     val entrees = remember { Journal.lire(context) }
-    FeuilleVerre("Journal", "Chaque mise à jour, à quoi elle sert, et tous les détails", onFermer) {
+    FeuilleVerre("Journal", "📜 Toutes les versions · touche pour voir", onFermer) {
         LazyColumn(
             Modifier.fillMaxSize(),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 130.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            itemsIndexed(entrees, key = { _, e -> e.pr }) { i, e -> CarteVersion(e, ouverteAuDepart = i == 0, actuelle = i == 0) }
+            itemsIndexed(entrees, key = { _, e -> e.pr }) { i, e -> CarteVersion(e, actuelle = i == 0, compacte = i > 0) }
         }
     }
 }
@@ -216,7 +220,7 @@ internal fun FeuilleNouveautes(onFermer: () -> Unit, onJournal: () -> Unit) {
             if (e == null) {
                 Text("Journal introuvable.", color = Discret, fontSize = 14.sp)
             } else {
-                CarteVersion(e, ouverteAuDepart = true, actuelle = true, repliable = false)
+                CarteVersion(e, actuelle = true, compacte = false)
             }
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -227,10 +231,15 @@ internal fun FeuilleNouveautes(onFermer: () -> Unit, onJournal: () -> Unit) {
     }
 }
 
-/** Une version : la phrase « sert à » toujours visible, les détails dépliables. */
+/**
+ * Une version, à lire d'un coup d'œil : titre, une phrase, les points essentiels (emoji).
+ * Les détails restent repliés. [compacte] (anciennes versions du journal) : titre + phrase, le reste au toucher.
+ */
 @Composable
-private fun CarteVersion(e: Journal.Entree, ouverteAuDepart: Boolean, actuelle: Boolean, repliable: Boolean = true) {
-    var ouverte by rememberSaveable(e.pr) { mutableStateOf(ouverteAuDepart) }
+private fun CarteVersion(e: Journal.Entree, actuelle: Boolean, compacte: Boolean) {
+    var ouverte by rememberSaveable(e.pr) { mutableStateOf(false) }
+    val aDetails = e.sections.isNotEmpty() || e.tester.isNotEmpty()
+    val repliable = compacte || aDetails
     PanneauVerre(
         Modifier.fillMaxWidth(),
         forme = RoundedCornerShape(24.dp),
@@ -248,25 +257,38 @@ private fun CarteVersion(e: Journal.Entree, ouverteAuDepart: Boolean, actuelle: 
                 }
                 Spacer(Modifier.width(10.dp))
                 Text(jour(e.date), color = Discret, fontSize = 12.sp, modifier = Modifier.weight(1f))
-                if (repliable) Text(if (ouverte) "▾" else "▸", color = Discret, fontSize = 14.sp)
             }
             Spacer(Modifier.height(10.dp))
-            Text(e.titre, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, lineHeight = 22.sp)
-            Spacer(Modifier.height(6.dp))
-            Text(e.sert, color = Color(0xFFDDDDDD), fontSize = 13.sp, lineHeight = 18.sp)
-            AnimatedVisibility(ouverte, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+            Text(e.titre, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, lineHeight = 23.sp)
+            Spacer(Modifier.height(4.dp))
+            Text(e.sert, color = Discret, fontSize = 13.sp, lineHeight = 18.sp)
+            // L'essentiel : toujours visible pour la version actuelle, au toucher pour les anciennes.
+            AnimatedVisibility(!compacte || ouverte, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+                Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    e.essentiel.forEach { Text(it, color = Color.White, fontSize = 15.sp, lineHeight = 20.sp) }
+                }
+            }
+            if (aDetails && (!compacte || ouverte)) {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    if (ouverte) "▾ Moins" else "▸ Détails",
+                    color = Discret, fontSize = 12.sp,
+                    modifier = if (compacte) Modifier else Modifier.appui({ ouverte = !ouverte }).padding(vertical = 4.dp),
+                )
+            }
+            AnimatedVisibility(ouverte && aDetails, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
                 Column {
                     e.sections.forEach { s ->
-                        Spacer(Modifier.height(14.dp))
+                        Spacer(Modifier.height(12.dp))
                         Text(s.titre.uppercase(), color = Discret, fontSize = 11.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(4.dp))
                         s.points.forEach { p -> Puce(p) }
                     }
                     if (e.tester.isNotEmpty()) {
-                        Spacer(Modifier.height(14.dp))
+                        Spacer(Modifier.height(12.dp))
                         Text("À TESTER", color = Rouge, fontSize = 11.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
-                        Spacer(Modifier.height(6.dp))
-                        e.tester.forEach { p -> Puce(p, "□") }
+                        Spacer(Modifier.height(4.dp))
+                        e.tester.forEach { p -> Puce("🧪 $p") }
                     }
                 }
             }
@@ -275,11 +297,8 @@ private fun CarteVersion(e: Journal.Entree, ouverteAuDepart: Boolean, actuelle: 
 }
 
 @Composable
-private fun Puce(texte: String, symbole: String = "•") {
-    Row(Modifier.padding(vertical = 3.dp)) {
-        Text(symbole, color = Discret, fontSize = 13.sp, modifier = Modifier.width(16.dp))
-        Text(texte, color = Color(0xFFCCCCCC), fontSize = 13.sp, lineHeight = 18.sp)
-    }
+private fun Puce(texte: String) {
+    Text(texte, color = Color(0xFFCCCCCC), fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(vertical = 2.dp))
 }
 
 /** Petit lien texte réutilisable. */

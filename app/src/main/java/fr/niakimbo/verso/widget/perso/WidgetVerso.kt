@@ -63,7 +63,7 @@ data class WidgetVerso(
     enum class TapW(val label: String, val tap: WidgetPerso.Tap) {
         CHOISIR("Fenêtre de choix", WidgetPerso.Tap.CHOISIR),
         SUIVANT("Modèle suivant", WidgetPerso.Tap.SUIVANT),
-        ONOFF("⏻ On / Off", WidgetPerso.Tap.ONOFF),
+        ONOFF("🔌 On / Off", WidgetPerso.Tap.ONOFF),
         VERSO("Ouvrir Verso", WidgetPerso.Tap.VERSO),
         AFFICHER("Afficher ce modèle au dos", WidgetPerso.Tap.AFFICHER),
     }

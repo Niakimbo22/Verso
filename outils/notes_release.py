@@ -15,11 +15,19 @@ except Exception as err:  # jamais bloquer la Release pour le journal
 print(e["sert"])
 print()
 print(f"## {e['titre']}")
+for p in e.get("essentiel", []):
+    print(f"- {p}")
+if e.get("sections"):
+    print()
+    print("<details><summary>Détails</summary>")
 for s in e.get("sections", []):
     print()
     print(f"### {s['titre']}")
     for p in s.get("points", []):
         print(f"- {p}")
+if e.get("sections"):
+    print()
+    print("</details>")
 if e.get("tester"):
     print()
     print("### À tester")

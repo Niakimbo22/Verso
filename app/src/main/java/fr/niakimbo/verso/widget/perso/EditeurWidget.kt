@@ -471,7 +471,7 @@ private fun PageGenre(
             Panneau("AFFICHER") {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (WidgetPerso.Type.NOM in base) PuceVerre(coche(r.nom) + "Nom du modèle", r.nom) { r = r.copy(nom = !r.nom) }
-                    if (WidgetPerso.Type.BOUTONS in base) PuceVerre(coche(r.boutons) + "Boutons ‹ ⏻ ›", r.boutons) { r = r.copy(boutons = !r.boutons) }
+                    if (WidgetPerso.Type.BOUTONS in base) PuceVerre(coche(r.boutons) + "Boutons ‹ On/Off ›", r.boutons) { r = r.copy(boutons = !r.boutons) }
                     if (WidgetPerso.Type.AUTO in base) PuceVerre(coche(r.regle) + "Règle auto", r.regle) { r = r.copy(regle = !r.regle) }
                     PuceVerre(coche(r.etatGlyph) + "État du Glyph", r.etatGlyph) { r = r.copy(etatGlyph = !r.etatGlyph) }
                 }

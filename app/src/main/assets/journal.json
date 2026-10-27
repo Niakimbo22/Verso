@@ -1,330 +1,332 @@
 [
   {
-    "pr": 34,
-    "version": null,
-    "date": "2026-10-27",
-    "titre": "Widgets plus réglables, menu latéral et journal des mises à jour",
-    "sert": "Cette mise à jour sert à rendre les widgets fidèles et beaucoup plus réglables (surtout la matrice), à ranger l'app dans un menu latéral ☰, et à t'expliquer chaque mise à jour.",
+    "pr": 35, "version": null, "date": "2026-10-27",
+    "titre": "👀 Nouveautés lisibles d'un coup d'œil",
+    "sert": "Des notes courtes avec emojis, et l'icône On/Off réparée.",
+    "essentiel": [
+      "📝 Journal et Nouveautés raccourcis",
+      "😀 Un emoji par point",
+      "🔽 Détails repliés par défaut",
+      "🔌 Icône On/Off réparée dans l'app"
+    ],
+    "sections": [
+      { "titre": "Changé", "points": [
+        "📝 Chaque version : 1 phrase + 3 à 5 points courts",
+        "🔽 Le reste dans « Détails », fermé au départ",
+        "📜 Tout le journal réécrit pareil"
+      ]},
+      { "titre": "Corrigé", "points": [
+        "🔌 « ⏻ » s'affichait en boîte vide dans l'app : remplacé par une icône (mini-lecteur) ou 🔌"
+      ]}
+    ]
+  },
+  {
+    "pr": 34, "version": "0.1.75", "date": "2026-10-27",
+    "titre": "🧩 Widgets réglables, menu ☰, journal",
+    "sert": "Des widgets fidèles et réglables, un menu latéral, et ce journal.",
+    "essentiel": [
+      "🖼️ Vrai aperçu à la pose du widget",
+      "🎨 Couleurs, points, LEDs, animation",
+      "📌 Modèle épinglé = raccourci",
+      "☰ Menu latéral animé",
+      "📜 Journal + Nouveautés"
+    ],
     "sections": [
       { "titre": "Corrigé", "points": [
-        "Fenêtre « Ajouter à l'écran d'accueil » : elle montre maintenant le vrai widget que tu as réglé, et plus l'aperçu fixe « 12:34 · VERSO PERSO ».",
-        "Boutons ‹ ⏻ › des widgets : dessinés en icônes. La police du lanceur n'a pas le caractère « ⏻ », d'où la petite boîte « NO GLYPH » à la place du bouton."
+        "🖼️ Fenêtre de pose : le vrai widget (plus « 12:34 VERSO PERSO »)",
+        "🔘 Boutons ‹ On/Off › en icônes (plus de « NO GLYPH »)"
       ]},
-      { "titre": "Nouveau — widgets", "points": [
-        "Modèle : « Suit le dos » (comme avant) ou « 📌 Épinglé » sur un modèle précis, choisi dans une rangée avec aperçus.",
-        "Au toucher : fenêtre de choix, modèle suivant, ⏻ On / Off, ouvrir Verso, ou « Afficher ce modèle au dos » (avec un modèle épinglé, le widget devient un raccourci).",
-        "Couleur des LEDs et du texte : blanc, rouge Nothing, ambre, bleu glace, vert, rose.",
-        "Points ronds ou carrés, LEDs éteintes visibles ou cachées, animation ou image fixe.",
-        "Afficher / masquer : nom du modèle, boutons ‹ ⏻ ›, règle auto, et nouvelle pastille « État du Glyph » (● Au dos · Toy actif, ● Glyph allumé, ○ Glyph éteint), à jour toute seule.",
-        "Réglages rangés en trois cartes : Apparence, Matrice, Afficher. L'aperçu au-dessus est toujours le vrai widget.",
-        "Liste des widgets du lanceur (Android 15+) : chaque taille montre son vrai rendu (envoyé au plus une fois par jour, limite du système)."
+      { "titre": "Widgets", "points": [
+        "📌 Modèle : suit le dos ou épinglé",
+        "👆 Au toucher : choix, suivant, On/Off, Verso, afficher l'épinglé",
+        "🎨 6 couleurs : blanc, rouge, ambre, bleu glace, vert, rose",
+        "⚫ Points ronds / carrés · LEDs éteintes visibles / cachées · animé / fixe",
+        "👁️ Afficher : nom, boutons, règle auto, état du Glyph",
+        "📋 Liste du lanceur : vrais aperçus (Android 15+)"
       ]},
-      { "titre": "Nouveau — app", "points": [
-        "Menu latéral ☰ (en haut à gauche) en verre : accès direct à tout (modèles, favoris, récents, dessins, règles, widgets, Glyph, journal, diagnostic, fond animé, matrice figée). Ouverture en ressort, éléments qui arrivent un par un, glisser vers la gauche pour fermer.",
-        "Journal des mises à jour (menu ☰ › Journal) : pour chaque version, à quoi elle sert en une phrase, puis tous les détails sur demande.",
-        "Après une mise à jour, une fenêtre « Nouveautés » s'ouvre une fois avec la version installée.",
-        "Le bouton « Mettre à jour » dit à quoi sert la nouvelle version, et la Release GitHub reprend le même texte."
-      ]},
-      { "titre": "Inchangé", "points": [
-        "Logique de la matrice (fermeture de la couche app au passage au Toy) : pas touchée.",
-        "Widgets déjà posés : relus tels quels (l'ancien réglage « Rouge Nothing » devient la couleur rouge)."
+      { "titre": "App", "points": [
+        "☰ Menu latéral en verre : ressort, lignes une par une, glisser pour fermer",
+        "📜 Journal de toutes les versions",
+        "✨ Nouveautés une fois après chaque mise à jour",
+        "⬇️ « Mettre à jour » dit à quoi sert la version"
       ]}
-    ],
-    "tester": [
-      "Galerie › Matrice › 4 × 1 › Ajouter : la fenêtre du lanceur montre-t-elle le bon widget ?",
-      "Boutons ‹ ⏻ › : vraies icônes ?",
-      "Épingler un modèle + « Afficher ce modèle au dos » : le tap l'affiche-t-il ?",
-      "Menu ☰ : animations, glisser pour fermer, chaque entrée."
     ]
   },
   {
     "pr": 33, "version": "0.1.71", "date": "2026-10-26",
-    "titre": "App plus fluide, écran principal plus clair",
-    "sert": "Cette mise à jour sert à faire moins ramer l'app (avec un banc de mesure pour le prouver) et à ranger les 90 modèles dans une bibliothèque qu'on ouvre seulement quand on en a besoin.",
+    "titre": "⚡ Plus fluide, écran plus clair",
+    "sert": "Moins de lag, et les 90 modèles rangés dans une bibliothèque.",
+    "essentiel": [
+      "⚡ Fond fixe : le verre ne recalcule plus sans arrêt",
+      "📚 Bibliothèque qui monte du bas",
+      "⭐ Accès rapide Favoris / Récents",
+      "📊 Banc de mesure de fluidité"
+    ],
     "sections": [
       { "titre": "Performance", "points": [
-        "Le fond ne bouge plus tout seul : avant, il forçait tout le verre de l'écran à se recalculer 20 fois par seconde, même sans toucher. Option « Fond animé » dans Plus pour le remettre.",
-        "Grille de points du fond dessinée en une seule commande au lieu d'environ 1 200 cercles.",
-        "La matrice (grande, mini-lecteur, aperçus) se redessine seule à chaque image, sans recalculer l'écran autour.",
-        "Bibliothèque « paresseuse » : seules les cartes à l'écran existent et sont calculées.",
-        "Verre : ses effets (flou + réfraction) ne sont plus reconstruits à chaque mise à jour de l'écran (trouvé dans le code de la bibliothèque Backdrop).",
-        "Fond et contenu dans leurs propres calques ; écran figé derrière la bibliothèque ouverte ; barre collante supprimée."
+        "🌫️ Fond fixe au repos (option « Fond animé »)",
+        "🔴 Seule la matrice se redessine à chaque image",
+        "📚 Seules les cartes à l'écran sont calculées",
+        "🧊 Effets du verre plus reconstruits sans raison"
       ]},
       { "titre": "Écran principal", "points": [
-        "En haut : la matrice, ‹ ⏻ ›, ☆ Favori, ⚙ Réglages, ◐ Options (luminosité, veille, au hasard).",
-        "Deux pastilles d'état (Glyph Toy, bouton Glyph) : détails au toucher, ouverts tout seuls en cas de problème.",
-        "Accès rapide : ★ Favoris / ◷ Récents en tuiles de verre (tap = afficher, appui long = réglages).",
-        "« Tous les modèles » ouvre la bibliothèque ; Automatique ; Widgets et Plus repliés.",
-        "Mini-lecteur : n'apparaît que quand la grande matrice sort de l'écran ou bibliothèque ouverte."
+        "🎛️ Matrice + ‹ On/Off › + Favori / Réglages / Options",
+        "🟢 2 pastilles d'état (Toy, Glyph)",
+        "🎵 Mini-lecteur seulement quand la matrice sort de l'écran"
       ]},
-      { "titre": "Bibliothèque", "points": [
-        "Feuille de verre qui monte du bas : poignée à tirer, ✕ ou retour pour fermer.",
-        "« Tous » rangé par rayons avec un titre par rayon ; 🔍, Récents, Mes modèles, créer / importer, réordonner ★ : tout est resté."
-      ]},
-      { "titre": "Liquid Glass", "points": [
-        "Appui façon iOS : le verre gonfle, s'étire vers le doigt, une lueur suit le doigt.",
-        "Bibliothèque en verre flouté sur l'écran ; tuiles de verre dans l'accès rapide."
-      ]},
-      { "titre": "Mesure", "points": [
-        "Plus › Diagnostic › Fluidité : le même parcours deux fois (ancien moteur reproduit, puis nouveau), avec l'outil officiel d'Android : images par seconde, % en retard, temps GPU, ouverture de la bibliothèque et de l'app."
-      ]}
+      { "titre": "Liquid Glass", "points": [ "💧 Appui iOS : le verre gonfle et suit le doigt" ]},
+      { "titre": "Mesure", "points": [ "📊 Diagnostic › Fluidité : ancien vs nouveau, en images/s et % en retard" ]}
     ]
   },
   {
     "pr": 32, "version": "0.1.67", "date": "2026-10-26",
-    "titre": "Widgets façon galerie iPhone",
-    "sert": "Cette mise à jour sert à refaire les widgets comme sur l'iPhone (genre, taille, style), sans blocs à placer, et à corriger le 4 × 2 qui se posait en 2 × 2.",
+    "titre": "📱 Widgets façon iPhone",
+    "sert": "Choisir un genre, glisser la taille, poser. Fini les blocs.",
+    "essentiel": [ "🧩 5 genres", "📐 8 vraies tailles", "🐞 Le 4 × 2 se pose en 4 × 2" ],
     "sections": [
       { "titre": "Nouveau", "points": [
-        "Genres : Matrice, Horloge, Tout-en-un, Batterie, Message, chacun avec un contenu pensé pour chaque taille.",
-        "8 vraies tailles (1×1, 2×1, 2×2, 3×2, 4×1, 4×2, 4×3, 4×4) qu'on fait défiler avec l'aperçu réel sur un faux fond d'écran.",
-        "Style Verre / Sombre / Clair / Sans fond, couleur blanc ou rouge Nothing, texte libre pour Message.",
-        "Posé depuis la liste du lanceur : la galerie s'ouvre à la bonne taille. Dans l'app : liste des widgets posés, toucher = modifier."
-      ]},
-      { "titre": "Corrigé", "points": [ "Un widget réglé en 4 × 2 se posait en 2 × 2 : chaque taille a maintenant son propre widget pour le lanceur." ]},
-      { "titre": "Liquid Glass", "points": [ "Verre des widgets imité (voile, reflet, ombre intérieure, liseré) ; verre de l'app plus transparent avec réfraction plus forte et irisation." ]}
+        "🧩 Matrice, Horloge, Tout-en-un, Batterie, Message",
+        "🎨 Style Verre / Sombre / Clair / Sans fond",
+        "✏️ Modifier un widget déjà posé"
+      ]}
     ]
   },
   {
     "pr": 31, "version": "0.1.65", "date": "2026-10-26",
-    "titre": "Mes widgets (première version)",
-    "sert": "Cette mise à jour servait à créer plusieurs widgets perso, chacun avec son design (remplacée par la galerie de la v0.1.67).",
-    "sections": [
-      { "titre": "Nouveau", "points": [
-        "Section Mes widgets : créer, modifier, poser sur l'écran d'accueil.",
-        "Éditeur à blocs : matrice, heure, date, nom, batterie, règle auto, texte, boutons, espace ; taille, couleur, fond, thème, alignement.",
-        "Heure et date tenues à jour par le téléphone, sans réveiller Verso."
-      ]},
-      { "titre": "Retour de Nico", "points": [ "Blocs pas intuitifs et bug de taille : refait dans la v0.1.67." ]}
-    ]
+    "titre": "🧱 Mes widgets (v1)",
+    "sert": "Créer plusieurs widgets perso (remplacé par la galerie).",
+    "essentiel": [ "🧱 Éditeur à blocs", "🕐 Heure à jour sans Verso" ],
+    "sections": [ { "titre": "Suite", "points": [ "↩️ Blocs pas intuitifs : refait en v0.1.67" ]} ]
   },
   {
     "pr": 30, "version": "0.1.63", "date": "2026-10-26",
-    "titre": "Le vrai bouton Glyph",
-    "sert": "Cette mise à jour sert à ce que ⏻ dans Verso allume ou éteigne vraiment la Glyph Interface, comme la tuile Glyph du menu déroulant.",
+    "titre": "🔌 Le vrai bouton Glyph",
+    "sert": "Éteindre / Rallumer coupe vraiment la Glyph Interface.",
+    "essentiel": [ "🔌 Appuie sur la tuile Glyph à ta place", "♿ Service d'accessibilité à activer 1 fois" ],
     "sections": [
       { "titre": "Comment", "points": [
-        "Nothing ne donne aucun moyen aux apps de couper la Glyph Interface : Verso utilise un service d'accessibilité « Verso · bouton Glyph », limité au menu déroulant, qui n'agit que sur demande.",
-        "Il ouvre le menu déroulant, trouve la tuile Glyph (même sur une autre page), lit son état, appuie seulement s'il faut, puis referme."
+        "📲 Ouvre le menu déroulant, trouve la tuile, appuie, referme",
+        "🌍 Marche depuis l'app, le mini-lecteur, le widget, la tuile, le raccourci",
+        "🤖 Les règles « Éteindre » ne touchent pas au Glyph"
       ]},
-      { "titre": "Partout", "points": [
-        "⏻ de l'app, du mini-lecteur, du widget On/Off, de la fenêtre ☰, de la tuile Verso, du raccourci de l'icône et la fin du minuteur de veille.",
-        "Les règles automatiques « Éteindre » ne touchent pas au Glyph système."
-      ]},
-      { "titre": "Activation", "points": [ "Une fois : fiche de Verso › ⋮ › Autoriser les paramètres restreints, puis Accessibilité › Verso · bouton Glyph. Guide dans la carte du bouton Glyph." ]}
+      { "titre": "Activation", "points": [ "⚙️ Fiche de Verso › ⋮ › Paramètres restreints, puis Accessibilité" ]}
     ]
   },
   {
     "pr": 29, "version": "0.1.61", "date": "2026-10-25",
-    "titre": "Petits plus partout",
-    "sert": "Cette mise à jour sert à changer de modèle plus vite de partout : mini-lecteur glissable, recherche, Récents, tuile et raccourcis.",
+    "titre": "✨ Petits plus",
+    "sert": "Changer de modèle plus vite, de partout.",
+    "essentiel": [ "👉 Glisser le mini-lecteur", "🔍 Recherche + ◷ Récents", "🧷 Tuile + raccourcis d'icône" ],
     "sections": [
       { "titre": "Nouveau", "points": [
-        "Mini-lecteur : glisser à gauche / droite = modèle suivant / précédent ; appui long = luminosité, minuteur de veille 15/30/60 min (marche app fermée), 🎲 au hasard.",
-        "Recherche 🔍 sans accents dans toute la bibliothèque, rayon ◷ Récents (12 derniers modèles).",
-        "Tuile « Verso » des réglages rapides : tap = suivant, appui long = ouvre l'app.",
-        "Raccourcis de l'icône : suivant, au hasard, éteindre / rallumer, Automatique."
+        "💡 Appui long mini-lecteur : luminosité, veille 15/30/60 min, 🎲",
+        "🧷 Tuile Verso : tap = suivant",
+        "📱 Raccourcis : suivant, hasard, On/Off, Automatique"
       ]}
     ]
   },
   {
     "pr": 28, "version": "0.1.59", "date": "2026-10-25",
-    "titre": "Mini-lecteur en verre",
-    "sert": "Cette mise à jour sert à garder le modèle affiché sous les yeux, dans une barre de verre en bas de l'écran.",
-    "sections": [
-      { "titre": "Nouveau", "points": [ "Matrice en direct, nom, règle auto en cours, ‹ › et ⏻ / ▶ ; toucher la barre = remonter à la grande matrice." ]}
-    ]
+    "titre": "🎵 Mini-lecteur",
+    "sert": "Le modèle reste sous les yeux, en bas.",
+    "essentiel": [ "🎵 Barre de verre en bas", "‹ › et On/Off" ],
+    "sections": []
   },
   {
     "pr": 27, "version": "0.1.57", "date": "2026-10-25",
-    "titre": "Liquid Glass + 18 déclencheurs",
-    "sert": "Cette mise à jour sert à donner à Verso un vrai verre façon iOS et beaucoup plus de « si » pour les règles automatiques.",
+    "titre": "💧 Liquid Glass + 18 déclencheurs",
+    "sert": "Du vrai verre iOS et beaucoup plus de « si ».",
+    "essentiel": [ "💧 Verre façon iOS", "🤖 18 déclencheurs", "➕ Conditions ET / OU" ],
     "sections": [
-      { "titre": "Liquid Glass", "points": [ "Réfraction des bords, flou, vibrance, reflet et ombre (bibliothèque Backdrop) sur l'écran principal et dans Automatique." ]},
-      { "titre": "Règles", "points": [
-        "18 déclencheurs : horaire, à une heure, réveil, nuit / jour, date, avant l'alarme, en charge, batterie faible, pleine, économie, verrouillé, Ne pas déranger, silencieux, avion, lampe, casque, Bluetooth, réseau.",
-        "Plusieurs conditions par règle (ET / OU). Actions : modèle, favori au hasard, défiler les favoris, éteindre.",
-        "Éditeur en phrase (« Si … alors … ») avec « ce serait le cas maintenant »."
-      ]}
+      { "titre": "Déclencheurs", "points": [
+        "🕐 Horaire, heure, réveil, nuit/jour, date, alarme",
+        "🔋 Charge, batterie faible, pleine, économie",
+        "📱 Verrouillé, Ne pas déranger, silencieux, avion, lampe",
+        "🎧 Casque, Bluetooth, réseau"
+      ]},
+      { "titre": "Actions", "points": [ "🎯 Modèle, 🎲 hasard, 🔁 défiler, 🌙 éteindre" ]}
     ]
   },
   {
     "pr": 26, "version": "0.1.55", "date": "2026-10-25",
-    "titre": "Règles automatiques (partie 1)",
-    "sert": "Cette mise à jour sert à changer de modèle tout seul selon la situation (heure, réveil, charge, batterie, casque, Ne pas déranger).",
-    "sections": [
-      { "titre": "Nouveau", "points": [
-        "La règle la plus haute gagne ; un choix à la main tient jusqu'au prochain changement automatique ; à la fin, retour au modèle d'avant.",
-        "Carte Automatique, liste réordonnable, idées en un tap, éditeur « Si… alors… »."
-      ]}
-    ]
+    "titre": "🤖 Règles automatiques",
+    "sert": "Le modèle change tout seul selon la situation.",
+    "essentiel": [ "🕐 Horaire, réveil", "🔋 Charge, batterie", "🎧 Casque, Ne pas déranger" ],
+    "sections": [ { "titre": "Règle", "points": [ "✋ Un choix à la main tient jusqu'au prochain changement auto", "↩️ À la fin : retour au modèle d'avant" ]} ]
   },
   {
     "pr": 25, "version": "0.1.53", "date": "2026-10-25",
-    "titre": "Spec : vraie cause de la matrice figée",
-    "sert": "Cette mise à jour sert seulement à corriger la documentation (aucun code changé).",
-    "sections": [ { "titre": "Doc", "points": [ "La vraie cause (couche app à fermer) remplace les fausses pistes ; sur le (4a) Pro, l'app passe devant le Toy, pas l'inverse." ]} ]
+    "titre": "📄 Doc : matrice figée",
+    "sert": "Doc corrigée, aucun code changé.",
+    "essentiel": [ "📄 Vraie cause notée" ],
+    "sections": []
   },
   {
     "pr": 24, "version": "0.1.51", "date": "2026-10-25",
-    "titre": "Animation écran éteint toujours active",
-    "sert": "Cette mise à jour sert à garder l'animation au dos écran éteint, sans réglage à toucher.",
-    "sections": [ { "titre": "Changé", "points": [ "Processeur gardé éveillé pendant l'animation (plus d'interrupteur) ; setGlyphMatrixTimeout plus jamais appelé." ]} ]
+    "titre": "🌙 Animation écran éteint",
+    "sert": "L'animation continue écran éteint, sans réglage.",
+    "essentiel": [ "🌙 Toujours active" ],
+    "sections": []
   },
   {
     "pr": 23, "version": "0.1.49", "date": "2026-10-25",
-    "titre": "Écran éteint : l'animation continue",
-    "sert": "Cette mise à jour sert à annuler les limites écran éteint (1 i/s, pause) : les gels venaient de la couche app coincée.",
-    "sections": [ { "titre": "Changé", "points": [ "Annule les v0.1.43 et v0.1.45 ; garde le correctif de la v0.1.47." ]} ]
+    "titre": "↩️ Annule les essais écran éteint",
+    "sert": "Retour de l'animation écran éteint.",
+    "essentiel": [ "↩️ Annule v0.1.43 et v0.1.45" ],
+    "sections": []
   },
   {
     "pr": 22, "version": "0.1.47", "date": "2026-10-25",
-    "titre": "Matrice figée : la vraie correction",
-    "sert": "Cette mise à jour sert à corriger pour de bon la matrice qui se figeait.",
-    "sections": [
-      { "titre": "Cause", "points": [ "Sur le (4a) Pro, la couche « app » passe devant le Toy et garde sa dernière image tant qu'on ne la ferme pas. À chaque démarrage, une image de Pluie y restait collée." ]},
-      { "titre": "Correctif", "points": [ "Verso ferme la couche app (closeAppMatrix) dès qu'il passe au Toy, puis renvoie l'image en cours au Toy." ]}
-    ]
+    "titre": "✅ Matrice figée : corrigé",
+    "sert": "La matrice ne se fige plus.",
+    "essentiel": [ "🧱 Couche « app » collée devant le Toy", "✅ Fermée dès le passage au Toy" ],
+    "sections": []
   },
   {
     "pr": 21, "version": "0.1.45", "date": "2026-10-25",
-    "titre": "Essai : animation en pause écran éteint",
-    "sert": "Cette mise à jour était un essai (annulé ensuite) : image fixe écran éteint, mise à jour chaque minute.",
-    "sections": [ { "titre": "Annulé", "points": [ "Annulé par la v0.1.49 : Nico veut l'animation écran éteint." ]} ]
+    "titre": "🧪 Essai : pause écran éteint",
+    "sert": "Essai annulé ensuite.",
+    "essentiel": [ "❌ Annulé en v0.1.49" ],
+    "sections": []
   },
   {
     "pr": 20, "version": "0.1.43", "date": "2026-10-25",
-    "titre": "Essai : 1 image par seconde écran éteint",
-    "sert": "Cette mise à jour était un essai (annulé ensuite) pour limiter les images écran éteint.",
-    "sections": [ { "titre": "Annulé", "points": [ "Annulé par la v0.1.49." ]} ]
+    "titre": "🧪 Essai : 1 image/s écran éteint",
+    "sert": "Essai annulé ensuite.",
+    "essentiel": [ "❌ Annulé en v0.1.49" ],
+    "sections": []
   },
   {
     "pr": 19, "version": "0.1.41", "date": "2026-10-25",
-    "titre": "Statut « Relance du Glyph Toy… »",
-    "sert": "Cette mise à jour sert à ne plus afficher une fausse alerte orange pendant que le système relance le Toy après un redémarrage.",
-    "sections": [ { "titre": "Changé", "points": [ "Pendant 3 min après un démarrage : message gris « Relance du Glyph Toy… », sans bouton." ]} ]
+    "titre": "⏳ « Relance du Toy… »",
+    "sert": "Plus de fausse alerte après un redémarrage.",
+    "essentiel": [ "⏳ Message gris pendant 3 min" ],
+    "sections": []
   },
   {
     "pr": 18, "version": "0.1.39", "date": "2026-10-25",
-    "titre": "Essai matrice figée (écran éteint)",
-    "sert": "Cette mise à jour était une fausse piste (register() à l'extinction et au rallumage), restée inoffensive.",
-    "sections": [ { "titre": "Fausse piste", "points": [ "La vraie cause a été trouvée dans la v0.1.47." ]} ]
+    "titre": "🧪 Fausse piste (écran éteint)",
+    "sert": "Essai inoffensif, la vraie cause est en v0.1.47.",
+    "essentiel": [ "🔎 Fausse piste" ],
+    "sections": []
   },
   {
     "pr": 17, "version": "0.1.37", "date": "2026-10-25",
-    "titre": "Essai matrice figée (liaison du Toy)",
-    "sert": "Cette mise à jour était une fausse piste (register() à chaque liaison du Toy), restée inoffensive.",
-    "sections": [ { "titre": "Fausse piste", "points": [ "La vraie cause a été trouvée dans la v0.1.47." ]} ]
+    "titre": "🧪 Fausse piste (liaison du Toy)",
+    "sert": "Essai inoffensif, la vraie cause est en v0.1.47.",
+    "essentiel": [ "🔎 Fausse piste" ],
+    "sections": []
   },
   {
     "pr": 16, "version": "0.1.35", "date": "2026-10-25",
-    "titre": "Chien de garde inoffensif",
-    "sert": "Cette mise à jour sert à ne plus couper la matrice quand le téléphone est posé face cachée.",
-    "sections": [ { "titre": "Corrigé", "points": [ "Le chien de garde mesurait le temps avec l'heure murale et coupait la connexion pendant la veille du processeur : il ne fait plus que noter dans le journal." ]} ]
+    "titre": "🐶 Chien de garde calmé",
+    "sert": "La matrice ne se coupe plus face cachée.",
+    "essentiel": [ "📵 Plus de coupure pendant la veille" ],
+    "sections": []
   },
   {
     "pr": 15, "version": "0.1.33", "date": "2026-10-25",
-    "titre": "Correctif urgent : plus jamais unInit",
-    "sert": "Cette mise à jour sert à réparer la matrice morte de la v0.1.30 et à ajouter un redémarrage de secours.",
-    "sections": [ { "titre": "Corrigé", "points": [
-      "Après unInit(), le service Glyph ne répondait plus jamais : Verso ne le fait plus.",
-      "Liaison perdue : bandeau « Redémarrer Verso », redémarrage automatique app fermée (au plus 1 fois / 10 min), bouton « ↻ Matrice figée ? »."
-    ]} ]
+    "titre": "🚑 Correctif urgent",
+    "sert": "Matrice réparée + redémarrage de secours.",
+    "essentiel": [ "🚫 Plus jamais unInit", "↻ Bouton « Matrice figée ? »" ],
+    "sections": []
   },
   {
     "pr": 14, "version": "0.1.30", "date": "2026-10-25",
-    "titre": "Éditeur dessin simple + aperçus animés",
-    "sert": "Cette mise à jour sert à rendre l'éditeur compréhensible sans explication et à animer les aperçus.",
-    "sections": [
-      { "titre": "Nouveau", "points": [ "Éditeur en un écran : crayon, gomme, remplir, 5 luminosités, images, lire, annuler, le reste dans « ⋯ ». Créateur par blocs retiré.", "Aperçus animés partout, seulement à l'écran." ]},
-      { "titre": "Matrice", "points": [ "Premier essai contre la matrice figée (plus tard corrigé autrement)." ]}
-    ]
+    "titre": "✏️ Éditeur dessin simple",
+    "sert": "Dessiner sans explication, aperçus animés.",
+    "essentiel": [ "✏️ Crayon, gomme, remplir", "▶️ Aperçus animés" ],
+    "sections": []
   },
   {
     "pr": 13, "version": "0.1.28", "date": "2026-10-25",
-    "titre": "Ordre des favoris + finitions (V1 complète)",
-    "sert": "Cette mise à jour sert à choisir l'ordre des favoris au doigt et à finir la V1.",
-    "sections": [ { "titre": "Nouveau", "points": [
-      "Rayon ★ : appui long puis glisser ; cet ordre est celui du widget et de la fenêtre ☰.",
-      "Bouton « Rallumer « X » », toucher la grande matrice = réglages, vibrations, onglet « ✎ Mes » dans ☰."
-    ]} ]
+    "titre": "⭐ Ordre des favoris",
+    "sert": "Ranger les favoris au doigt. V1 complète.",
+    "essentiel": [ "✋ Appui long + glisser", "▶️ « Rallumer X »" ],
+    "sections": []
   },
   {
     "pr": 12, "version": "0.1.26", "date": "2026-10-25",
-    "titre": "Créateur de modèles",
-    "sert": "Cette mise à jour sert à dessiner tes propres modèles et à les partager.",
-    "sections": [ { "titre": "Nouveau", "points": [
-      "Éditeur dessin (statique et animé) et créateur dynamique par blocs (heure, date, batterie, texte défilant…).",
-      "Mes modèles : partager, exporter en .json, importer, supprimer."
-    ]} ]
+    "titre": "🎨 Créateur de modèles",
+    "sert": "Dessiner et partager tes modèles.",
+    "essentiel": [ "🎨 Dessin animé", "📤 Partager / importer" ],
+    "sections": []
   },
   {
     "pr": 11, "version": "0.1.24", "date": "2026-10-25",
-    "titre": "90 modèles rangés par rayons",
-    "sert": "Cette mise à jour sert à avoir beaucoup plus de modèles, rangés par rayons.",
-    "sections": [ { "titre": "Nouveau", "points": [ "80 nouveaux modèles : Effets, Météo, Icônes, Émotions, Persos, Formes, Fêtes, Texte, avec des puces de filtre." ]} ]
+    "titre": "🗂️ 90 modèles",
+    "sert": "80 nouveaux modèles, rangés par rayons.",
+    "essentiel": [ "🗂️ 9 rayons" ],
+    "sections": []
   },
   {
     "pr": 10, "version": "0.1.22", "date": "2026-10-25",
-    "titre": "Tap du widget réglable",
-    "sert": "Cette mise à jour sert à choisir ce que fait un tap sur le widget.",
-    "sections": [ { "titre": "Nouveau", "points": [ "Choisir (défaut), Suivant, On / Off, Verso ; section Widgets dans l'app." ]} ]
+    "titre": "👆 Tap du widget réglable",
+    "sert": "Choisir ce que fait un tap.",
+    "essentiel": [ "👆 Choisir, suivant, On/Off, Verso" ],
+    "sections": []
   },
   {
     "pr": 9, "version": "0.1.20", "date": "2026-10-25",
-    "titre": "Widgets + favoris",
-    "sert": "Cette mise à jour sert à changer de modèle depuis l'écran d'accueil.",
-    "sections": [ { "titre": "Nouveau", "points": [
-      "4 widgets (Carré, Rond, Barre, Mini), réglables, animation jouée par le lanceur et mise en pause hors écran.",
-      "Favoris ☆ / ★ ; fenêtre ☰ de choix rapide ; horloge remise à l'heure chaque minute."
-    ]} ]
+    "titre": "🏠 Widgets + favoris",
+    "sert": "Changer de modèle depuis l'écran d'accueil.",
+    "essentiel": [ "🏠 4 widgets", "⭐ Favoris", "☰ Choix rapide" ],
+    "sections": []
   },
   {
     "pr": 8, "version": "0.1.17", "date": "2026-10-24",
-    "titre": "Versions et réglages des modèles",
-    "sert": "Cette mise à jour sert à régler chaque modèle et à garder l'ancienne version quand un modèle change.",
-    "sections": [ { "titre": "Nouveau", "points": [ "Fiche du modèle : version (V1, V2), luminosité, vitesse, rotation, miroir, inverser, et réglages propres (pluie, cœur, onde, chargement, horloge)." ]} ]
+    "titre": "⚙️ Réglages des modèles",
+    "sert": "Régler chaque modèle, garder les anciennes versions.",
+    "essentiel": [ "⚙️ Vitesse, luminosité, rotation…", "🕰️ Versions V1 / V2" ],
+    "sections": []
   },
   {
     "pr": 7, "version": "0.1.15", "date": "2026-10-24",
-    "titre": "Nouvelle pluie",
-    "sert": "Cette mise à jour sert à rendre la pluie naturelle.",
-    "sections": [ { "titre": "Changé", "points": [ "Cycle d'environ 18 s sans couture, 3 types de gouttes, intensité variable, éclaboussures." ]} ]
+    "titre": "🌧️ Nouvelle pluie",
+    "sert": "Une averse naturelle.",
+    "essentiel": [ "🌧️ Cycle de 18 s" ],
+    "sections": []
   },
   {
     "pr": 6, "version": "0.1.13", "date": "2026-10-24",
-    "titre": "Statut du Glyph Toy fiable",
-    "sert": "Cette mise à jour sert à savoir où en est le Toy après un redémarrage.",
-    "sections": [ { "titre": "Nouveau", "points": [ "Carte du Toy à 4 états avec conseils ; journal du démarrage." ]} ]
+    "titre": "🟢 Statut du Toy",
+    "sert": "Savoir où en est le Toy.",
+    "essentiel": [ "🟢 4 états clairs" ],
+    "sections": []
   },
   {
     "pr": 5, "version": "0.1.11", "date": "2026-10-24",
-    "titre": "Verso devient un Glyph Toy",
-    "sert": "Cette mise à jour sert à garder le modèle affiché au dos app fermée, et après un redémarrage.",
-    "sections": [ { "titre": "Nouveau", "points": [ "Glyph Toy « Always-on », modèle mémorisé, horloge à l'heure réelle, journal du Toy." ]} ]
+    "titre": "🔒 Verso devient un Glyph Toy",
+    "sert": "Le modèle reste au dos, app fermée.",
+    "essentiel": [ "🔒 Affichage permanent", "🕐 Horloge réelle" ],
+    "sections": []
   },
   {
     "pr": 4, "version": "0.1.9", "date": "2026-10-23",
-    "titre": "Bibliothèque de modèles",
-    "sert": "Cette mise à jour sert à changer de modèle en un tap.",
-    "sections": [ { "titre": "Nouveau", "points": [ "10 modèles intégrés, format JSON, grille avec aperçus ronds, bouton Éteindre, Diagnostic repliable." ]} ]
+    "titre": "📚 Bibliothèque",
+    "sert": "Changer de modèle en un tap.",
+    "essentiel": [ "📚 10 modèles" ],
+    "sections": []
   },
   {
     "pr": 3, "version": "0.1.6", "date": "2026-10-23",
-    "titre": "CI : vérification de l'AAR Glyph",
-    "sert": "Cette mise à jour sert à fiabiliser la fabrication de l'app (rien de visible).",
-    "sections": [ { "titre": "Technique", "points": [ "Le SDK Glyph est vérifié par empreinte sha256." ]} ]
+    "titre": "🔧 Fabrication fiable",
+    "sert": "Rien de visible.",
+    "essentiel": [ "🔧 SDK vérifié" ],
+    "sections": []
   },
   {
     "pr": 2, "version": null, "date": "2026-10-22",
-    "titre": "Premier contact avec la matrice",
-    "sert": "Cette mise à jour servait à allumer la vraie Glyph Matrix pour la première fois.",
-    "sections": [ { "titre": "Nouveau", "points": [ "Écran de test : pixel central, image test, tout allumer, éteindre, journal." ]} ]
+    "titre": "💡 Premier contact",
+    "sert": "La matrice s'allume pour la première fois.",
+    "essentiel": [ "💡 Écran de test" ],
+    "sections": []
   },
   {
     "pr": 1, "version": "0.1.2", "date": "2026-10-21",
-    "titre": "Naissance de Verso",
-    "sert": "Cette mise à jour servait à créer l'app et le bouton « Mettre à jour » (plus besoin d'installer les APK à la main).",
-    "sections": [ { "titre": "Nouveau", "points": [ "Squelette de l'app, fabrication automatique signée, vérificateur de mises à jour." ]} ]
+    "titre": "🐣 Naissance de Verso",
+    "sert": "L'app et le bouton « Mettre à jour ».",
+    "essentiel": [ "⬇️ Mises à jour sans câble" ],
+    "sections": []
   }
 ]

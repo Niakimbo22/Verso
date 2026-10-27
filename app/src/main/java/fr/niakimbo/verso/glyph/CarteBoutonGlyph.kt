@@ -70,7 +70,7 @@ fun CarteBoutonGlyph() {
                         },
                         color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
                     )
-                    Text("⏻ dans Verso appuie sur la vraie tuile Glyph", color = Discret, fontSize = 11.sp)
+                    Text("🔌 Éteindre / Rallumer appuie sur la vraie tuile Glyph", color = Discret, fontSize = 11.sp)
                 }
                 BoutonVerre(
                     if (occupe) "…" else if (allume == false) "Allumer" else "Éteindre",
@@ -94,11 +94,11 @@ fun CarteBoutonGlyph() {
 
     PanneauVerre(Modifier.fillMaxWidth(), forme = RoundedCornerShape(22.dp)) {
         Column(Modifier.padding(16.dp)) {
-            Text("⏻ Vrai bouton Glyph : pas encore activé", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text("🔌 Vrai bouton Glyph : pas encore activé", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(4.dp))
             Text(
                 "Sans lui, si le Glyph est coupé dans le menu déroulant, Verso ne peut pas le rallumer. " +
-                    "Une fois activé, ⏻ (app, mini-lecteur, widget, tuile, raccourci) appuie sur la tuile Glyph à ta place.",
+                    "Une fois activé, Éteindre / Rallumer (app, mini-lecteur, widget, tuile, raccourci) appuie sur la tuile Glyph à ta place.",
                 color = Discret, fontSize = 12.sp, lineHeight = 16.sp,
             )
             Spacer(Modifier.height(10.dp))

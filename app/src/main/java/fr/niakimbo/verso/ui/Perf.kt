@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** Réglages d'affichage de l'app (pas de la matrice). */
 object ReglagesUi {
@@ -24,17 +25,49 @@ object ReglagesUi {
     var derniereMesure by mutableStateOf<String?>(null)
         private set
 
+    /** Qualité du verre : réglée à la main (Plus) ou par l'optimisation automatique du banc. */
+    enum class QualiteVerre(val label: String) { HAUTE("Haute"), EQUILIBREE("Équilibrée"), LEGERE("Légère") }
+
+    var qualiteVerre by mutableStateOf(QualiteVerre.HAUTE)
+        private set
+
+    /** Aperçus animés dans la bibliothèque et l'accès rapide (la grande matrice et le mini-lecteur restent animés). */
+    var apercusAnimes by mutableStateOf(true)
+        private set
+
+    fun changerQualiteVerre(q: QualiteVerre) {
+        qualiteVerre = q
+        prefs?.edit()?.putString("qualite_verre", q.name)?.apply()
+    }
+
+    fun changerApercusAnimes(v: Boolean) {
+        apercusAnimes = v
+        prefs?.edit()?.putBoolean("apercus_animes", v)?.apply()
+    }
+
     fun charger(context: Context) {
         if (prefs != null) return
         val p = context.applicationContext.getSharedPreferences("verso_ui", Context.MODE_PRIVATE)
         prefs = p
+        qualiteVerre = QualiteVerre.entries.firstOrNull { it.name == p.getString("qualite_verre", null) } ?: QualiteVerre.HAUTE
+        apercusAnimes = p.getBoolean("apercus_animes", true)
         fondAnime = p.getBoolean("fond_anime", false)
         derniereMesure = p.getString("derniere_mesure", null)
+        rapport = p.getString("dernier_rapport", null)
     }
 
     fun changerFondAnime(v: Boolean) {
         fondAnime = v
         prefs?.edit()?.putBoolean("fond_anime", v)?.apply()
+    }
+
+    /** Dernier banc en JSON (affichage en barres). */
+    var rapport by mutableStateOf<String?>(null)
+        private set
+
+    fun enregistrerRapport(json: String) {
+        rapport = json
+        prefs?.edit()?.putString("dernier_rapport", json)?.apply()
     }
 
     fun enregistrerMesure(texte: String) {
@@ -121,15 +154,89 @@ object Mesure {
 
 /**
  * Banc de fluidité du Diagnostic : le même parcours, deux fois (ancien moteur puis nouveau),
- * sans toucher l'écran. ~35 s. Les branchements sont posés par l'écran principal.
+ * sans toucher l'écran. Complet ≈ 35 s, rapide ≈ 15 s. Les branchements sont posés par l'écran principal.
+ *
+ * L'écran reste allumé pendant la mesure (`FLAG_KEEP_SCREEN_ON`, retiré à la fin, même en cas
+ * d'annulation) : sinon la mise en veille automatique coupait la mesure au milieu.
  */
 class BancFluidite {
-    data class Ligne(val scene: String, val ancien: Mesure.Resultat, val nouveau: Mesure.Resultat)
+    data class Ligne(val scene: String, val symbole: String, val ancien: Mesure.Resultat, val nouveau: Mesure.Resultat)
+
+    /** Dernier banc complet, pour l'affichage en barres (gardé entre deux lancements). */
+    data class Rapport(val quand: String, val hz: Int, val rapide: Boolean, val lignes: List<Ligne>, val ouvAncien: Long?, val ouvNouveau: Long?)
 
     var enCours by mutableStateOf(false)
         private set
     var etape by mutableStateOf("")
         private set
+    /** 0 → 1 pendant la mesure (barre de progression). */
+    var progression by mutableStateOf(0f)
+        private set
+    var dernier by mutableStateOf<Rapport?>(null)
+        private set
+
+    /** Ce que l'optimisation automatique a changé à la fin du dernier banc (vide = rien à changer). */
+    var ajustements by mutableStateOf<List<String>>(emptyList())
+        private set
+    private var avantAjustement: Triple<ReglagesUi.QualiteVerre, Boolean, Boolean>? = null
+    val peutAnnuler: Boolean get() = avantAjustement != null && ajustements.isNotEmpty()
+
+    /**
+     * Optimisation automatique, d'après le NOUVEAU moteur (ce que tu vis vraiment) :
+     * - repos qui dessine encore beaucoup avec le fond animé → fond animé coupé ;
+     * - écran principal en retard (> 8 % / > 20 %) → verre Équilibré (sans irisation) / Léger (moins de flou, sans ombre) ;
+     * - bibliothèque en retard (> 8 %) → aperçus fixes dans la grille (la grande matrice reste animée) ;
+     * - tout est fluide (< 3 %) et des réglages avaient été baissés → on remonte d'un cran.
+     * Chaque changement est listé, et « Annuler » remet tout comme avant.
+     */
+    private fun optimiser(r: Rapport) {
+        val n = r.lignes.associate { it.scene to it.nouveau }
+        val repos = n["Repos"]
+        val page = n["Écran principal"]
+        val biblio = n["Bibliothèque (90)"]
+        avantAjustement = Triple(ReglagesUi.qualiteVerre, ReglagesUi.apercusAnimes, ReglagesUi.fondAnime)
+        val faits = mutableListOf<String>()
+        if (ReglagesUi.fondAnime && repos != null && repos.parSeconde > 25) {
+            ReglagesUi.changerFondAnime(false)
+            faits += "🌫️ Fond animé coupé (${repos.parSeconde.toInt()} images/s au repos)"
+        }
+        val retardPage = page?.pourcentRetard ?: 0.0
+        val voulu = when {
+            retardPage > 20 -> ReglagesUi.QualiteVerre.LEGERE
+            retardPage > 8 -> ReglagesUi.QualiteVerre.EQUILIBREE
+            else -> null
+        }
+        if (voulu != null && voulu.ordinal > ReglagesUi.qualiteVerre.ordinal) {
+            ReglagesUi.changerQualiteVerre(voulu)
+            faits += "🧊 Verre « ${voulu.label} » (écran principal : ${retardPage.toInt()} % d'images en retard)"
+        }
+        val retardBiblio = biblio?.pourcentRetard ?: 0.0
+        if (ReglagesUi.apercusAnimes && retardBiblio > 8) {
+            ReglagesUi.changerApercusAnimes(false)
+            faits += "🖼️ Aperçus fixes dans la bibliothèque (${retardBiblio.toInt()} % en retard)"
+        }
+        // Tout est fluide : on rend la qualité qu'on avait baissée, un cran à la fois.
+        if (faits.isEmpty() && retardPage < 3 && retardBiblio < 3) {
+            if (ReglagesUi.qualiteVerre != ReglagesUi.QualiteVerre.HAUTE) {
+                val q = ReglagesUi.QualiteVerre.entries[ReglagesUi.qualiteVerre.ordinal - 1]
+                ReglagesUi.changerQualiteVerre(q)
+                faits += "✨ Verre remonté en « ${q.label} » (tout est fluide)"
+            } else if (!ReglagesUi.apercusAnimes) {
+                ReglagesUi.changerApercusAnimes(true)
+                faits += "✨ Aperçus animés remis (tout est fluide)"
+            }
+        }
+        ajustements = faits
+    }
+
+    fun annulerAjustements() {
+        val (q, a, f) = avantAjustement ?: return
+        ReglagesUi.changerQualiteVerre(q)
+        ReglagesUi.changerApercusAnimes(a)
+        ReglagesUi.changerFondAnime(f)
+        ajustements = listOf("↩️ Réglages remis comme avant le banc")
+        avantAjustement = null
+    }
 
     var defilerPage: (suspend (versLeBas: Boolean, ms: Int) -> Unit)? = null
     var ouvrirBibliotheque: ((Boolean) -> Unit)? = null
@@ -138,9 +245,40 @@ class BancFluidite {
     /** Posé par la bibliothèque à sa première image affichée. */
     @Volatile var ouverteA = 0L
 
-    suspend fun lancer(window: Window) {
+    private var travail: kotlinx.coroutines.Job? = null
+
+    fun annuler() {
+        travail?.cancel()
+    }
+
+    suspend fun lancer(window: Window, rapide: Boolean = false) {
         if (enCours) return
         enCours = true
+        progression = 0f
+        travail = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
+        // Durées (ms) : repos, défilement de la page (×2), de la bibliothèque (×2).
+        val repos = if (rapide) 1500L else 3000L
+        val page = if (rapide) 1000 else 2000
+        val biblio = if (rapide) 1200 else 2500
+        val total = 2 * (1200 + repos + 2 * page + 900 + 2 * biblio + 600).toFloat()
+        var fait = 0f
+        suspend fun etapeDe(ms: Number, bloc: suspend () -> Unit) {
+            val debut = fait
+            kotlinx.coroutines.coroutineScope {
+                val anim = launch {
+                    val t0 = SystemClock.uptimeMillis()
+                    while (true) {
+                        progression = ((debut + (SystemClock.uptimeMillis() - t0)) / total).coerceAtMost(1f)
+                        delay(50)
+                    }
+                }
+                try { bloc() } finally { anim.cancel() }
+            }
+            fait = debut + ms.toFloat()
+            progression = (fait / total).coerceAtMost(1f)
+        }
+
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         val parMode = mutableMapOf<Boolean, List<Pair<String, Mesure.Resultat>>>()
         val ouverture = mutableMapOf<Boolean, Long>()
         try {
@@ -148,72 +286,142 @@ class BancFluidite {
                 val nom = if (ancien) "ancien moteur" else "nouveau moteur"
                 ModePerf.ancien = ancien
                 ouvrirBibliotheque?.invoke(false)
-                defilerPage?.invoke(false, 300)
-                delay(1200)
+                etapeDe(1200) {
+                    defilerPage?.invoke(false, 300)
+                    delay(900)
+                }
                 val lignes = mutableListOf<Pair<String, Mesure.Resultat>>()
 
-                etape = "1/3 · repos ($nom)"
-                lignes += "Repos 3 s" to mesurer(window) { delay(3000) }
+                etape = "😴 repos · $nom"
+                etapeDe(repos) { lignes += "Repos" to mesurer(window) { delay(repos) } }
 
-                etape = "2/3 · écran principal ($nom)"
-                lignes += "Écran principal" to mesurer(window) {
-                    defilerPage?.invoke(true, 2000)
-                    defilerPage?.invoke(false, 2000)
+                etape = "📜 écran principal · $nom"
+                etapeDe(2 * page) {
+                    lignes += "Écran principal" to mesurer(window) {
+                        defilerPage?.invoke(true, page)
+                        defilerPage?.invoke(false, page)
+                    }
                 }
 
-                etape = "3/3 · bibliothèque ($nom)"
-                ouverteA = 0L
-                val t0 = SystemClock.uptimeMillis()
-                ouvrirBibliotheque?.invoke(true)
-                var attente = 0
-                while (ouverteA == 0L && attente < 100) { delay(20); attente++ }
-                if (ouverteA != 0L) ouverture[ancien] = ouverteA - t0
-                delay(900)
-                lignes += "Bibliothèque (90)" to mesurer(window) {
-                    defilerBibliotheque?.invoke(3500f, 2500)
-                    defilerBibliotheque?.invoke(-3500f, 2500)
+                etape = "📚 bibliothèque · $nom"
+                etapeDe(900) {
+                    ouverteA = 0L
+                    val t0 = SystemClock.uptimeMillis()
+                    ouvrirBibliotheque?.invoke(true)
+                    var attente = 0
+                    while (ouverteA == 0L && attente < 100) { delay(20); attente++ }
+                    if (ouverteA != 0L) ouverture[ancien] = ouverteA - t0
+                    delay(600)
                 }
-                ouvrirBibliotheque?.invoke(false)
-                delay(600)
+                etapeDe(2 * biblio) {
+                    lignes += "Bibliothèque (90)" to mesurer(window) {
+                        defilerBibliotheque?.invoke(3500f, biblio)
+                        defilerBibliotheque?.invoke(-3500f, biblio)
+                    }
+                }
+                etapeDe(600) {
+                    ouvrirBibliotheque?.invoke(false)
+                    delay(600)
+                }
                 parMode[ancien] = lignes
             }
+            val a = parMode[true].orEmpty()
+            val n = parMode[false].orEmpty()
+            val symboles = mapOf("Repos" to "😴", "Écran principal" to "📜", "Bibliothèque (90)" to "📚")
+            val lignes = a.zip(n).map { (x, y) -> Ligne(x.first, symboles[x.first] ?: "•", x.second, y.second) }
+            val hz = window.decorView.display?.refreshRate?.toInt() ?: 0
+            val quand = java.time.LocalDateTime.now().withNano(0).toString().replace('T', ' ')
+            val r = Rapport(quand, hz, rapide, lignes, ouverture[true], ouverture[false])
+            dernier = r
+            optimiser(r)
+            ReglagesUi.enregistrerMesure(texte(r) + if (ajustements.isEmpty()) "\n✅ Rien à changer : c'est fluide.\n" else "\n🛠️ Réglé automatiquement :\n" + ajustements.joinToString("\n") { "  $it" } + "\n")
+            ReglagesUi.enregistrerRapport(versJson(r))
         } finally {
+            window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             ModePerf.ancien = false
+            ouvrirBibliotheque?.invoke(false)
             etape = ""
+            progression = 0f
             enCours = false
+            travail = null
         }
-        val a = parMode[true].orEmpty()
-        val n = parMode[false].orEmpty()
-        val lignes = a.zip(n).map { (x, y) -> Ligne(x.first, x.second, y.second) }
-        ReglagesUi.enregistrerMesure(rapport(lignes, ouverture[true], ouverture[false], window))
+    }
+
+    /** Relit le dernier banc enregistré (après un redémarrage de l'app). */
+    fun relire() {
+        if (dernier == null) dernier = ReglagesUi.rapport?.let(::depuisJson)
     }
 
     private suspend fun mesurer(window: Window, action: suspend () -> Unit): Mesure.Resultat {
         val e = Enregistreur(window)
         e.demarrer()
-        action()
+        try {
+            action()
+        } catch (c: kotlinx.coroutines.CancellationException) {
+            // Annulé : on détache quand même l'écoute des images, puis on s'arrête.
+            e.arreter()
+            throw c
+        }
         return e.arreter()
     }
 
-    private fun rapport(lignes: List<Ligne>, ouvAncien: Long?, ouvNouveau: Long?, window: Window): String {
-        val hz = window.decorView.display?.refreshRate?.toInt() ?: 0
-        val f = java.util.Locale.FRANCE
-        return buildString {
-            append("Banc de fluidité · ${java.time.LocalDateTime.now().withNano(0).toString().replace('T', ' ')} · écran $hz Hz\n")
-            append("(ancien = causes de lenteur de la v0.1.67 reproduites ; nouveau = cette version)\n")
-            lignes.forEach { l ->
-                append("\n${l.scene}\n")
-                fun ligne(nom: String, r: Mesure.Resultat) = append(
-                    String.format(f, "  %-7s %4d images (%5.1f/s) · médiane %5.1f ms · 95%% < %5.1f ms · GPU %4.1f ms · en retard %4.1f %%\n",
-                        nom, r.images, r.parSeconde, r.medianeMs, r.p95Ms, r.gpuMedianMs, r.pourcentRetard),
-                )
-                ligne("ancien", l.ancien)
-                ligne("nouveau", l.nouveau)
-            }
-            if (ouvAncien != null || ouvNouveau != null) {
-                append("\nOuverture de la bibliothèque : ancien ${ouvAncien ?: "?"} ms · nouveau ${ouvNouveau ?: "?"} ms\n")
+    companion object {
+        /** Gain en % (positif = mieux) : moins de retard, plus d'images par seconde… */
+        fun gain(avant: Double, apres: Double, plusEstMieux: Boolean): Int? {
+            if (avant <= 0.0 && apres <= 0.0) return null
+            val base = if (plusEstMieux) avant else maxOf(avant, 0.0001)
+            if (base <= 0.0) return null
+            val g = if (plusEstMieux) (apres - avant) / base else (avant - apres) / base
+            return (g * 100).toInt()
+        }
+
+        fun texte(r: Rapport): String {
+            val f = java.util.Locale.FRANCE
+            return buildString {
+                append("📊 Banc de fluidité · ${r.quand} · écran ${r.hz} Hz" + (if (r.rapide) " · rapide" else "") + "\n")
+                append("(ancien = causes de lenteur de la v0.1.67 reproduites ; nouveau = cette version)\n")
+                r.lignes.forEach { l ->
+                    append("\n${l.symbole} ${l.scene}\n")
+                    fun ligne(nom: String, x: Mesure.Resultat) = append(
+                        String.format(f, "  %-7s %4d images (%5.1f/s) · médiane %5.1f ms · 95%% < %5.1f ms · GPU %4.1f ms · en retard %4.1f %%\n",
+                            nom, x.images, x.parSeconde, x.medianeMs, x.p95Ms, x.gpuMedianMs, x.pourcentRetard),
+                    )
+                    ligne("ancien", l.ancien)
+                    ligne("nouveau", l.nouveau)
+                }
+                if (r.ouvAncien != null || r.ouvNouveau != null) {
+                    append("\n📚 Ouverture de la bibliothèque : ancien ${r.ouvAncien ?: "?"} ms · nouveau ${r.ouvNouveau ?: "?"} ms\n")
+                }
+                Demarrage.ms?.let { append("🚀 Ouverture de l'app : $it ms\n") }
             }
         }
+
+        private fun resJson(x: Mesure.Resultat) = org.json.JSONObject()
+            .put("i", x.images).put("d", x.dureeMs).put("m", x.medianeMs).put("p", x.p95Ms).put("g", x.gpuMedianMs).put("r", x.retards)
+
+        private fun resDe(o: org.json.JSONObject) = Mesure.Resultat(
+            o.optInt("i"), o.optLong("d"), o.optDouble("m"), o.optDouble("p"), o.optDouble("g"), o.optInt("r"),
+        )
+
+        fun versJson(r: Rapport): String = org.json.JSONObject()
+            .put("quand", r.quand).put("hz", r.hz).put("rapide", r.rapide)
+            .put("oa", r.ouvAncien ?: -1).put("on", r.ouvNouveau ?: -1)
+            .put("lignes", org.json.JSONArray().apply {
+                r.lignes.forEach { l -> put(org.json.JSONObject().put("s", l.scene).put("e", l.symbole).put("a", resJson(l.ancien)).put("n", resJson(l.nouveau))) }
+            }).toString()
+
+        fun depuisJson(t: String): Rapport? = runCatching {
+            val o = org.json.JSONObject(t)
+            val ls = o.getJSONArray("lignes")
+            Rapport(
+                o.optString("quand"), o.optInt("hz"), o.optBoolean("rapide"),
+                (0 until ls.length()).map { i ->
+                    val l = ls.getJSONObject(i)
+                    Ligne(l.optString("s"), l.optString("e"), resDe(l.getJSONObject("a")), resDe(l.getJSONObject("n")))
+                },
+                o.optLong("oa").takeIf { it >= 0 }, o.optLong("on").takeIf { it >= 0 },
+            )
+        }.getOrNull()
     }
 }
 

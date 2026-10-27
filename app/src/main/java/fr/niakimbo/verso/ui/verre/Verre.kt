@@ -322,6 +322,14 @@ fun Modifier.verre(
         ?: return this.clip(forme).background(Color(0xFF111111)).background(teinte).border(1.dp, Color(0xFF2A2A2A), forme)
     // Banc de comparaison : l'ancien code recréait ces lambdas à chaque recomposition.
     val cle: Any = if (ModePerf.ancien) Any() else Unit
+    // Qualité (Plus, ou optimisation automatique du banc) : Équilibrée = sans irisation ;
+    // Légère = flou et réfraction réduits, sans irisation ni ombre. Le banc « ancien » garde la qualité haute.
+    val q = if (ModePerf.ancien) ReglagesUi.QualiteVerre.HAUTE else ReglagesUi.qualiteVerre
+    val legere = q == ReglagesUi.QualiteVerre.LEGERE
+    val flou = if (legere) flou * 0.6f else flou
+    val refraction = if (legere) refraction * 0.6f else refraction
+    val irisation = irisation && q == ReglagesUi.QualiteVerre.HAUTE
+    val ombre = ombre && !legere
     val shape = remember(forme, cle) { { forme } }
     val effets: com.kyant.backdrop.BackdropEffectScope.() -> Unit = remember(flou, refraction, irisation, cle) {
         {
