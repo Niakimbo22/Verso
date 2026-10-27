@@ -162,9 +162,13 @@ fun MiniLecteur(app: VersoApp, modifier: Modifier = Modifier, onRemonter: () -> 
                 Bouton("‹") { scope.launch { ActionsRapides.changer(app, -1) } }
                 val glyph by fr.niakimbo.verso.glyph.BoutonGlyph.allume.collectAsStateWithLifecycle()
                 val allume = actif != null && glyph != false
-                Bouton(if (allume) "⏻" else "▶", couleur = if (allume) Color.White else Rouge) {
-                    scope.launch { ActionsRapides.basculer(app) }
-                }
+                // Icône dessinée : la police du téléphone n'a pas le caractère « ⏻ » (boîte vide).
+                androidx.compose.material3.Icon(
+                    androidx.compose.ui.res.painterResource(if (allume) fr.niakimbo.verso.R.drawable.ic_w_marche else fr.niakimbo.verso.R.drawable.ic_w_lecture),
+                    contentDescription = if (allume) "Éteindre" else "Rallumer",
+                    tint = if (allume) Color.White else Rouge,
+                    modifier = Modifier.appui({ scope.launch { ActionsRapides.basculer(app) } }).padding(horizontal = 10.dp, vertical = 8.dp).size(24.dp),
+                )
                 Bouton("›") { scope.launch { ActionsRapides.changer(app, 1) } }
             }
         }

@@ -494,7 +494,8 @@ private fun CarteModele(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
-            ApercuModele(modele, animer = visible, modifier = Modifier.fillMaxWidth().aspectRatio(1f))
+            // Aperçus fixes si l'optimisation auto (ou Plus) l'a choisi ; le modèle affiché reste animé.
+            ApercuModele(modele, animer = visible && (ReglagesUi.apercusAnimes || actif || ModePerf.ancien), modifier = Modifier.fillMaxWidth().aspectRatio(1f))
             if (modele?.estVivant == true) {
                 Text("▶", color = Dim, fontSize = 10.sp, modifier = Modifier.align(Alignment.TopEnd))
             }

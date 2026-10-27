@@ -81,7 +81,7 @@ private val GROUPES: List<Pair<String, List<Entree>>> = listOf(
         Entree("▣", "Mes widgets", Destination.WIDGETS, "posés, anciens widgets"),
     ),
     "GLYPH" to listOf(
-        Entree("⏻", "Bouton Glyph", Destination.GLYPH, "état, activation"),
+        Entree("🔌", "Bouton Glyph", Destination.GLYPH, "état, activation"),
         Entree("◎", "Choisir le Glyph Toy", Destination.TOY, "affichage app fermée"),
     ),
     "INFOS" to listOf(

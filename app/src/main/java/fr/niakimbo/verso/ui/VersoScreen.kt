@@ -215,15 +215,15 @@ fun VersoScreen(
             MenuLateral(menuOuvert, onFermer = { menuOuvert = false }, onAller = ::aller)
             if (banc.enCours) {
                 PanneauVerre(
-                    Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(12.dp),
-                    forme = RoundedCornerShape(50),
+                    Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(12.dp).fillMaxWidth(),
+                    forme = RoundedCornerShape(24.dp),
                     actif = true,
                 ) {
-                    Text(
-                        "Mesure · ${banc.etape} · ne touche pas l'écran",
-                        color = Color.White, fontSize = 12.sp,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                    )
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                        Text("📊 Mesure en cours · ne touche pas l'écran · 🔆 l'écran reste allumé", color = Discret, fontSize = 11.sp)
+                        Spacer(Modifier.height(6.dp))
+                        ProgressionBanc(banc)
+                    }
                 }
             }
         },

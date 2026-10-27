@@ -142,7 +142,7 @@ internal fun Heros(app: VersoApp, entrees: List<EntreeCatalogue>?, onFiche: (Ent
             RondVerre("‹", { portee.launch { ActionsRapides.changer(app, -1) } }, taille = 24.sp)
             BoutonVerre(
                 when {
-                    allume -> "⏻  Éteindre"
+                    allume -> "🔌  Éteindre"
                     nomDernier != null -> "▶  Rallumer « $nomDernier »"
                     else -> "▶  Rallumer"
                 },
@@ -321,7 +321,7 @@ private fun TuileModele(app: VersoApp, entree: EntreeCatalogue, cache: CacheMode
             .padding(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        ApercuModele(modele, animer = !LocalFige.current, modifier = Modifier.size(76.dp))
+        ApercuModele(modele, animer = !LocalFige.current && (ReglagesUi.apercusAnimes || actif), modifier = Modifier.size(76.dp))
         Spacer(Modifier.height(6.dp))
         Text(
             entree.nom, color = Color.White, fontSize = 11.sp, fontFamily = FontFamily.Monospace,
@@ -402,31 +402,180 @@ internal fun ReglageFondAnime() {
     }
 }
 
-/** Banc de fluidité (Diagnostic) : mesure ancien / nouveau moteur sur ce téléphone. */
+/** Banc de fluidité (Diagnostic) : mesure ancien / nouveau moteur sur ce téléphone, puis optimise. */
 @Composable
 internal fun SectionBanc(banc: BancFluidite) {
     val context = LocalContext.current
     val portee = rememberCoroutineScope()
+    LaunchedEffect(Unit) { banc.relire() }
+    fun lancer(rapide: Boolean) {
+        val fenetre = context.activite()?.window ?: return
+        if (!banc.enCours) portee.launch { banc.lancer(fenetre, rapide) }
+    }
     Column(Modifier.fillMaxWidth()) {
-        SectionTitle("FLUIDITÉ")
+        SectionTitle("📊 FLUIDITÉ")
         Spacer(Modifier.height(6.dp))
-        Hint("Fait défiler l'écran et la bibliothèque tout seul, deux fois : avec l'ancien moteur (causes de lenteur de la v0.1.67 reproduites) puis le nouveau. Ne touche pas l'écran pendant ~35 s. Pour le pire cas, affiche d'abord un modèle animé (Pluie).")
+        Hint("Fait défiler l'app tout seul, avec l'ancien moteur puis le nouveau, puis règle ce qui rame. L'écran reste allumé. Ne touche à rien. Pire cas : affiche Pluie avant.")
         Spacer(Modifier.height(10.dp))
-        BoutonVerre(
-            if (banc.enCours) "Mesure en cours…" else "Mesurer la fluidité",
-            {
-                val fenetre = context.activite()?.window ?: return@BoutonVerre
-                if (!banc.enCours) portee.launch { banc.lancer(fenetre) }
-            },
-            Modifier.fillMaxWidth(), principal = !banc.enCours, taille = 14.sp,
-        )
-        Demarrage.ms?.let {
-            Spacer(Modifier.height(8.dp))
-            MonoLine("Ouverture de l'app (ce lancement) : $it ms")
+        if (banc.enCours) {
+            ProgressionBanc(banc)
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                BoutonVerre("📊  Complet · 35 s", { lancer(false) }, Modifier.weight(1f), principal = true, taille = 13.sp)
+                BoutonVerre("⚡  Rapide · 15 s", { lancer(true) }, Modifier.weight(1f), taille = 13.sp)
+            }
         }
-        ReglagesUi.derniereMesure?.let { texte ->
+        banc.dernier?.let { r ->
+            Spacer(Modifier.height(14.dp))
+            ResultatsBanc(banc, r)
+        }
+        Spacer(Modifier.height(14.dp))
+        ReglagesPerf()
+    }
+}
+
+/** Barre de progression + étape + Annuler (aussi en haut de l'écran pendant la mesure). */
+@Composable
+internal fun ProgressionBanc(banc: BancFluidite, modifier: Modifier = Modifier) {
+    Column(modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(banc.etape.ifBlank { "Préparation…" }, color = Color.White, fontSize = 13.sp, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("${(banc.progression * 100).toInt()} %", color = Discret, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+            Spacer(Modifier.width(10.dp))
+            Text("✕ Annuler", color = Rouge, fontSize = 13.sp, modifier = Modifier.appui({ banc.annuler() }).padding(vertical = 4.dp))
+        }
+        Spacer(Modifier.height(8.dp))
+        Box(Modifier.fillMaxWidth().height(6.dp).background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(50))) {
+            Box(Modifier.fillMaxWidth(banc.progression.coerceIn(0.02f, 1f)).height(6.dp).background(Rouge, RoundedCornerShape(50)))
+        }
+    }
+}
+
+/** Résultats en un coup d'œil : verdict, une carte par scène avec barres ancien / nouveau, réglages faits. */
+@Composable
+private fun ResultatsBanc(banc: BancFluidite, r: BancFluidite.Rapport) {
+    val context = LocalContext.current
+    val portee = rememberCoroutineScope()
+    var details by rememberSaveable { mutableStateOf(false) }
+    val gains = r.lignes.mapNotNull { BancFluidite.gain(it.ancien.pourcentRetard, it.nouveau.pourcentRetard, plusEstMieux = false) }
+    val moyen = if (gains.isEmpty()) null else gains.average().toInt()
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        PanneauVerre(Modifier.fillMaxWidth(), forme = RoundedCornerShape(22.dp), actif = true) {
+            Column(Modifier.padding(16.dp)) {
+                Text(
+                    when {
+                        moyen == null -> "📊 Mesure faite"
+                        moyen >= 10 -> "🚀 Nouveau moteur : $moyen % d'images en retard en moins"
+                        moyen > -10 -> "🤝 Pareil que l'ancien moteur"
+                        else -> "⚠️ Nouveau moteur moins fluide (${-moyen} %)"
+                    },
+                    color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, lineHeight = 21.sp,
+                )
+                Text("${r.quand} · écran ${r.hz} Hz" + if (r.rapide) " · rapide" else "", color = Discret, fontSize = 11.sp)
+            }
+        }
+        r.lignes.forEach { l -> CarteScene(l) }
+        if (r.ouvAncien != null || r.ouvNouveau != null || Demarrage.ms != null) {
+            PanneauVerre(Modifier.fillMaxWidth(), forme = RoundedCornerShape(18.dp)) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    if (r.ouvAncien != null || r.ouvNouveau != null) {
+                        Text("📚 Ouverture bibliothèque : ${r.ouvAncien ?: "?"} → ${r.ouvNouveau ?: "?"} ms", color = Color.White, fontSize = 13.sp)
+                    }
+                    Demarrage.ms?.let { Text("🚀 Ouverture de l'app : $it ms", color = Color.White, fontSize = 13.sp) }
+                }
+            }
+        }
+        // Optimisation automatique.
+        PanneauVerre(Modifier.fillMaxWidth(), forme = RoundedCornerShape(18.dp)) {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(if (banc.ajustements.isEmpty()) "✅ Rien à changer : c'est fluide" else "🛠️ Réglé automatiquement", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                banc.ajustements.forEach { Text(it, color = Color(0xFFDDDDDD), fontSize = 13.sp, lineHeight = 18.sp) }
+                if (banc.ajustements.isNotEmpty()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
+                        if (banc.peutAnnuler) PuceVerre("↩️  Annuler", false, Modifier.weight(1f)) { banc.annulerAjustements() }
+                        PuceVerre("🔁  Re-mesurer", false, Modifier.weight(1f)) {
+                            val f = context.activite()?.window ?: return@PuceVerre
+                            if (!banc.enCours) portee.launch { banc.lancer(f, rapide = true) }
+                        }
+                    }
+                }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PuceVerre(if (details) "▾  Chiffres" else "▸  Chiffres", details, Modifier.weight(1f)) { details = !details }
+            PuceVerre("📋  Copier", false, Modifier.weight(1f)) {
+                val texte = ReglagesUi.derniereMesure ?: BancFluidite.texte(r)
+                context.getSystemService(android.content.ClipboardManager::class.java)
+                    ?.setPrimaryClip(android.content.ClipData.newPlainText("Banc Verso", texte))
+                android.widget.Toast.makeText(context, "Rapport copié", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+        if (details) PanelBox { MonoLine(ReglagesUi.derniereMesure ?: BancFluidite.texte(r)) }
+    }
+}
+
+/** Une scène : % en retard et images/s, ancien (gris) contre nouveau (rouge). */
+@Composable
+private fun CarteScene(l: BancFluidite.Ligne) {
+    val g = BancFluidite.gain(l.ancien.pourcentRetard, l.nouveau.pourcentRetard, plusEstMieux = false)
+    PanneauVerre(Modifier.fillMaxWidth(), forme = RoundedCornerShape(18.dp)) {
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("${l.symbole}  ${l.scene}", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                g?.let {
+                    Text(
+                        if (it >= 0) "−$it % retard" else "+${-it} % retard",
+                        color = if (it >= 0) Vert else Ambre, fontSize = 12.sp, fontFamily = FontFamily.Monospace,
+                    )
+                }
+            }
             Spacer(Modifier.height(8.dp))
-            PanelBox { MonoLine(texte) }
+            val maxRetard = maxOf(l.ancien.pourcentRetard, l.nouveau.pourcentRetard, 1.0)
+            Barre("⏱️ en retard", l.ancien.pourcentRetard, l.nouveau.pourcentRetard, maxRetard, "%")
+            Spacer(Modifier.height(6.dp))
+            val maxIps = maxOf(l.ancien.parSeconde, l.nouveau.parSeconde, 1.0)
+            Barre("🎞️ images/s", l.ancien.parSeconde, l.nouveau.parSeconde, maxIps, "")
+        }
+    }
+}
+
+@Composable
+private fun Barre(titre: String, ancien: Double, nouveau: Double, max: Double, unite: String) {
+    Column {
+        Text(titre, color = Discret, fontSize = 11.sp)
+        Spacer(Modifier.height(3.dp))
+        listOf(Triple("ancien", ancien, Color.White.copy(alpha = 0.35f)), Triple("nouveau", nouveau, Rouge)).forEach { (nom, v, c) ->
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
+                Text(nom, color = Discret, fontSize = 10.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.width(52.dp))
+                Box(Modifier.weight(1f).height(8.dp).background(Color.White.copy(alpha = 0.06f), RoundedCornerShape(50))) {
+                    Box(Modifier.fillMaxWidth((v / max).toFloat().coerceIn(0.02f, 1f)).height(8.dp).background(c, RoundedCornerShape(50)))
+                }
+                Text(String.format(java.util.Locale.FRANCE, "%.1f%s", v, unite), color = Color.White, fontSize = 11.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.width(52.dp).padding(start = 6.dp))
+            }
+        }
+    }
+}
+
+/** Réglages d'affichage (ceux que l'optimisation automatique peut changer), à la main. */
+@Composable
+internal fun ReglagesPerf() {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("🧊 Qualité du verre", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ReglagesUi.QualiteVerre.entries.forEach { q ->
+                PuceVerre(q.label, q == ReglagesUi.qualiteVerre, Modifier.weight(1f)) { ReglagesUi.changerQualiteVerre(q) }
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("🖼️ Aperçus animés", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text("bibliothèque et accès rapide", color = Discret, fontSize = 11.sp)
+            }
+            Switch(
+                checked = ReglagesUi.apercusAnimes,
+                onCheckedChange = { ReglagesUi.changerApercusAnimes(it) },
+                colors = SwitchDefaults.colors(checkedTrackColor = Rouge),
+            )
         }
     }
 }
