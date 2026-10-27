@@ -4,7 +4,7 @@ import java.time.DayOfWeek
 import java.time.ZoneId
 
 /** Les quatre familles du catalogue « Si… ». */
-enum class Famille(val titre: String) { TEMPS("Temps"), BATTERIE("Batterie"), TELEPHONE("Téléphone"), CONNEXIONS("Connexions") }
+enum class Famille(val titre: String) { APPS("Apps"), TEMPS("Temps"), BATTERIE("Batterie"), TELEPHONE("Téléphone"), CONNEXIONS("Connexions") }
 
 /** Chaque déclencheur proposé dans le catalogue, avec son picto dot-matrix 9×9. */
 enum class TypeQuand(val cle: String, val famille: Famille, val titre: String, val sousTitre: String, val picto: String) {
@@ -260,6 +260,34 @@ enum class TypeQuand(val cle: String, val famille: Famille, val titre: String, v
         ....X....
         """,
     ),
+    NOTIF(
+        Declencheur.NOTIF, Famille.APPS, "Notification", "Flash puis fondu",
+        """
+        .XXXXXXX.
+        X.......X
+        X.XXXXX.X
+        X.......X
+        X.XXX...X
+        X.......X
+        .XXXXXXX.
+        .XX......
+        .X.......
+        """,
+    ),
+    MUSIQUE(
+        Declencheur.MUSIQUE, Famille.APPS, "Musique", "Quand ça joue",
+        """
+        ...XXXXXX
+        ...XXXXXX
+        ...X....X
+        ...X....X
+        ...X....X
+        .XXX..XXX
+        XXXX.XXXX
+        XXXX.XXXX
+        .XX...XX.
+        """,
+    ),
     ;
 
     /** Points allumés du picto, ligne par ligne. */
@@ -285,6 +313,8 @@ enum class TypeQuand(val cle: String, val famille: Famille, val titre: String, v
         CASQUE -> Declencheur.Casque()
         BLUETOOTH -> Declencheur.Bluetooth()
         RESEAU -> Declencheur.Reseau()
+        NOTIF -> Declencheur.Notification()
+        MUSIQUE -> Declencheur.Musique()
     }
 
     companion object {
@@ -356,6 +386,8 @@ object Textes {
             Declencheur.AUCUN -> "hors ligne"
             else -> "sur Wi-Fi"
         }
+        is Declencheur.Notification -> if (d.apps.isEmpty()) "une notif arrive" else "une notif de ${d.apps.noms("")} arrive"
+        is Declencheur.Musique -> if (d.apps.isEmpty()) "de la musique joue" else "${d.apps.noms("")} joue"
     }
 
     /** Toutes les conditions d'une règle, reliées par « et » / « ou ». */
@@ -376,13 +408,20 @@ object Textes {
 
     /** « Si la nuit et en charge, afficher Lune. » */
     fun phrase(r: Regle, nom: (String) -> String): String {
-        val si = conditions(r).replaceFirstChar { it.uppercase() }
-        val alors = when (r.action) {
+        val si = conditions(r)
+        val alors = when {
+            r.estFlash -> "afficher " + alors(r.action, nom) + " ${r.secondesFlash} s"
+            else -> alorsPendant(r, nom)
+        }
+        return "Si $si, $alors."
+    }
+
+    private fun alorsPendant(r: Regle, nom: (String) -> String): String {
+        return when (r.action) {
             Action.Eteindre -> "éteindre la matrice"
             is Action.Defiler -> "faire défiler les favoris (toutes les ${(r.action as Action.Defiler).minutes} min)"
             else -> "afficher " + alors(r.action, nom)
         }
-        return "Si $si, $alors."
     }
 
     /** Lever et coucher du soleil aujourd'hui, pour la ville choisie. */
@@ -401,6 +440,8 @@ object Recettes {
         Recette(titre, nom) { id -> Regle(id, nom, si.toList(), action, toutes) }
 
     val toutes = listOf(
+        r("🔔 Une notif, la cloche 5 s", "Notif", Declencheur.Notification(), action = Action.Afficher("notification")),
+        r("🎵 Musique en cours, l'égaliseur", "Musique", Declencheur.Musique(), action = Action.Afficher("egaliseur")),
         r("La nuit, une lune", "Nuit", Declencheur.Soleil(nuit = true), action = Action.Afficher("lune")),
         r("Au réveil, un soleil", "Réveil", Declencheur.Reveil(), action = Action.Afficher("soleil")),
         r("En charge, la barre de chargement", "En charge", Declencheur.Charge(), action = Action.Afficher("chargement")),

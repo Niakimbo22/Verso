@@ -28,8 +28,20 @@ data class Regle(
     constructor(id: String, nom: String, quand: Declencheur, modele: String?) :
         this(id, nom, listOf(quand), if (modele == null) Action.Eteindre else Action.Afficher(modele))
 
+    /**
+     * Une condition « flash » (notification) : la règle affiche son modèle quelques secondes à chaque
+     * notification, puis le modèle d'avant revient en fondu. Elle n'est ni « pendant » ni « moment ».
+     */
+    val estFlash: Boolean get() = conditions.any { it.estFlash }
+
     /** Une condition « moment » (réveil, heure précise) fait de toute la règle un moment. */
-    val estMoment: Boolean get() = conditions.any { it.estMoment }
+    val estMoment: Boolean get() = !estFlash && conditions.any { it.estMoment }
+
+    /** Règle « pendant » : vraie tant que la situation dure. */
+    val estPendant: Boolean get() = !estFlash && !estMoment
+
+    /** Durée d'affichage d'une règle flash, en secondes. */
+    val secondesFlash: Int get() = conditions.filterIsInstance<Declencheur.Notification>().firstOrNull()?.secondes ?: 5
 
     /** Change quand ce qui s'affiche change : une règle en cours modifiée est réappliquée. */
     val signature: String get() = "$id|${action.signature}|$revenir"
@@ -66,6 +78,7 @@ sealed class Action {
 sealed class Declencheur {
     abstract val type: String
     open val estMoment: Boolean get() = false
+    open val estFlash: Boolean get() = false
 
     // ---- Temps ----
 
@@ -163,6 +176,22 @@ sealed class Declencheur {
         override val type get() = RESEAU
     }
 
+    // ---- Apps ----
+
+    /**
+     * Une notification arrive d'une de ces [apps] (vide = n'importe laquelle) : le modèle s'affiche
+     * [secondes] secondes, puis le modèle d'avant revient en fondu.
+     */
+    data class Notification(val apps: List<AppChoisie> = emptyList(), val secondes: Int = 5) : Declencheur() {
+        override val type get() = NOTIF
+        override val estFlash get() = true
+    }
+
+    /** De la musique joue (une de ces [apps], vide = n'importe laquelle). */
+    data class Musique(val apps: List<AppChoisie> = emptyList()) : Declencheur() {
+        override val type get() = MUSIQUE
+    }
+
     companion object {
         const val PLAGE = "plage"
         const val A_HEURE = "aheure"
@@ -182,6 +211,8 @@ sealed class Declencheur {
         const val CASQUE = "casque"
         const val BLUETOOTH = "bluetooth"
         const val RESEAU = "reseau"
+        const val NOTIF = "notif"
+        const val MUSIQUE = "musique"
 
         const val CABLE = "cable"
         const val SANS_FIL = "sansfil"
@@ -193,6 +224,17 @@ sealed class Declencheur {
 
         val TOUS_LES_JOURS: Set<DayOfWeek> = DayOfWeek.entries.toSet()
     }
+}
+
+/** Une app choisie dans une condition : son paquet, et son nom pour l'affichage. */
+data class AppChoisie(val pkg: String, val nom: String)
+
+/** « WhatsApp », « WhatsApp ou Discord », « 3 apps » ; vide = [tout]. */
+fun List<AppChoisie>.noms(tout: String): String = when (size) {
+    0 -> tout
+    1 -> this[0].nom
+    2 -> "${this[0].nom} ou ${this[1].nom}"
+    else -> "$size apps"
 }
 
 /** Position de la ville choisie (lever et coucher du soleil). */
@@ -219,6 +261,8 @@ data class Contexte(
     val prochaineAlarme: LocalDateTime? = null,
     val lieu: Lieu? = null,
     val zone: ZoneId = ZoneId.systemDefault(),
+    /** Paquets des apps dont la musique joue en ce moment. */
+    val musique: List<String> = emptyList(),
 )
 
 /** Évaluation des règles : fonctions pures, testées sans téléphone. */
@@ -226,7 +270,21 @@ object Evaluation {
 
     /** La règle « pendant » qui gagne maintenant : la première de la liste (ordre = priorité). */
     fun gagnante(regles: List<Regle>, ctx: Contexte): Regle? =
-        regles.firstOrNull { it.active && !it.estMoment && vraie(it, ctx) }
+        regles.firstOrNull { it.active && it.estPendant && vraie(it, ctx) }
+
+    /**
+     * La règle « flash » qui réagit à une notification de [pkg] : la première de la liste dont la
+     * condition notification accepte cette app ; avec « toutes », les autres conditions (sauf les
+     * moments) doivent aussi être vraies maintenant.
+     */
+    fun flash(regles: List<Regle>, pkg: String, ctx: Contexte): Regle? = regles.firstOrNull { r ->
+        if (!r.active || !r.estFlash) return@firstOrNull false
+        val notifs = r.conditions.filterIsInstance<Declencheur.Notification>()
+        val accepte = notifs.any { n -> n.apps.isEmpty() || n.apps.any { it.pkg == pkg } }
+        if (!accepte) return@firstOrNull false
+        val autres = r.conditions.filter { !it.estFlash && !it.estMoment }
+        !r.toutes || autres.all { vraie(it, ctx) }
+    }
 
     /** Toutes les conditions (ou au moins une) sont vraies. */
     fun vraie(r: Regle, ctx: Contexte): Boolean {
@@ -265,6 +323,8 @@ object Evaluation {
         is Declencheur.Casque -> contient(ctx.casques, d.appareil)
         is Declencheur.Bluetooth -> contient(ctx.bluetooth, d.appareil)
         is Declencheur.Reseau -> ctx.reseau == d.type_
+        is Declencheur.Notification -> false // un évènement, pas un état
+        is Declencheur.Musique -> if (d.apps.isEmpty()) ctx.musique.isNotEmpty() else d.apps.any { it.pkg in ctx.musique }
     }
 
     private fun contient(liste: List<String>, nom: String?) =

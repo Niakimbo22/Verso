@@ -2,6 +2,7 @@ package fr.niakimbo.verso.modele
 
 import android.content.Context
 import android.os.PowerManager
+import android.os.SystemClock
 import fr.niakimbo.verso.reglage.Catalogue
 import fr.niakimbo.verso.matrix.MatrixController
 import fr.niakimbo.verso.matrix.MatrixFrame
@@ -40,6 +41,10 @@ class ModelePlayer(
 
     private var boucle: Job? = null
     private var dernierFrame: MatrixFrame? = null
+
+    /** Un flash de notification est à l'écran (voir [flash]). */
+    @Volatile
+    private var flashEnCours = false
 
     /** Vrai tant qu'un écran de Verso est au premier plan. */
     @Volatile
@@ -152,11 +157,77 @@ class ModelePlayer(
     }
 
     /**
+     * Flash d'une notification (règle automatique « flash ») : [modele] s'affiche [dureeMs], puis s'éteint
+     * en fondu et le modèle d'avant revient en fondu. Rien n'est mémorisé : c'est un affichage de passage.
+     *
+     * Rien ne se passe (false) si personne ne peut voir la matrice (on n'ouvre jamais la couche app
+     * app fermée, voir §3.3) ou si la matrice est éteinte (éteinte = on ne veut rien voir).
+     * Un choix à la main, une règle ou un autre flash pendant ce temps l'interrompt.
+     */
+    @Synchronized
+    fun flash(modele: Modele, dureeMs: Long): Boolean {
+        if (!doitTourner() || _actif.value == null) return false
+        arreterBoucle()
+        flashEnCours = true
+        boucle = scope.launch {
+            val fin = SystemClock.elapsedRealtime() + dureeMs
+            fun reste() = fin - SystemClock.elapsedRealtime()
+            var derniere = imageInitiale(modele)
+            // 1. Le modèle de la notification (animé ou dynamique), pendant la durée choisie.
+            while (isActive && reste() > 0) {
+                if (modele.dynamique != null) {
+                    derniere = modele.frameDynamique()
+                    envoyer(derniere) ?: return@launch
+                    wakeLock.acquire(WAKE_LOCK_MS)
+                    delay(minOf(modele.periodeMs ?: 1_000L, reste()).coerceAtLeast(1))
+                } else {
+                    for (image in modele.images) {
+                        if (reste() <= 0) break
+                        derniere = image.frame
+                        envoyer(derniere) ?: return@launch
+                        wakeLock.acquire(WAKE_LOCK_MS)
+                        delay(if (modele.images.size > 1) minOf(image.dureeMs, reste()) else reste())
+                    }
+                }
+            }
+            // 2. Fondu de sortie.
+            for (i in FONDU_PAS - 1 downTo 0) {
+                envoyer(derniere.attenue(i / FONDU_PAS.toFloat())) ?: return@launch
+                delay(FONDU_MS / FONDU_PAS)
+            }
+            // 3. Le modèle d'avant revient en fondu, puis reprend sa boucle normale.
+            val retour = synchronized(this@ModelePlayer) { _actif.value }
+            if (retour == null) {
+                synchronized(this@ModelePlayer) {
+                    if (!isActive) return@launch
+                    flashEnCours = false
+                    dernierFrame = null
+                    controller.clear()
+                }
+                return@launch
+            }
+            val image = imageInitiale(retour)
+            for (i in 1..FONDU_PAS) {
+                envoyer(image.attenue(i / FONDU_PAS.toFloat())) ?: return@launch
+                delay(FONDU_MS / FONDU_PAS)
+            }
+            synchronized(this@ModelePlayer) {
+                if (!isActive) return@launch
+                flashEnCours = false
+                dernierFrame = image
+                if (retour.estVivant && doitTourner()) lancerBoucle(retour) else relacherEveil()
+            }
+        }
+        return true
+    }
+
+    /**
      * Signal « minute » du Glyph Toy (EVENT_AOD) : on redessine l'horloge et on renvoie
      * l'image courante, au cas où le système l'aurait effacée.
      */
     @Synchronized
     fun signalMinute() {
+        if (flashEnCours) return
         val modele = _actif.value
         val frame = if (modele?.dynamique != null) modele.frameDynamique() else dernierFrame
         if (frame != null) {
@@ -245,6 +316,11 @@ class ModelePlayer(
     private fun arreterBoucle() {
         boucle?.cancel()
         boucle = null
+        if (flashEnCours) {
+            // Flash interrompu : l'image à renvoyer (réveil, Toy relié) est celle du modèle, pas du flash.
+            flashEnCours = false
+            dernierFrame = _actif.value?.let(::imageInitiale)
+        }
         relacherEveil()
     }
 
@@ -255,5 +331,9 @@ class ModelePlayer(
     private companion object {
         /** Renouvelé à chaque image : se relâche tout seul 1 min après l'arrêt de l'animation. */
         const val WAKE_LOCK_MS = 60_000L
+
+        /** Fondu d'un flash de notification : durée et nombre d'images (de chaque côté). */
+        const val FONDU_MS = 480L
+        const val FONDU_PAS = 8
     }
 }

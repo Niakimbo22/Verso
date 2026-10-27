@@ -28,6 +28,11 @@
     <!-- Android 11+ : rend visible le service système Glyph pour bindService -->
     <queries>
         <package android:name="com.nothing.thirdparty" />
+        <!-- Règles automatiques : choisir une app (notification, musique, app ouverte) -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
     </queries>
 
     <application
@@ -93,6 +98,20 @@
             <meta-data
                 android:name="android.accessibilityservice"
                 android:resource="@xml/bouton_glyph" />
+        </service>
+
+        <!--
+            Règles automatiques « Notification » et « Musique » : accès aux notifications.
+            Verso ne lit que le nom de l'app (et les sessions média), jamais le contenu.
+        -->
+        <service
+            android:name=".auto.EcouteNotifs"
+            android:exported="true"
+            android:label="@string/ecoute_notifs_nom"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
         </service>
 
         <!-- Minuteur de veille : éteint la matrice à l'heure choisie -->

@@ -329,6 +329,9 @@ private sealed class Vue {
     data object Regle : Vue()
     data object Catalogue : Vue()
     data object Modele : Vue()
+
+    /** Choix des apps de la condition n° [index]. */
+    data class Apps(val index: Int) : Vue()
 }
 
 @Composable
@@ -368,7 +371,39 @@ private fun EditeurRegle(app: VersoApp, edition: Edition, contenu: Catalogue.Con
             }
             return
         }
+        is Vue.Apps -> {
+            val i = (vue as Vue.Apps).index
+            val d = regle.conditions.getOrNull(i)
+            BackHandler { vue = Vue.Regle }
+            val apps = when (d) {
+                is Declencheur.Notification -> d.apps
+                is Declencheur.Musique -> d.apps
+                else -> emptyList()
+            }
+            ChoixApps(
+                titre = "Chercher une app",
+                choisies = apps,
+                tout = "Toutes les apps",
+                onRetour = { vue = Vue.Regle },
+            ) { choix ->
+                val nouveau = when (d) {
+                    is Declencheur.Notification -> d.copy(apps = choix)
+                    is Declencheur.Musique -> d.copy(apps = choix)
+                    else -> d
+                }
+                if (nouveau != null) regle = regle.copy(conditions = regle.conditions.mapIndexed { j, c -> if (j == i) nouveau else c })
+                vue = Vue.Regle
+            }
+            return
+        }
         Vue.Regle -> Unit
+    }
+
+    // Une règle « flash » (notification) n'affiche qu'un modèle : pas de défilement ni d'extinction.
+    LaunchedEffect(regle.estFlash, regle.action) {
+        if (regle.estFlash && (regle.action is Action.Defiler || regle.action == Action.Eteindre)) {
+            regle = regle.copy(action = Action.Afficher(app.store.modeleActif ?: "notification"))
+        }
     }
 
     fun enregistrer() {
@@ -405,6 +440,7 @@ private fun EditeurRegle(app: VersoApp, edition: Edition, contenu: Catalogue.Con
                     Spacer(Modifier.height(12.dp))
                     Text(
                         when {
+                            regle.estFlash -> "⚡ À chaque notif : ${regle.secondesFlash} s, puis fondu"
                             regle.estMoment -> "Se déclenche au moment choisi, une fois par jour."
                             maintenant -> "● Ce serait le cas maintenant"
                             else -> "○ Pas le cas en ce moment"
@@ -422,6 +458,7 @@ private fun EditeurRegle(app: VersoApp, edition: Edition, contenu: Catalogue.Con
                 regle.conditions.forEachIndexed { i, d ->
                     CarteCondition(
                         app, d, ctx,
+                        onApps = { vue = Vue.Apps(i) },
                         ouverte = i == ouverte,
                         supprimable = regle.conditions.size > 1,
                         onOuvrir = { ouverte = if (ouverte == i) -1 else i },
@@ -453,8 +490,10 @@ private fun EditeurRegle(app: VersoApp, edition: Edition, contenu: Catalogue.Con
                     if (a !is Action.Afficher) regle = regle.copy(action = Action.Afficher(app.store.modeleActif ?: "lune"))
                 }
                 PuceVerre("Hasard", a == Action.Hasard, Modifier.weight(1f)) { regle = regle.copy(action = Action.Hasard) }
-                PuceVerre("Défiler", a is Action.Defiler, Modifier.weight(1f)) { if (a !is Action.Defiler) regle = regle.copy(action = Action.Defiler()) }
-                PuceVerre("Éteindre", a == Action.Eteindre, Modifier.weight(1f)) { regle = regle.copy(action = Action.Eteindre) }
+                if (!regle.estFlash) {
+                    PuceVerre("Défiler", a is Action.Defiler, Modifier.weight(1f)) { if (a !is Action.Defiler) regle = regle.copy(action = Action.Defiler()) }
+                    PuceVerre("Éteindre", a == Action.Eteindre, Modifier.weight(1f)) { regle = regle.copy(action = Action.Eteindre) }
+                }
             }
             Spacer(Modifier.height(10.dp))
             when (a) {
@@ -504,7 +543,7 @@ private fun EditeurRegle(app: VersoApp, edition: Edition, contenu: Catalogue.Con
                                 },
                             )
                         }
-                        if (!regle.estMoment) {
+                        if (regle.estPendant) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
                                     Text("À la fin, revenir au modèle d'avant", color = Color.White, fontSize = 14.sp)
@@ -567,6 +606,7 @@ private fun CarteCondition(
     app: VersoApp,
     d: Declencheur,
     ctx: Contexte,
+    onApps: () -> Unit,
     ouverte: Boolean,
     supprimable: Boolean,
     onOuvrir: () -> Unit,
@@ -574,7 +614,7 @@ private fun CarteCondition(
     onChange: (Declencheur) -> Unit,
 ) {
     val type = TypeQuand.de(d)
-    val vrai = !d.estMoment && Evaluation.vraie(d, ctx)
+    val vrai = !d.estMoment && !d.estFlash && Evaluation.vraie(d, ctx)
     PanneauVerre(Modifier.fillMaxWidth(), actif = ouverte) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -587,7 +627,7 @@ private fun CarteCondition(
                             Text(Textes.quand(d).replaceFirstChar { it.uppercase() }, color = Discret, fontSize = 12.sp, maxLines = 2)
                         }
                         Text(
-                            if (d.estMoment) "◷" else if (vrai) "●" else "○",
+                            if (d.estFlash) "⚡" else if (d.estMoment) "◷" else if (vrai) "●" else "○",
                             color = if (vrai) Rouge else Discret, fontSize = 14.sp,
                         )
                     }
@@ -599,7 +639,7 @@ private fun CarteCondition(
             }
             if (ouverte) {
                 Spacer(Modifier.height(14.dp))
-                ReglagesCondition(app, d, ctx, onChange)
+                ReglagesCondition(app, d, ctx, onApps, onChange)
             }
         }
     }
@@ -608,7 +648,7 @@ private fun CarteCondition(
 
 /** Réglages de chaque type de condition : toujours des boutons, jamais de menu caché. */
 @Composable
-private fun ReglagesCondition(app: VersoApp, d: Declencheur, ctx: Contexte, onChange: (Declencheur) -> Unit) {
+private fun ReglagesCondition(app: VersoApp, d: Declencheur, ctx: Contexte, onApps: () -> Unit, onChange: (Declencheur) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         when (d) {
             is Declencheur.Plage -> {
@@ -671,11 +711,36 @@ private fun ReglagesCondition(app: VersoApp, d: Declencheur, ctx: Contexte, onCh
                 if (connectes.isEmpty()) Aide("Branche ton casque pour le voir apparaître ici.")
             }
             is Declencheur.Bluetooth -> ReglageBluetooth(app, d, onChange)
+            is Declencheur.Notification -> {
+                PermissionNotifs()
+                BoutonApps(d.apps, "Toutes les apps", onApps)
+                Choix(listOf(3, 5, 10, 30).map { "$it s" to it }, d.secondes) { onChange(d.copy(secondes = it)) }
+                Aide("⚡ Flash puis fondu · 🌙 rien si la matrice est éteinte")
+            }
+            is Declencheur.Musique -> {
+                PermissionNotifs()
+                BoutonApps(d.apps, "N'importe quelle app", onApps)
+                val joue = Musique.etat.collectAsStateWithLifecycle().value
+                Aide(
+                    if (joue?.enLecture == true) "▶ En ce moment : ${Apps.nom(LocalContext.current, joue.pkg) ?: joue.pkg}" + (joue.titre?.let { " · $it" } ?: "")
+                    else "⏸ Rien ne joue en ce moment",
+                )
+            }
             Declencheur.Economie, Declencheur.NePasDeranger, Declencheur.Avion, Declencheur.Lampe ->
                 Aide("Rien à régler.")
         }
     }
 }
+
+/** « Accès aux notifications » (notifs + musique), avec bouton direct vers le réglage. */
+@Composable
+private fun PermissionNotifs() = CartePermission(
+    emoji = "🔔",
+    titre = "Active « Accès aux notifications »",
+    bouton = "Ouvrir le réglage",
+    autorise = EcouteNotifs::autorise,
+    ouvrir = EcouteNotifs::ouvrirReglage,
+)
 
 @Composable
 private fun Appareils(noms: List<String>, choisi: String?, onChoix: (String?) -> Unit) {
@@ -822,7 +887,7 @@ private fun CatalogueConditions(onRetour: () -> Unit, onChoix: (TypeQuand) -> Un
                 }
                 Spacer(Modifier.height(16.dp))
             }
-            Aide("Bientôt : notification d'une app, musique en cours, météo, Wi-Fi par nom.")
+            Aide("Bientôt : app ouverte, météo.")
         }
     }
 }

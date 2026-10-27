@@ -103,10 +103,21 @@ val Discret = Color(0xFF9A9A9A)
 val LocalFond = staticCompositionLocalOf<Backdrop?> { null }
 
 /**
+ * Verre « flottant » (mini-lecteur, barres du haut, boutons flottants, menu) : il ne floute que le fond,
+ * pas le contenu qui défile dessous (28/10, « au plus fluide mais je veux du style »). Le style est
+ * compensé par un verre fumé plus dense, un dégradé de lumière en haut et une lueur rouge au bas.
+ */
+val LocalFlottant = staticCompositionLocalOf { false }
+
+/**
  * Écran en verre :
  * - [contenu] en verre sur le fond ;
  * - [feuille] (facultative, ex. la bibliothèque) par-dessus le contenu : son verre floute le contenu ;
- * - [dessus] (barres et boutons flottants) en verre sur tout le reste.
+ * - [dessus] (barres et boutons flottants) en verre « flottant » sur le fond seul ([LocalFlottant]).
+ *
+ * Avant le 28/10, [dessus] floutait tout l'écran (fond + contenu + feuille) : tout l'écran était
+ * enregistré dans un calque à chaque image, et chaque verre du contenu y était recalculé une 2ᵉ fois.
+ * Le banc (« ancien moteur ») garde ce comportement pour la comparaison.
  */
 @Composable
 fun EcranVerre(
@@ -119,8 +130,9 @@ fun EcranVerre(
     val fond = rememberLayerBackdrop()
     val principal = rememberLayerBackdrop()
     val tout = rememberLayerBackdrop()
+    val ancien = ModePerf.ancien
     Box(Modifier.fillMaxSize().background(Color.Black)) {
-        Box(Modifier.fillMaxSize().layerBackdrop(tout)) {
+        Box(if (ancien) Modifier.fillMaxSize().layerBackdrop(tout) else Modifier.fillMaxSize()) {
             val base: @Composable () -> Unit = {
                 FondAnime(defilement, Modifier.fillMaxSize().layerBackdrop(fond))
                 CompositionLocalProvider(LocalFond provides fond) {
@@ -137,7 +149,11 @@ fun EcranVerre(
                 }
             }
         }
-        CompositionLocalProvider(LocalFond provides tout) { dessus() }
+        if (ancien) {
+            CompositionLocalProvider(LocalFond provides tout) { dessus() }
+        } else {
+            CompositionLocalProvider(LocalFond provides fond, LocalFlottant provides true) { dessus() }
+        }
     }
 }
 
@@ -330,6 +346,7 @@ fun Modifier.verre(
     val refraction = if (legere) refraction * 0.6f else refraction
     val irisation = irisation && q == ReglagesUi.QualiteVerre.HAUTE
     val ombre = ombre && !legere
+    val flottant = LocalFlottant.current && !ModePerf.ancien
     val shape = remember(forme, cle) { { forme } }
     val effets: com.kyant.backdrop.BackdropEffectScope.() -> Unit = remember(flou, refraction, irisation, cle) {
         {
@@ -341,7 +358,23 @@ fun Modifier.verre(
     }
     val reflet = remember(cle) { { Highlight(width = 1.dp, style = HighlightStyle.Default(intensity = 0.85f)) } }
     val ombrage: (() -> Shadow?)? = remember(ombre, cle) { if (ombre) ({ Shadow(radius = 22.dp, color = Color.Black.copy(alpha = 0.45f)) }) else null }
-    val surface: DrawScope.() -> Unit = remember(teinte, cle) { { drawRect(Color.Black.copy(alpha = 0.10f)); drawRect(teinte) } }
+    val surface: DrawScope.() -> Unit = remember(teinte, cle, flottant) {
+        if (!flottant) {
+            { drawRect(Color.Black.copy(alpha = 0.10f)); drawRect(teinte) }
+        } else {
+            {
+                // Verre fumé : le contenu qui passe dessous n'est plus flouté, on le couvre joliment.
+                drawRect(Color.Black.copy(alpha = 0.34f))
+                drawRect(teinte)
+                // Lumière qui tombe du haut, comme sur une vraie plaque de verre.
+                drawRect(Brush.verticalGradient(0f to Color.White.copy(alpha = 0.13f), 0.5f to Color.White.copy(alpha = 0.02f), 1f to Color.Transparent))
+                // Lueur rouge Nothing au bas, très légère.
+                drawRect(Brush.radialGradient(listOf(Rouge.copy(alpha = 0.16f), Color.Transparent), center = Offset(size.width * 0.5f, size.height * 1.1f), radius = size.maxDimension * 0.6f))
+                // Liseré lumineux en haut.
+                drawRect(Color.White.copy(alpha = 0.22f), size = androidx.compose.ui.geometry.Size(size.width, 1.dp.toPx()))
+            }
+        }
+    }
     return this.drawBackdrop(
         backdrop = fond,
         shape = shape,
