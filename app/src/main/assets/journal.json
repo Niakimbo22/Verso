@@ -1,7 +1,39 @@
 [
   {
-    "pr": 35,
+    "pr": 36,
     "version": null,
+    "date": "2026-10-27",
+    "titre": "🧹 Banc plus simple, mesure plus juste",
+    "sert": "Résultats lisibles en 3 secondes, et une mesure qui ne se fausse plus elle-même.",
+    "essentiel": [
+      "🎯 Un verdict + une ligne par scène",
+      "🙈 Chiffres cachés",
+      "🐢 Ce qui freine le plus",
+      "🔧 Outils avancés repliés"
+    ],
+    "sections": [
+      {
+        "titre": "Plus simple",
+        "points": [
+          "🎯 ✅ mieux / ➖ pareil / ⚠️ moins bien par scène",
+          "🛠️ Réglages faits en une ligne chacun",
+          "🙈 Barres et chiffres dans « Chiffres »",
+          "🔧 Journal du Toy et tests repliés"
+        ]
+      },
+      {
+        "titre": "Plus juste",
+        "points": [
+          "📉 La barre de progression ne bouge plus pendant la mesure (elle ajoutait des images)",
+          "🔬 Temps de chaque image découpé : attente, animations, mise en page, dessin, envoi, GPU",
+          "± Écart de moins de 25 % = « pareil » (une mesure courte bouge beaucoup)"
+        ]
+      }
+    ]
+  },
+  {
+    "pr": 35,
+    "version": "0.1.78",
     "date": "2026-10-27",
     "titre": "📊 Banc qui optimise, notes en un coup d'œil",
     "sert": "La mesure de fluidité règle l'app toute seule, et les notes se lisent en 3 secondes.",

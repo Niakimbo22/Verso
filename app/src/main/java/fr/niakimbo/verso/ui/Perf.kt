@@ -94,6 +94,8 @@ object ModePerf {
 class Enregistreur(private val window: Window) {
     private val totaux = ArrayList<Long>()
     private val gpu = ArrayList<Long>()
+    /** Où part le temps de chaque image (étapes officielles de FrameMetrics, regroupées). */
+    private val phases = Mesure.PHASES.associateWith { ArrayList<Long>() }
     private var retards = 0
     private val verrou = Any()
     private val fil = HandlerThread("verso-mesure").apply { start() }
@@ -104,6 +106,12 @@ class Enregistreur(private val window: Window) {
         synchronized(verrou) {
             totaux += total
             gpu += m.getMetric(FrameMetrics.GPU_DURATION)
+            phases.getValue(Mesure.ATTENTE).add(m.getMetric(FrameMetrics.UNKNOWN_DELAY_DURATION))
+            phases.getValue(Mesure.ANIMATION).add(m.getMetric(FrameMetrics.INPUT_HANDLING_DURATION) + m.getMetric(FrameMetrics.ANIMATION_DURATION))
+            phases.getValue(Mesure.MISE_EN_PAGE).add(m.getMetric(FrameMetrics.LAYOUT_MEASURE_DURATION))
+            phases.getValue(Mesure.DESSIN).add(m.getMetric(FrameMetrics.DRAW_DURATION))
+            phases.getValue(Mesure.ENVOI).add(m.getMetric(FrameMetrics.SYNC_DURATION) + m.getMetric(FrameMetrics.COMMAND_ISSUE_DURATION) + m.getMetric(FrameMetrics.SWAP_BUFFERS_DURATION))
+            phases.getValue(Mesure.GPU).add(m.getMetric(FrameMetrics.GPU_DURATION))
             if (echeance in 1 until total) retards++
         }
     }
@@ -118,7 +126,10 @@ class Enregistreur(private val window: Window) {
         val duree = SystemClock.elapsedRealtime() - debut
         runCatching { window.removeOnFrameMetricsAvailableListener(ecoute) }
         fil.quitSafely()
-        return synchronized(verrou) { Mesure.calculer(totaux.toList(), gpu.toList(), retards, duree) }
+        return synchronized(verrou) {
+            Mesure.calculer(totaux.toList(), gpu.toList(), retards, duree)
+                .copy(phases = phases.mapValues { (_, v) -> Mesure.centile(v, 0.5) / 1e6 })
+        }
     }
 }
 
@@ -130,7 +141,11 @@ object Mesure {
         val p95Ms: Double,
         val gpuMedianMs: Double,
         val retards: Int,
+        /** Temps médian (ms) de chaque étape d'une image : voir [PHASES]. */
+        val phases: Map<String, Double> = emptyMap(),
     ) {
+        /** L'étape qui prend le plus de temps (et ses ms), en mots simples. */
+        val plusLente: Pair<String, Double>? get() = phases.maxByOrNull { it.value }?.toPair()
         val parSeconde: Double get() = if (dureeMs > 0) images * 1000.0 / dureeMs else 0.0
         val pourcentRetard: Double get() = if (images > 0) 100.0 * retards / images else 0.0
     }
@@ -143,6 +158,14 @@ object Mesure {
         gpuMedianMs = centile(gpuNs, 0.5) / 1e6,
         retards = retards,
     )
+
+    const val ATTENTE = "⏳ attente du système"
+    const val ANIMATION = "👆 animations"
+    const val MISE_EN_PAGE = "📐 mise en page"
+    const val DESSIN = "✏️ dessin de l'écran"
+    const val ENVOI = "🔄 envoi au GPU"
+    const val GPU = "🎮 GPU"
+    val PHASES = listOf(ATTENTE, ANIMATION, MISE_EN_PAGE, DESSIN, ENVOI, GPU)
 
     fun centile(valeurs: List<Long>, q: Double): Double {
         if (valeurs.isEmpty()) return 0.0
@@ -264,16 +287,9 @@ class BancFluidite {
         var fait = 0f
         suspend fun etapeDe(ms: Number, bloc: suspend () -> Unit) {
             val debut = fait
-            kotlinx.coroutines.coroutineScope {
-                val anim = launch {
-                    val t0 = SystemClock.uptimeMillis()
-                    while (true) {
-                        progression = ((debut + (SystemClock.uptimeMillis() - t0)) / total).coerceAtMost(1f)
-                        delay(50)
-                    }
-                }
-                try { bloc() } finally { anim.cancel() }
-            }
+            // La barre n'avance qu'entre deux étapes : la faire bouger pendant la mesure ajoutait
+            // elle-même des images (verre redessiné 20×/s) et faussait surtout le « Repos ».
+            bloc()
             fait = debut + ms.toFloat()
             progression = (fait / total).coerceAtMost(1f)
         }
@@ -388,6 +404,10 @@ class BancFluidite {
                     )
                     ligne("ancien", l.ancien)
                     ligne("nouveau", l.nouveau)
+                    if (l.nouveau.phases.isNotEmpty()) {
+                        append("  où part le temps (nouveau) : " + l.nouveau.phases.entries.sortedByDescending { it.value }
+                            .joinToString(" · ") { (k, v) -> String.format(f, "%s %.1f ms", k, v) } + "\n")
+                    }
                 }
                 if (r.ouvAncien != null || r.ouvNouveau != null) {
                     append("\n📚 Ouverture de la bibliothèque : ancien ${r.ouvAncien ?: "?"} ms · nouveau ${r.ouvNouveau ?: "?"} ms\n")
@@ -398,9 +418,11 @@ class BancFluidite {
 
         private fun resJson(x: Mesure.Resultat) = org.json.JSONObject()
             .put("i", x.images).put("d", x.dureeMs).put("m", x.medianeMs).put("p", x.p95Ms).put("g", x.gpuMedianMs).put("r", x.retards)
+            .put("ph", org.json.JSONObject().apply { x.phases.forEach { (k, v) -> put(k, v) } })
 
         private fun resDe(o: org.json.JSONObject) = Mesure.Resultat(
             o.optInt("i"), o.optLong("d"), o.optDouble("m"), o.optDouble("p"), o.optDouble("g"), o.optInt("r"),
+            o.optJSONObject("ph")?.let { ph -> ph.keys().asSequence().associateWith { ph.optDouble(it) } } ?: emptyMap(),
         )
 
         fun versJson(r: Rapport): String = org.json.JSONObject()
