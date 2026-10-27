@@ -1,7 +1,37 @@
 [
   {
-    "pr": 36,
+    "pr": 37,
     "version": null,
+    "date": "2026-10-27",
+    "titre": "🎯 Verdicts du banc corrigés",
+    "sert": "Le banc ne crie plus « moins bien » pour rien, et dit plus précisément ce qui freine.",
+    "essentiel": [
+      "😴 Repos jugé en images/s",
+      "🚀 Verdict global sans le repos",
+      "🔬 « Envoi au GPU » découpé en 3",
+      "🔎 « Plus rien à baisser » quand c'est le cas"
+    ],
+    "sections": [
+      {
+        "titre": "Verdicts",
+        "points": [
+          "😴 Repos : moins d'images/s = ✅ (le % en retard n'y veut rien dire)",
+          "⚠️ « Moins bien » seulement si la médiane confirme (+10 %)",
+          "🚀 Titre calculé sur l'écran principal + la bibliothèque"
+        ]
+      },
+      {
+        "titre": "Ce qui freine",
+        "points": [
+          "📤 envoi des images · 📨 commandes de dessin · 🔁 attente d'un tampon",
+          "🔎 Verre déjà « Légère » et encore lent : le banc le dit au lieu de « Rien à régler »"
+        ]
+      }
+    ]
+  },
+  {
+    "pr": 36,
+    "version": "0.1.80",
     "date": "2026-10-27",
     "titre": "🧹 Banc plus simple, mesure plus juste",
     "sert": "Résultats lisibles en 3 secondes, et une mesure qui ne se fausse plus elle-même.",

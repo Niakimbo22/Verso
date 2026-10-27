@@ -110,7 +110,10 @@ class Enregistreur(private val window: Window) {
             phases.getValue(Mesure.ANIMATION).add(m.getMetric(FrameMetrics.INPUT_HANDLING_DURATION) + m.getMetric(FrameMetrics.ANIMATION_DURATION))
             phases.getValue(Mesure.MISE_EN_PAGE).add(m.getMetric(FrameMetrics.LAYOUT_MEASURE_DURATION))
             phases.getValue(Mesure.DESSIN).add(m.getMetric(FrameMetrics.DRAW_DURATION))
-            phases.getValue(Mesure.ENVOI).add(m.getMetric(FrameMetrics.SYNC_DURATION) + m.getMetric(FrameMetrics.COMMAND_ISSUE_DURATION) + m.getMetric(FrameMetrics.SWAP_BUFFERS_DURATION))
+            // « Envoi au GPU » découpé en 3 : textures (SYNC), commandes (ISSUE), attente d'un tampon (SWAP).
+            phases.getValue(Mesure.TEXTURES).add(m.getMetric(FrameMetrics.SYNC_DURATION))
+            phases.getValue(Mesure.COMMANDES).add(m.getMetric(FrameMetrics.COMMAND_ISSUE_DURATION))
+            phases.getValue(Mesure.TAMPON).add(m.getMetric(FrameMetrics.SWAP_BUFFERS_DURATION))
             phases.getValue(Mesure.GPU).add(m.getMetric(FrameMetrics.GPU_DURATION))
             if (echeance in 1 until total) retards++
         }
@@ -163,9 +166,11 @@ object Mesure {
     const val ANIMATION = "👆 animations"
     const val MISE_EN_PAGE = "📐 mise en page"
     const val DESSIN = "✏️ dessin de l'écran"
-    const val ENVOI = "🔄 envoi au GPU"
+    const val TEXTURES = "📤 envoi des images au GPU"
+    const val COMMANDES = "📨 commandes de dessin (verre, flou)"
+    const val TAMPON = "🔁 attente d'un tampon libre"
     const val GPU = "🎮 GPU"
-    val PHASES = listOf(ATTENTE, ANIMATION, MISE_EN_PAGE, DESSIN, ENVOI, GPU)
+    val PHASES = listOf(ATTENTE, ANIMATION, MISE_EN_PAGE, DESSIN, TEXTURES, COMMANDES, TAMPON, GPU)
 
     fun centile(valeurs: List<Long>, q: Double): Double {
         if (valeurs.isEmpty()) return 0.0

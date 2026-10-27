@@ -454,8 +454,11 @@ internal fun ProgressionBanc(banc: BancFluidite, modifier: Modifier = Modifier) 
     }
 }
 
-/** Verdict d'une comparaison de retards (le bruit d'une mesure courte est grand : ±25 % = « pareil »). */
-private fun verdict(ancien: Double, nouveau: Double): Pair<String, Color> {
+/**
+ * Verdict d'une comparaison où « moins = mieux » (le bruit d'une mesure courte est grand : ±25 % = « pareil »).
+ * « Moins bien » seulement si un 2ᵉ indice indépendant ([confirme], ex. la médiane) va dans le même sens.
+ */
+private fun verdict(ancien: Double, nouveau: Double, confirme: Boolean = true): Pair<String, Color> {
     val f = java.util.Locale.FRANCE
     return when {
         nouveau <= 0.5 && ancien > 0.5 -> "✅ parfait" to Vert
@@ -463,10 +466,19 @@ private fun verdict(ancien: Double, nouveau: Double): Pair<String, Color> {
             val x = ancien / nouveau
             "✅ " + (if (x >= 2) String.format(f, "%.0f×", x) else String.format(f, "%.1f×", x)) + " mieux" to Vert
         }
-        nouveau > ancien * 1.33 && nouveau - ancien > 3 -> "⚠️ moins bien" to Ambre
+        nouveau > ancien * 1.33 && nouveau - ancien > 3 && confirme -> "⚠️ moins bien" to Ambre
         else -> "➖ pareil" to Discret
     }
 }
+
+/**
+ * Verdict d'une scène. Au repos rien ne défile : le % « en retard » n'y veut rien dire,
+ * on juge le nombre d'images dessinées par seconde (moins = moins de batterie).
+ * Ailleurs : % en retard, confirmé par la médiane (+10 % au moins) avant de dire « moins bien ».
+ */
+private fun verdictScene(l: BancFluidite.Ligne): Pair<String, Color> =
+    if (l.scene == "Repos") verdict(l.ancien.parSeconde, l.nouveau.parSeconde)
+    else verdict(l.ancien.pourcentRetard, l.nouveau.pourcentRetard, confirme = l.nouveau.medianeMs > l.ancien.medianeMs * 1.1)
 
 /** Résultats d'un coup d'œil : un verdict, une ligne par scène, ce qui ralentit, ce qui a été réglé. Les chiffres sont cachés. */
 @Composable
@@ -474,10 +486,13 @@ private fun ResultatsBanc(banc: BancFluidite, r: BancFluidite.Rapport) {
     val context = LocalContext.current
     val portee = rememberCoroutineScope()
     var details by rememberSaveable { mutableStateOf(false) }
-    val totalA = r.lignes.sumOf { it.ancien.pourcentRetard }
-    val totalN = r.lignes.sumOf { it.nouveau.pourcentRetard }
-    val (global, _) = verdict(totalA, totalN)
-    val lent = r.lignes.firstOrNull { it.scene == "Écran principal" }?.nouveau?.plusLente
+    // Verdict global : seulement les scènes où ça défile (le repos se juge à part, en images/s).
+    val mouvement = r.lignes.filter { it.scene != "Repos" }
+    val (global, _) = verdict(mouvement.sumOf { it.ancien.pourcentRetard }, mouvement.sumOf { it.nouveau.pourcentRetard })
+    val principal = r.lignes.firstOrNull { it.scene == "Écran principal" }?.nouveau
+    val lent = principal?.plusLente
+    val plusRienABaisser = banc.ajustements.isEmpty() && (principal?.pourcentRetard ?: 0.0) > 8 &&
+        ReglagesUi.qualiteVerre == ReglagesUi.QualiteVerre.LEGERE
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         PanneauVerre(Modifier.fillMaxWidth(), forme = RoundedCornerShape(24.dp), actif = true) {
             Column(Modifier.padding(18.dp)) {
@@ -492,7 +507,7 @@ private fun ResultatsBanc(banc: BancFluidite, r: BancFluidite.Rapport) {
                 Text("${r.quand.substringAfter(' ').take(5)} · ${r.hz} Hz" + if (r.rapide) " · rapide" else "", color = Discret, fontSize = 11.sp)
                 Spacer(Modifier.height(14.dp))
                 r.lignes.forEach { l ->
-                    val (v, c) = verdict(l.ancien.pourcentRetard, l.nouveau.pourcentRetard)
+                    val (v, c) = verdictScene(l)
                     Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("${l.symbole}  ${l.scene.substringBefore(" (")}", color = Color.White, fontSize = 15.sp, modifier = Modifier.weight(1f))
                         Text(v, color = c, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
@@ -507,7 +522,10 @@ private fun ResultatsBanc(banc: BancFluidite, r: BancFluidite.Rapport) {
         // Optimisation automatique : une ligne courte par changement.
         PanneauVerre(Modifier.fillMaxWidth(), forme = RoundedCornerShape(20.dp)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (banc.ajustements.isEmpty()) {
+                if (plusRienABaisser) {
+                    Text("🔎 Plus rien à baisser", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Verre déjà « Légère » : le frein est ailleurs (voir 🐢)", color = Discret, fontSize = 13.sp)
+                } else if (banc.ajustements.isEmpty()) {
                     Text("✅ Rien à régler", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 } else {
                     Text("🛠️ Réglé tout seul", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
