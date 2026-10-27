@@ -69,6 +69,13 @@ Première version (« Mes widgets », blocs à placer, v0.1.65) jugée pas intui
 - Posé depuis la liste des widgets du lanceur : la galerie s'ouvre avec la taille imposée (`ConfigWidgetPersoActivity`) ; sans réglage, le widget montre la Matrice de sa taille. Dans l'app, la liste « Sur ton écran d'accueil » permet de **modifier** chaque widget posé (contenu et style ; la taille reste celle posée).
 - Rendu : `WidgetVerso.plan()` → `RenduPerso` (blocs internes : matrice S/M/L/XL, `TextClock` pour l'heure et la date, batterie, nom, règle auto, texte, boutons). Mises à jour par `WidgetMaj` (modèle, minute, batterie, règle auto, état du Glyph).
 - **Verre** dans un widget : le lanceur ne permet pas de flouter le fond d'écran ; `widget_fond_verre` imite le Liquid Glass (voile en dégradé, reflet en haut, ombre intérieure en bas, liseré lumineux).
+- **Réglages (27/10, demande de Nico : « pas assez personnalisable, surtout pour Glyph »)**, en trois cartes sous l'aperçu :
+  - *Apparence* : style, couleur des LEDs et du texte principal (blanc / noir en clair, rouge Nothing, ambre, bleu glace, vert, rose), texte pour Message.
+  - *Matrice* : modèle **Suit le dos** ou **📌 Épinglé** (choisi dans une rangée d'aperçus ; le widget montre toujours ce modèle, horloge comprise, remise à jour chaque minute), points ronds / carrés, LEDs éteintes visibles / cachées, animée / image fixe, **au toucher** : fenêtre de choix, suivant, ⏻ On / Off, ouvrir Verso, **afficher ce modèle au dos** (modèle épinglé = raccourci ; `WidgetActions.AFFICHER`, une intention par modèle).
+  - *Afficher* : nom du modèle, boutons ‹ ⏻ ›, règle auto (seulement si la taille les a), pastille **État du Glyph** (`Type.GLYPH` : ○ Glyph éteint en rouge, ● Au dos · Toy actif / ● Glyph allumé en vert, ○ Matrice éteinte ; mis à jour à chaque liaison du Toy et changement du Glyph).
+  - JSON relu sans perte : l'ancien `rouge` devient la couleur rouge.
+- **Fenêtre de pose du lanceur** : `requestPinAppWidget` reçoit le vrai widget réglé en `EXTRA_APPWIDGET_PREVIEW` (avant : l'aperçu fixe « 12:34 · VERSO PERSO » de `widget_perso_apercu`). **Liste des widgets du lanceur** (Android 15+) : `setWidgetPreview` envoie le vrai rendu Matrice de chaque taille, ~8 s après le démarrage, une fois par version et au plus une fois par jour (API limitée à ~2 appels / heure).
+- **Boutons ‹ ⏻ ›** : icônes vectorielles (`ic_w_precedent`, `ic_w_marche`, `ic_w_lecture`, `ic_w_suivant`, Material, Apache 2.0) teintées par `setColorFilter`. La police du lanceur n'a pas le caractère « ⏻ » : il s'affichait en boîte « NO GLYPH ».
 
 ### 3.3 Glyph Toy « Verso » (affichage permanent)
 - Verso déclare un **Glyph Toy AOD** (`VersoToyService`). Une fois choisi dans les réglages Glyph (bouton dans l'app), il affiche le modèle actif **app fermée**, et le système le relance tout seul après un redémarrage.
@@ -268,6 +275,17 @@ Demande de Nico : l'app rame un peu ; les 90 modèles prennent toute la place ; 
 | Écran principal animé derrière la feuille | flou plein écran recalculé à chaque image | grande matrice et tuiles figées tant que la feuille est ouverte (`LocalFige`) |
 
 **Banc de fluidité** (Plus › Diagnostic › FLUIDITÉ, `ui/Perf.kt`) : ~35 s sans toucher, le même parcours deux fois — **ancien moteur** (`ModePerf.ancien` reproduit les causes ci-dessus : fond animé point par point, effets du verre recréés, grille non paresseuse, recompositions à chaque image) puis **nouveau**. Trois scènes : repos 3 s, défilement de l'écran principal, défilement de la bibliothèque (90). Mesure avec l'API officielle `Window.addOnFrameMetricsAvailableListener` : nombre d'images réellement dessinées (et par seconde), durée médiane et 95 % d'une image, temps GPU médian, % d'images **en retard** (au-delà de l'échéance `FrameMetrics.DEADLINE`), plus le temps d'ouverture de la bibliothèque et de l'app (lancement à froid). Le rapport est gardé (relisible après coup). Limite : l'« ancien » est reproduit dans la nouvelle mise en page (la bibliothèque y est dans la feuille), pas la v0.1.67 à l'identique.
+
+### 3.10 Menu latéral ☰ (27/10)
+Bouton ☰ (verre) à gauche de « Verso ». Panneau de verre (304 dp) posé sur tout l'écran (couche `dessus`), qui glisse depuis la gauche avec un ressort ; voile noir qui s'assombrit avec ; chaque ligne arrive à son tour (fondu + glissé, décalé de 28 ms). Fermer : pousser le panneau vers la gauche, toucher à côté, retour Android. En-tête : la matrice en direct, version, modèle affiché.
+Entrées (raccourcis, rien n'y est caché qui ne soit aussi sur l'écran) : Accueil, Tous les modèles, Favoris, Récents, Mes dessins, Créer un dessin · Règles automatiques · Ajouter un widget, Mes widgets · Bouton Glyph (ouvre les détails des pastilles), Choisir le Glyph Toy · Nouveautés, Journal des mises à jour, Diagnostic et fluidité, Matrice figée ? Redémarrer · interrupteur Fond animé.
+
+### 3.11 Journal des mises à jour (27/10)
+`app/src/main/assets/journal.json`, la plus récente en premier : `pr`, `version` (null pour l'entrée de tête), `date`, `titre`, **`sert`** (une phrase « Cette mise à jour sert à … »), `sections` (titre + points : tous les détails), `tester` (facultatif).
+- **Règle pour chaque PR** : ajouter son entrée en tête avec `"version": null` et remplir la version de l'entrée précédente (= numéro de la Release publiée). Une entrée de tête sans version = la version installée (`BuildConfig.VERSION_NAME`).
+- **Menu ☰ › Journal** : feuille de verre, une carte par version (puce de version, date, titre, phrase « sert à » toujours visible, détails dépliables).
+- **Nouveautés** : au premier lancement d'une nouvelle version, la feuille « Nouveautés » s'ouvre une fois (préférence `nouveautes_vues`), avec « Compris » et « Tout le journal ».
+- **Release GitHub** : notes = l'entrée de tête (`outils/notes_release.py`, 1re ligne = phrase « sert à »). Le bouton « Mettre à jour » de l'app affiche cette phrase (`Release.sert`).
 
 ## 4. Feuille de route après la V1 (dans cet ordre)
 
