@@ -274,6 +274,20 @@ enum class TypeQuand(val cle: String, val famille: Famille, val titre: String, v
         .X.......
         """,
     ),
+    APP(
+        Declencheur.APP, Famille.APPS, "App ouverte", "Tant qu'elle est à l'écran",
+        """
+        XX.XX.XX.
+        XX.XX.XX.
+        .........
+        XX.XX.XX.
+        XX.XX.XX.
+        .........
+        XX.XX.XX.
+        XX.XX.XX.
+        .........
+        """,
+    ),
     MUSIQUE(
         Declencheur.MUSIQUE, Famille.APPS, "Musique", "Quand ça joue",
         """
@@ -286,6 +300,20 @@ enum class TypeQuand(val cle: String, val famille: Famille, val titre: String, v
         XXXX.XXXX
         XXXX.XXXX
         .XX...XX.
+        """,
+    ),
+    METEO(
+        Declencheur.METEO, Famille.TEMPS, "Météo", "Le vrai temps dehors",
+        """
+        ...XXX...
+        ..XXXXX..
+        .XXXXXXX.
+        XXXXXXXXX
+        XXXXXXXXX
+        .........
+        .X..X..X.
+        .........
+        X..X..X..
         """,
     ),
     ;
@@ -315,6 +343,8 @@ enum class TypeQuand(val cle: String, val famille: Famille, val titre: String, v
         RESEAU -> Declencheur.Reseau()
         NOTIF -> Declencheur.Notification()
         MUSIQUE -> Declencheur.Musique()
+        APP -> Declencheur.AppOuverte()
+        METEO -> Declencheur.Meteo()
     }
 
     companion object {
@@ -388,6 +418,22 @@ object Textes {
         }
         is Declencheur.Notification -> if (d.apps.isEmpty()) "une notif arrive" else "une notif de ${d.apps.noms("")} arrive"
         is Declencheur.Musique -> if (d.apps.isEmpty()) "de la musique joue" else "${d.apps.noms("")} joue"
+        is Declencheur.AppOuverte -> when (d.apps.size) {
+            0 -> "une app (à choisir) est ouverte"
+            1, 2 -> "${d.apps.noms("")} est ouverte"
+            else -> "une des ${d.apps.size} apps est ouverte"
+        }
+        is Declencheur.Meteo -> Meteo.CIELS.filter { it in d.ciels }.joinToString(" ou ") { ciel(it) }.ifEmpty { "la météo change" }
+    }
+
+    /** « il pleut », « il fait beau »… */
+    fun ciel(c: String): String = when (c) {
+        Meteo.SOLEIL -> "il fait beau"
+        Meteo.NUAGES -> "c'est nuageux"
+        Meteo.PLUIE -> "il pleut"
+        Meteo.NEIGE -> "il neige"
+        Meteo.ORAGE -> "il y a de l'orage"
+        else -> c
     }
 
     /** Toutes les conditions d'une règle, reliées par « et » / « ou ». */
@@ -433,15 +479,32 @@ object Textes {
 }
 
 /** Règles toutes faites, ajoutées d'un tap depuis la liste. */
-data class Recette(val titre: String, val nom: String, val regle: (String) -> Regle)
+data class Recette(
+    val titre: String,
+    val nom: String,
+    /** Apps à trouver sur le téléphone (app météo, appareil photo…) ; null = aucune. */
+    val apps: GenreApps? = null,
+    val regle: (String) -> Regle,
+)
+
+/** Familles d'apps qu'une idée cherche toute seule sur le téléphone. */
+enum class GenreApps { METEO, MUSIQUE, PHOTO }
 
 object Recettes {
     private fun r(titre: String, nom: String, vararg si: Declencheur, action: Action, toutes: Boolean = true) =
         Recette(titre, nom) { id -> Regle(id, nom, si.toList(), action, toutes) }
 
+    /** Idée « App ouverte » : les apps trouvées sont mises dans la condition au moment de l'ajout. */
+    private fun app(titre: String, nom: String, genre: GenreApps, action: Action) =
+        Recette(titre, nom, genre) { id -> Regle(id, nom, listOf(Declencheur.AppOuverte()), action) }
+
     val toutes = listOf(
+        app("🌦️ App météo ouverte, la vraie météo", "App météo", GenreApps.METEO, Action.Afficher("meteo-live")),
+        app("🎧 Spotify ouvert, la musique en direct", "App musique", GenreApps.MUSIQUE, Action.Afficher("musique-live")),
+        app("📸 Appareil photo ouvert, un sourire au dos", "Selfie", GenreApps.PHOTO, Action.Afficher("smiley")),
         r("🔔 Une notif, la cloche 5 s", "Notif", Declencheur.Notification(), action = Action.Afficher("notification")),
-        r("🎵 Musique en cours, l'égaliseur", "Musique", Declencheur.Musique(), action = Action.Afficher("egaliseur")),
+        r("🎵 Musique en cours, la musique en direct", "Musique", Declencheur.Musique(), action = Action.Afficher("musique-live")),
+        r("🌧️ Il pleut, la pluie", "Pluie", Declencheur.Meteo(setOf(Meteo.PLUIE)), action = Action.Afficher("pluie")),
         r("La nuit, une lune", "Nuit", Declencheur.Soleil(nuit = true), action = Action.Afficher("lune")),
         r("Au réveil, un soleil", "Réveil", Declencheur.Reveil(), action = Action.Afficher("soleil")),
         r("En charge, la barre de chargement", "En charge", Declencheur.Charge(), action = Action.Afficher("chargement")),
@@ -456,9 +519,16 @@ object Recettes {
         r("Lampe allumée, matrice éteinte", "Lampe", Declencheur.Lampe, action = Action.Eteindre),
     )
 
-    /** Déjà ajoutée : une règle avec les mêmes conditions et la même action existe. */
+    /**
+     * Déjà ajoutée : une règle avec les mêmes conditions et la même action existe
+     * (pour une idée « App ouverte », la même sorte de condition suffit : les apps ont été trouvées à l'ajout).
+     */
     fun dejaLa(r: Recette, regles: List<Regle>): Boolean {
         val modele = r.regle("x")
-        return regles.any { it.conditions == modele.conditions && it.action == modele.action }
+        return regles.any {
+            it.action == modele.action &&
+                if (r.apps != null) it.conditions.map { c -> c.type } == modele.conditions.map { c -> c.type }
+                else it.conditions == modele.conditions
+        }
     }
 }

@@ -184,9 +184,16 @@ class MoteurRegles(private val app: VersoApp) {
                 }
 
                 programmerAlarme(regles, ctx)
+
+                // App ouverte sans accessibilité : lecture toutes les secondes, écran allumé seulement.
+                AppPremierPlan.actualiserSondage(regles.any { r -> r.active && r.conditions.any { it is Declencheur.AppOuverte } })
+                // Condition météo : la mesure est redemandée quand elle a plus de 30 min.
+                if (utiliseMeteo(regles)) Meteo.rafraichirSiVieille()
             }
         }
     }
+
+    private fun utiliseMeteo(regles: List<Regle>) = regles.any { r -> r.active && r.conditions.any { it is Declencheur.Meteo } }
 
     private fun estLeMoment(d: Declencheur, t: LocalDateTime, deverrouillage: Boolean): Boolean = when (d) {
         // L'alarme peut arriver avec un peu de retard (téléphone en veille) : 3 minutes de marge.
@@ -273,6 +280,9 @@ class MoteurRegles(private val app: VersoApp) {
             lieu = store.lieu.value,
             zone = zone,
             musique = Musique.lecteurs,
+            app = if (keyguard.isKeyguardLocked) null else AppPremierPlan.pkg,
+            // Une mesure de plus de 3 h ne dit plus rien du ciel.
+            ciel = Meteo.etat.value?.takeIf { System.currentTimeMillis() - it.luA < 3 * 3_600_000L }?.ciel,
         )
     }
 
@@ -330,7 +340,11 @@ class MoteurRegles(private val app: VersoApp) {
         )
         val frontiere = Evaluation.prochaineFrontiere(regles, ctx)?.atZone(ctx.zone)?.toInstant()?.toEpochMilli()
         val defilement = store.prochainDefilement.takeIf { it > 0 }
-        val ms = listOfNotNull(frontiere, defilement).minOrNull()
+        // Condition météo : un réveil quand la mesure aura 30 min (au moins dans 5 min).
+        val meteo = if (utiliseMeteo(regles)) {
+            ((Meteo.etat.value?.luA ?: 0L) + Meteo.VALIDITE_MS).coerceAtLeast(System.currentTimeMillis() + 5 * 60_000L)
+        } else null
+        val ms = listOfNotNull(frontiere, defilement, meteo).minOrNull()
         if (ms == null) {
             alarmes.cancel(pi)
             return
@@ -377,7 +391,8 @@ class AlarmeRegles : BroadcastReceiver() {
             },
         )
         // Laisse au moteur le temps d'appliquer le modèle avant que le système reprenne la main.
-        Handler(Looper.getMainLooper()).postDelayed({ fin.finish() }, 3_000)
+        // Météo à redemander : on laisse au téléphone le temps de la recevoir (quelques secondes).
+        Handler(Looper.getMainLooper()).postDelayed({ fin.finish() }, if (Meteo.vieille()) 10_000 else 3_000)
     }
 }
 

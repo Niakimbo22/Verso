@@ -19,7 +19,8 @@ import kotlinx.coroutines.sync.withLock
  * d'accessibilité fait donc ce que ferait le doigt : il ouvre le menu déroulant, trouve la tuile
  * « Glyph », lit son état, appuie dessus si besoin, puis referme le menu.
  *
- * Il ne réagit à aucun évènement de lui-même : il n'agit que quand Verso le lui demande (⏻).
+ * Il n'agit que quand Verso le lui demande (⏻). Depuis le 28/10, il note aussi quelle app est
+ * ouverte (changements de fenêtre seulement), pour la condition « App ouverte » des règles.
  */
 class BoutonGlyph : AccessibilityService() {
 
@@ -35,7 +36,10 @@ class BoutonGlyph : AccessibilityService() {
         return super.onUnbind(intent)
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
+    /** Changement de fenêtre : sert à la condition « App ouverte » des règles automatiques. */
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        event?.let(fr.niakimbo.verso.auto.AppPremierPlan::surEvenement)
+    }
     override fun onInterrupt() = Unit
 
     /** Ouvre le menu, cherche la tuile (en tournant les pages), lit l'état, appuie si besoin. */

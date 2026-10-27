@@ -192,6 +192,16 @@ sealed class Declencheur {
         override val type get() = MUSIQUE
     }
 
+    /** Une de ces [apps] est ouverte (au premier plan, téléphone déverrouillé). */
+    data class AppOuverte(val apps: List<AppChoisie> = emptyList()) : Declencheur() {
+        override val type get() = APP
+    }
+
+    /** Le ciel en ce moment (météo réelle) : un des [ciels] ([fr.niakimbo.verso.auto.Meteo.CIELS]). */
+    data class Meteo(val ciels: Set<String> = setOf(PLUIE_)) : Declencheur() {
+        override val type get() = METEO
+    }
+
     companion object {
         const val PLAGE = "plage"
         const val A_HEURE = "aheure"
@@ -213,6 +223,9 @@ sealed class Declencheur {
         const val RESEAU = "reseau"
         const val NOTIF = "notif"
         const val MUSIQUE = "musique"
+        const val APP = "app"
+        const val METEO = "meteo"
+        private const val PLUIE_ = "pluie"
 
         const val CABLE = "cable"
         const val SANS_FIL = "sansfil"
@@ -263,6 +276,10 @@ data class Contexte(
     val zone: ZoneId = ZoneId.systemDefault(),
     /** Paquets des apps dont la musique joue en ce moment. */
     val musique: List<String> = emptyList(),
+    /** App au premier plan (null = inconnue, ou téléphone verrouillé). */
+    val app: String? = null,
+    /** Ciel en ce moment (météo réelle), null = inconnu. */
+    val ciel: String? = null,
 )
 
 /** Évaluation des règles : fonctions pures, testées sans téléphone. */
@@ -325,6 +342,8 @@ object Evaluation {
         is Declencheur.Reseau -> ctx.reseau == d.type_
         is Declencheur.Notification -> false // un évènement, pas un état
         is Declencheur.Musique -> if (d.apps.isEmpty()) ctx.musique.isNotEmpty() else d.apps.any { it.pkg in ctx.musique }
+        is Declencheur.AppOuverte -> ctx.app != null && d.apps.any { it.pkg == ctx.app }
+        is Declencheur.Meteo -> ctx.ciel != null && ctx.ciel in d.ciels
     }
 
     private fun contient(liste: List<String>, nom: String?) =

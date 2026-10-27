@@ -100,6 +100,28 @@ object Apps {
     }
 
     fun sansAccents(s: String) = Normalizer.normalize(s, Normalizer.Form.NFD).replace(Regex("\\p{M}+"), "").lowercase()
+
+    private val MUSIQUE = setOf(
+        "com.spotify.music", "com.google.android.apps.youtube.music", "deezer.android.app", "com.apple.android.music",
+        "com.soundcloud.android", "com.amazon.mp3", "com.qobuz.music", "com.aspiro.tidal",
+    )
+
+    /** Apps du téléphone qui correspondent à une idée (app météo, de musique, appareil photo). */
+    suspend fun suggerees(context: Context, genre: GenreApps): List<AppChoisie> {
+        val toutes = installees(context)
+        val trouvees = when (genre) {
+            GenreApps.METEO -> toutes.filter { sansAccents(it.nom).let { n -> "meteo" in n || "weather" in n } }
+            GenreApps.MUSIQUE -> toutes.filter { it.pkg in MUSIQUE || sansAccents(it.nom).let { n -> "music" in n || "musique" in n } }
+            GenreApps.PHOTO -> {
+                val pm = context.packageManager
+                val defaut = withContext(Dispatchers.IO) {
+                    pm.resolveActivity(Intent(android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA), 0)?.activityInfo?.packageName
+                }
+                toutes.filter { it.pkg == defaut || sansAccents(it.nom).let { n -> n == "appareil photo" || n == "camera" } }
+            }
+        }
+        return trouvees.take(4).map { AppChoisie(it.pkg, it.nom) }
+    }
 }
 
 /** Icône ronde d'une app (lettre en attendant). */

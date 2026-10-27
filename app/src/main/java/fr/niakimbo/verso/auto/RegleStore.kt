@@ -173,6 +173,8 @@ class RegleStore(context: Context) {
                 is Declencheur.Reseau -> put("reseau", d.type_)
                 is Declencheur.Notification -> put("apps", apps(d.apps)).put("secondes", d.secondes)
                 is Declencheur.Musique -> put("apps", apps(d.apps))
+                is Declencheur.AppOuverte -> put("apps", apps(d.apps))
+                is Declencheur.Meteo -> put("ciels", JSONArray(d.ciels.sorted()))
                 Declencheur.Economie, Declencheur.NePasDeranger, Declencheur.Avion, Declencheur.Lampe -> Unit
             }
         }
@@ -206,6 +208,11 @@ class RegleStore(context: Context) {
             Declencheur.RESEAU -> Declencheur.Reseau(texte(q, "reseau") ?: Declencheur.WIFI)
             Declencheur.NOTIF -> Declencheur.Notification(lireApps(q), q.optInt("secondes", 5).coerceIn(2, 60))
             Declencheur.MUSIQUE -> Declencheur.Musique(lireApps(q))
+            Declencheur.APP -> Declencheur.AppOuverte(lireApps(q))
+            Declencheur.METEO -> Declencheur.Meteo(
+                q.optJSONArray("ciels")?.let { a -> (0 until a.length()).map { a.optString(it) }.filter { it in Meteo.CIELS }.toSet() }
+                    ?.takeIf { it.isNotEmpty() } ?: setOf(Meteo.PLUIE),
+            )
             else -> null
         }
 

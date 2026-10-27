@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Service d'accessibilité « Verso · bouton Glyph » : n'agit que quand on touche ⏻ dans Verso.
-    Il ouvre le menu déroulant, appuie sur la tuile Glyph et le referme. Il ne lit que le menu
-    déroulant (com.android.systemui), et n'envoie rien hors du téléphone.
+    Service d'accessibilité « Verso · Glyph et apps » :
+    - quand on touche ⏻ dans Verso, il ouvre le menu déroulant, appuie sur la tuile Glyph et le referme ;
+    - il note quelle app est ouverte (changements de fenêtre seulement, jamais le contenu) pour la
+      condition « App ouverte » des règles automatiques.
+    Il n'envoie rien hors du téléphone.
 -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowStateChanged"
@@ -12,5 +14,4 @@
     android:canPerformGestures="false"
     android:description="@string/bouton_glyph_description"
     android:notificationTimeout="100"
-    android:packageNames="com.android.systemui"
     android:summary="@string/bouton_glyph_resume" />
