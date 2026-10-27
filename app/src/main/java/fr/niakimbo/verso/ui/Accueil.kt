@@ -171,10 +171,15 @@ internal fun Heros(app: VersoApp, entrees: List<EntreeCatalogue>?, onFiche: (Ent
 
 /** Deux pastilles d'état (Glyph Toy, bouton Glyph) ; toucher = détails. Problème = détails ouverts. */
 @Composable
-internal fun LigneStatut(etatToy: EtatToy, onChoisirToy: () -> Unit) {
+internal fun LigneStatut(
+    etatToy: EtatToy,
+    onChoisirToy: () -> Unit,
+    details: Boolean,
+    onDetails: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val disponible by BoutonGlyph.disponible.collectAsStateWithLifecycle()
     val glyph by BoutonGlyph.allume.collectAsStateWithLifecycle()
-    var details by rememberSaveable { mutableStateOf(false) }
     val texteToy = when (etatToy) {
         EtatToy.Lie -> "Toy actif"
         EtatToy.Relance -> "Toy : relance…"
@@ -188,10 +193,10 @@ internal fun LigneStatut(etatToy: EtatToy, onChoisirToy: () -> Unit) {
         glyph == false -> Rouge to "Glyph éteint"
         else -> Discret to "Glyph prêt"
     }
-    Column(Modifier.fillMaxWidth()) {
+    Column(modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Pastille(couleurToy(etatToy), texteToy, details, Modifier.weight(1f)) { details = !details }
-            Pastille(couleurGlyph, texteGlyph, details, Modifier.weight(1f)) { details = !details }
+            Pastille(couleurToy(etatToy), texteToy, details, Modifier.weight(1f)) { onDetails(!details) }
+            Pastille(couleurGlyph, texteGlyph, details, Modifier.weight(1f)) { onDetails(!details) }
         }
         AnimatedVisibility(details || etatToy.probleme, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
             Column {

@@ -7,7 +7,8 @@ import java.io.FileNotFoundException
 import java.net.HttpURLConnection
 import java.net.URL
 
-data class Release(val version: String, val apkUrl: String)
+/** [sert] = première ligne des notes de la Release (« Cette mise à jour sert à … »), tirée du journal. */
+data class Release(val version: String, val apkUrl: String, val sert: String? = null)
 
 object UpdateChecker {
     private const val LATEST_URL = "https://api.github.com/repos/Niakimbo22/Verso/releases/latest"
@@ -33,6 +34,8 @@ object UpdateChecker {
                     return@withContext Release(
                         version = json.getString("tag_name").removePrefix("v"),
                         apkUrl = asset.getString("browser_download_url"),
+                        sert = json.optString("body").lineSequence().firstOrNull()?.trim()
+                            ?.takeIf { it.isNotEmpty() && !it.startsWith("Build automatique") },
                     )
                 }
             }
