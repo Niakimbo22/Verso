@@ -165,7 +165,7 @@ Le modèle change tout seul selon la situation. Carte **Automatique** sur l'écr
 - **Liste** : « En ce moment » (modèle affiché animé + règle en cours), mes règles (appui long + glisser = ordre = priorité, interrupteur par règle), **idées** en un tap (défilement horizontal), bouton flottant **＋ Nouvelle règle**.
 - **Éditeur** : en haut une **phrase** qui résume la règle (« Si de 22:00 à 07:00 et en charge, afficher Lune. ») avec l'aperçu animé et « ● ce serait le cas maintenant / ○ pas le cas ». Puis **SI…** (une carte par condition, ses réglages juste dessous, ● vraie maintenant), « Toutes (ET) / Au moins une (OU) » dès 2 conditions, **＋ Ajouter une condition** (catalogue par familles). Puis **ALORS…** : Modèle / Hasard / Défiler / Éteindre. **▸ Plus d'options** : nom, revenir au modèle d'avant.
 
-Déclencheurs (18, aucun menu caché : chaque réglage est un bouton) :
+Déclencheurs (20, aucun menu caché : chaque réglage est un bouton) :
 
 | Famille | Déclencheur | Réglages | Source / permission |
 |---|---|---|---|
@@ -187,6 +187,12 @@ Déclencheurs (18, aucun menu caché : chaque réglage est un bouton) :
 | Connexions | Casque | n'importe lequel / un précis | sorties audio, sans permission |
 | Connexions | Bluetooth (montre, voiture…) | n'importe lequel / un associé | `ACL_CONNECTED/DISCONNECTED` (récepteur du manifeste, liste gardée dans `verso_auto`) ; **permission « Appareils à proximité »** demandée dans l'éditeur |
 | Connexions | Réseau | Wi-Fi / données / hors ligne | `ACCESS_NETWORK_STATE` (sans le nom du Wi-Fi) |
+| Apps | Notification (**flash**) | apps (toutes ou cochées), durée 3 / 5 / 10 / 30 s | `EcouteNotifs` (NotificationListenerService) ; **« Accès aux notifications »** |
+| Apps | Musique | apps (n'importe laquelle ou cochées) | sessions média (`MediaSessionManager.getActiveSessions`, même accès) |
+
+**Notification = règle « flash »** (partie 2, 28/10) : ni « pendant » ni « moment ». À chaque nouvelle notification d'une app acceptée, la première règle flash de la liste (avec « toutes », ses autres conditions doivent être vraies, moments exclus) affiche son modèle pendant la durée choisie, puis **fondu** : le dessin s'éteint en 480 ms, le modèle d'avant revient en 480 ms (8 images chacun) et reprend sa boucle (`ModelePlayer.flash`). Rien n'est mémorisé (ni modèle actif, ni mémoire des règles). Pas de flash si la matrice est éteinte, ni si personne ne peut la voir (app fermée et Toy pas lié : jamais de couche app). Un choix à la main, une règle ou un autre flash l'interrompt. Actions possibles : Modèle ou Hasard. Notifications ignorées : celles de Verso, permanentes / service au premier plan, résumés de groupe, « silencieuses » (`isAmbient`), mises à jour (`FLAG_ONLY_ALERT_ONCE`, ou même clé < 3 s). Verso ne lit que le paquet de l'app.
+
+**Choix des apps** (`auto/ChoixApps.kt`) : apps du lanceur (`<queries>` MAIN/LAUNCHER), icône + nom, recherche sans accents, cochées en haut ; rien de coché = toutes. Carte d'autorisation avec bouton direct (`ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS`) et rappel « 🔒 Grisé ? Fiche de Verso › ⋮ › Autoriser les paramètres restreints » (app hors Play Store) ; elle disparaît dès que c'est accordé.
 
 Actions : **Modèle** ; **Hasard** (un favori au hasard, ou toute la bibliothèque sans favori) ; **Défiler** (les favoris dans l'ordre ★ toutes les 5-60 min, tant que la règle dure, par alarme) ; **Éteindre**.
 
@@ -208,12 +214,13 @@ Format JSON d'une règle (`RegleStore`, ordre de la liste = priorité ; l'ancien
   "si": [ { "type": "plage", "debut": 1380, "fin": 420, "jours": [1,2,3,4,5,6,7] }, { "type": "charge" } ],
   "alors": { "type": "eteindre" } }
 ```
-Types `si` : `plage` (`debut`, `fin` en minutes, `jours` 1 = lundi), `aheure` (`minute`, `jours`), `reveil` (`debut`, `fin`), `soleil` (`nuit`, `decalage`), `date` (`jour`, `mois`), `alarme` (`minutes`), `charge` (`source` cable/sansfil), `batterie` (`seuil`), `pleine` (`seuil`), `economie`, `ecran` (`verrouille`), `dnd`, `sonnerie` (`mode` silencieux/vibreur), `avion`, `lampe`, `casque` (`appareil`), `bluetooth` (`appareil`), `reseau` (`reseau` wifi/donnees/aucun). `alors` : `modele` (+ `modele`), `hasard`, `defiler` (+ `minutes`), `eteindre`.
+Types `si` : `notif` (`apps` = [{`pkg`, `nom`}], vide = toutes ; `secondes`), `musique` (`apps`), `plage` (`debut`, `fin` en minutes, `jours` 1 = lundi), `aheure` (`minute`, `jours`), `reveil` (`debut`, `fin`), `soleil` (`nuit`, `decalage`), `date` (`jour`, `mois`), `alarme` (`minutes`), `charge` (`source` cable/sansfil), `batterie` (`seuil`), `pleine` (`seuil`), `economie`, `ecran` (`verrouille`), `dnd`, `sonnerie` (`mode` silencieux/vibreur), `avion`, `lampe`, `casque` (`appareil`), `bluetooth` (`appareil`), `reseau` (`reseau` wifi/donnees/aucun). `alors` : `modele` (+ `modele`), `hasard`, `defiler` (+ `minutes`), `eteindre`.
 
-**À venir** : notification d'une app (modèle quelques secondes puis fondu de luminosité) et musique en cours (« Accès aux notifications ») ; météo réelle (Open-Meteo) et Wi-Fi par nom (localisation « Toujours », acceptée par Nico).
+**À venir (partie 3)** : app ouverte (service d'accessibilité, repli « Accès aux données d'utilisation ») et modèles live (météo réelle Open-Meteo, musique). Le Wi-Fi par nom est **abandonné** (28/10, Nico : peu utile, coûte la localisation « Toujours »).
 
 ### 3.7 Liquid Glass (interface)
 Vrai verre façon iOS, avec la bibliothèque **Backdrop** (`io.github.kyant0:backdrop:1.0.1`, Kyant, Apache 2.0) : réfraction des bords (shader AGSL `lens`, avec profondeur), flou, vibrance, reflet (`Highlight`) et ombre. Code dans `ui/verre/Verre.kt` :
+- **Verre flottant** (28/10, « au plus fluide mais je veux du style ») : tout ce qui est dans `dessus` (mini-lecteur, barres du haut, boutons flottants, menu ☰) ne floute plus que le **fond**, plus le contenu qui défile dessous. Avant, tout l'écran était enregistré dans un calque à chaque image et chaque verre du contenu y était recalculé une 2ᵉ fois. Style compensé (`LocalFlottant`) : verre fumé plus dense (noir 34 %), lumière en dégradé du haut, lueur rouge au bas, liseré clair. Le banc (« ancien moteur ») garde l'ancien calque pour comparer.
 - `EcranVerre` : fond (noir, lueurs rouge Nothing / blanche / rouge sombre qui suivent le défilement — et dérivent à 20 images/s si « Fond animé » est activé —, grille de points façon matrice) + contenu en verre sur ce fond + éléments flottants (`dessus`) en verre sur le fond **et** le contenu qui défile dessous.
 - `Modifier.verre`, `PanneauVerre`, `BoutonVerre` (principal = teinté rouge), `PuceVerre`, `RondVerre`, effet d'appui qui enfonce le verre (ressort + vibration).
 - Réglages (26/10, renforcés à la demande de Nico) : flou léger (7 dp) pour un verre plus transparent, réfraction forte des bords (22 dp) avec irisation (`chromaticAberration`, retirée des petites puces où elle ne se voit pas), reflet plus marqué, lueurs du fond plus vives.
@@ -325,4 +332,4 @@ Entrées (raccourcis, rien n'y est caché qui ne soit aussi sur l'écran) : Accu
 6. Plein de modèles (90) + bibliothèque par rayons.
 7. Créateur de modèles : éditeur dessin (statique et animé), import/export JSON (§3.5). Refait en version simple le 25/10 ; le créateur par blocs a été retiré (trop compliqué).
 8. Ordre des favoris (glisser-déposer) + finitions : correctif de l'essai « canal app » au démarrage, bouton Rallumer, tap sur la grande matrice = réglages, vibrations, onglet « Mes » dans la fenêtre ☰. **V1 complète.**
-9. Règles automatiques (§3.6) + Liquid Glass (§3.7). Fait : moteur, 18 déclencheurs, ET/OU, actions, éditeur en phrase. À venir : notifications (fondu) et musique ; météo et Wi-Fi par nom.
+9. Règles automatiques (§3.6) + Liquid Glass (§3.7). Fait : moteur, 20 déclencheurs, ET/OU, actions, éditeur en phrase ; partie 2 (28/10) : notifications (flash + fondu) et musique. À venir : app ouverte et modèles live (météo, musique).

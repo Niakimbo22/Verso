@@ -251,4 +251,57 @@ class ReglesTest {
         assertNull(Decision.evaluer(m, r, "autre", "etoile").afficher)
         assertEquals("pluie", Decision.evaluer(m, null, null, "etoile").afficher?.modele)
     }
+
+    // ---- Étape 9, partie 2 : notifications (flash) et musique ----
+
+    private val whatsapp = AppChoisie("com.whatsapp", "WhatsApp")
+    private val spotify = AppChoisie("com.spotify.music", "Spotify")
+
+    @Test
+    fun flash_jamaisPendant() {
+        val r = Regle("n", "Notif", listOf(Declencheur.Notification(listOf(whatsapp), 5)), Action.Afficher("message"))
+        assertTrue(r.estFlash)
+        assertFalse(r.estMoment)
+        assertFalse(r.estPendant)
+        assertNull(Evaluation.gagnante(listOf(r), ctx(12)))
+        assertNull(Evaluation.prochaineFrontiere(listOf(r), ctx(12)))
+    }
+
+    @Test
+    fun flash_appEtConditions() {
+        val wa = Regle("wa", "WA", listOf(Declencheur.Notification(listOf(whatsapp), 10), Declencheur.Plage(22 * 60, 7 * 60)), Action.Afficher("message"))
+        val tout = Regle("tout", "Tout", listOf(Declencheur.Notification()), Action.Afficher("notification"))
+        val regles = listOf(wa, tout)
+        // WhatsApp la nuit : la règle WhatsApp (la plus haute) gagne.
+        assertEquals("wa", Evaluation.flash(regles, "com.whatsapp", ctx(23))?.id)
+        assertEquals(10, Evaluation.flash(regles, "com.whatsapp", ctx(23))?.secondesFlash)
+        // WhatsApp le jour : la plage est fausse, c'est « toutes les apps ».
+        assertEquals("tout", Evaluation.flash(regles, "com.whatsapp", ctx(12))?.id)
+        // Une autre app : seulement « toutes les apps ».
+        assertEquals("tout", Evaluation.flash(regles, "com.discord", ctx(23))?.id)
+        // Règle coupée, ou OU : la plage n'est plus obligatoire.
+        assertNull(Evaluation.flash(listOf(wa), "com.whatsapp", ctx(12)))
+        assertEquals("wa", Evaluation.flash(listOf(wa.copy(toutes = false)), "com.whatsapp", ctx(12))?.id)
+        assertNull(Evaluation.flash(listOf(tout.copy(active = false)), "com.discord", ctx(12)))
+    }
+
+    @Test
+    fun musique() {
+        val c = Contexte(t(12), musique = listOf("com.spotify.music"))
+        assertTrue(Evaluation.vraie(Declencheur.Musique(), c))
+        assertTrue(Evaluation.vraie(Declencheur.Musique(listOf(spotify)), c))
+        assertFalse(Evaluation.vraie(Declencheur.Musique(listOf(whatsapp)), c))
+        assertFalse(Evaluation.vraie(Declencheur.Musique(), ctx(12)))
+        val r = Regle("m", "Musique", listOf(Declencheur.Musique()), Action.Afficher("egaliseur"))
+        assertTrue(r.estPendant)
+        assertEquals("m", Evaluation.gagnante(listOf(r), c)?.id)
+    }
+
+    @Test
+    fun textes() {
+        val r = Regle("n", "", listOf(Declencheur.Notification(listOf(whatsapp), 5)), Action.Afficher("message"))
+        assertEquals("Si une notif de WhatsApp arrive, afficher Message 5 s.", Textes.phrase(r) { "Message" })
+        assertEquals("Spotify ou WhatsApp joue", Textes.quand(Declencheur.Musique(listOf(spotify, whatsapp))))
+        assertEquals("de la musique joue", Textes.quand(Declencheur.Musique()))
+    }
 }

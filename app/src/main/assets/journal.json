@@ -1,7 +1,60 @@
 [
   {
-    "pr": 37,
+    "pr": 38,
     "version": null,
+    "date": "2026-10-28",
+    "titre": "🔔 Notifs et musique au dos",
+    "sert": "Une notif fait flasher la matrice, la musique peut changer le modèle, et le verre flottant est plus fluide.",
+    "essentiel": [
+      "🔔 Notif d'une app → flash puis fondu",
+      "🎵 Musique en cours → modèle au choix",
+      "📱 Choix des apps avec icônes",
+      "⚡ Mini-lecteur plus fluide, verre fumé"
+    ],
+    "sections": [
+      {
+        "titre": "Notifications",
+        "points": [
+          "⚡ Le modèle s'affiche 3, 5, 10 ou 30 s",
+          "🌫️ Puis fondu vers le modèle d'avant",
+          "📱 Toutes les apps ou celles cochées",
+          "🌙 Rien si la matrice est éteinte",
+          "🤫 Ignorées : notifs permanentes, silencieuses, mises à jour"
+        ]
+      },
+      {
+        "titre": "Musique",
+        "points": [
+          "🎵 Vraie tant que ça joue (Spotify, YouTube Music…)",
+          "▶️ L'éditeur montre ce qui joue maintenant"
+        ]
+      },
+      {
+        "titre": "Autorisation",
+        "points": [
+          "🔐 « Accès aux notifications », bouton direct",
+          "🔒 Grisé ? Fiche de Verso › ⋮ › Autoriser les paramètres restreints",
+          "👀 Verso ne lit que le nom de l'app, jamais le contenu"
+        ]
+      },
+      {
+        "titre": "Fluidité",
+        "points": [
+          "⚡ Mini-lecteur, barres et boutons flottants floutent le fond seul",
+          "🎨 Verre fumé : lumière en haut, lueur rouge en bas",
+          "✍️ Phrase des règles : plus de majuscule au milieu (« Si de 22:00… »)"
+        ]
+      }
+    ],
+    "tester": [
+      "Règle 🔔 Notif → recevoir un message",
+      "Règle 🎵 Musique → lancer Spotify",
+      "Banc Complet : écran principal"
+    ]
+  },
+  {
+    "pr": 37,
+    "version": "0.1.82",
     "date": "2026-10-27",
     "titre": "🎯 Verdicts du banc corrigés",
     "sert": "Le banc ne crie plus « moins bien » pour rien, et dit plus précisément ce qui freine.",

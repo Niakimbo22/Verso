@@ -19,6 +19,12 @@ class MatrixFrame(pixels: IntArray) {
     val litCount: Int
         get() = (0 until SIZE).count { pixels[it] > 0 && isOnMatrix(it % SIDE, it / SIDE) }
 
+    /** Même image, luminosité multipliée par [f] (0 = éteinte, 1 = inchangée) : pour les fondus. */
+    fun attenue(f: Float): MatrixFrame {
+        val k = f.coerceIn(0f, 1f)
+        return MatrixFrame(IntArray(SIZE) { (pixels[it] * k).toInt() })
+    }
+
     /** Conversion vers le format du SDK Glyph : luminosité 0-4095. */
     fun toGlyphColors(): IntArray = IntArray(SIZE) { pixels[it] * GLYPH_MAX / MAX }
 

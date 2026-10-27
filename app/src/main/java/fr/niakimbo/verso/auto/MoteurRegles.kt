@@ -272,7 +272,28 @@ class MoteurRegles(private val app: VersoApp) {
             prochaineAlarme = alarmes.nextAlarmClock?.triggerTime?.let { LocalDateTime.ofInstant(Instant.ofEpochMilli(it), zone) },
             lieu = store.lieu.value,
             zone = zone,
+            musique = Musique.lecteurs,
         )
+    }
+
+    /**
+     * Une notification vient d'arriver de [pkg] (voir [EcouteNotifs]) : la première règle « flash »
+     * qui l'accepte affiche son modèle quelques secondes, puis le modèle d'avant revient en fondu.
+     * Rien ne change dans la mémoire des règles : c'est un affichage de passage.
+     */
+    fun notification(pkg: String) {
+        app.appScope.launch {
+            mutex.withLock {
+                if (!store.actif.value) return@withLock
+                val ctx = contexte()
+                val r = Evaluation.flash(store.regles.value, pkg, ctx) ?: return@withLock
+                val id = cible(r, app.store.modeleActif) ?: return@withLock
+                val modele = app.catalogue.resoudre(id) ?: return@withLock
+                if (app.player.flash(modele, r.secondesFlash * 1000L)) {
+                    app.journalToy.ajouter("Auto (notif $pkg) : « ${r.nom} » → ${modele.nom} ${r.secondesFlash} s")
+                }
+            }
+        }
     }
 
     fun bluetoothAutorise(): Boolean =

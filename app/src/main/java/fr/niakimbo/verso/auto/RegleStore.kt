@@ -39,11 +39,16 @@ class RegleStore(context: Context) {
         _lieu.value = l
     }
 
+    /** [enHaut] : une nouvelle règle passe en tête de liste (priorité la plus haute). */
     @Synchronized
-    fun enregistrer(r: Regle) {
+    fun enregistrer(r: Regle, enHaut: Boolean = false) {
         val liste = _regles.value.toMutableList()
         val i = liste.indexOfFirst { it.id == r.id }
-        if (i >= 0) liste[i] = r else liste.add(r)
+        when {
+            i >= 0 -> liste[i] = r
+            enHaut -> liste.add(0, r)
+            else -> liste.add(r)
+        }
         ecrire(liste)
     }
 
@@ -141,6 +146,14 @@ class RegleStore(context: Context) {
 
         private fun jours(j: Set<DayOfWeek>) = JSONArray(j.sorted().map { it.value })
 
+        private fun apps(a: List<AppChoisie>) = JSONArray(a.map { JSONObject().put("pkg", it.pkg).put("nom", it.nom) })
+
+        private fun lireApps(q: JSONObject): List<AppChoisie> = q.optJSONArray("apps")?.let { a ->
+            (0 until a.length()).mapNotNull { i ->
+                a.optJSONObject(i)?.let { o -> texte(o, "pkg")?.let { AppChoisie(it, texte(o, "nom") ?: it) } }
+            }.distinctBy { it.pkg }
+        }.orEmpty()
+
         private fun declencheurJson(d: Declencheur): JSONObject = JSONObject().apply {
             put("type", d.type)
             when (d) {
@@ -158,6 +171,8 @@ class RegleStore(context: Context) {
                 is Declencheur.Casque -> d.appareil?.let { put("appareil", it) }
                 is Declencheur.Bluetooth -> d.appareil?.let { put("appareil", it) }
                 is Declencheur.Reseau -> put("reseau", d.type_)
+                is Declencheur.Notification -> put("apps", apps(d.apps)).put("secondes", d.secondes)
+                is Declencheur.Musique -> put("apps", apps(d.apps))
                 Declencheur.Economie, Declencheur.NePasDeranger, Declencheur.Avion, Declencheur.Lampe -> Unit
             }
         }
@@ -189,6 +204,8 @@ class RegleStore(context: Context) {
             Declencheur.CASQUE -> Declencheur.Casque(texte(q, "appareil"))
             Declencheur.BLUETOOTH -> Declencheur.Bluetooth(texte(q, "appareil"))
             Declencheur.RESEAU -> Declencheur.Reseau(texte(q, "reseau") ?: Declencheur.WIFI)
+            Declencheur.NOTIF -> Declencheur.Notification(lireApps(q), q.optInt("secondes", 5).coerceIn(2, 60))
+            Declencheur.MUSIQUE -> Declencheur.Musique(lireApps(q))
             else -> null
         }
 
