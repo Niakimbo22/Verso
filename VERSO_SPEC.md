@@ -165,7 +165,7 @@ Le modèle change tout seul selon la situation. Carte **Automatique** sur l'écr
 - **Liste** : « En ce moment » (modèle affiché animé + règle en cours), mes règles (appui long + glisser = ordre = priorité, interrupteur par règle), **idées** en un tap (défilement horizontal), bouton flottant **＋ Nouvelle règle**.
 - **Éditeur** : en haut une **phrase** qui résume la règle (« Si de 22:00 à 07:00 et en charge, afficher Lune. ») avec l'aperçu animé et « ● ce serait le cas maintenant / ○ pas le cas ». Puis **SI…** (une carte par condition, ses réglages juste dessous, ● vraie maintenant), « Toutes (ET) / Au moins une (OU) » dès 2 conditions, **＋ Ajouter une condition** (catalogue par familles). Puis **ALORS…** : Modèle / Hasard / Défiler / Éteindre. **▸ Plus d'options** : nom, revenir au modèle d'avant.
 
-Déclencheurs (20, aucun menu caché : chaque réglage est un bouton) :
+Déclencheurs (22, aucun menu caché : chaque réglage est un bouton) :
 
 | Famille | Déclencheur | Réglages | Source / permission |
 |---|---|---|---|
@@ -189,8 +189,16 @@ Déclencheurs (20, aucun menu caché : chaque réglage est un bouton) :
 | Connexions | Réseau | Wi-Fi / données / hors ligne | `ACCESS_NETWORK_STATE` (sans le nom du Wi-Fi) |
 | Apps | Notification (**flash**) | apps (toutes ou cochées), durée 3 / 5 / 10 / 30 s | `EcouteNotifs` (NotificationListenerService) ; **« Accès aux notifications »** |
 | Apps | Musique | apps (n'importe laquelle ou cochées) | sessions média (`MediaSessionManager.getActiveSessions`, même accès) |
+| Apps | App ouverte | une ou plusieurs apps (au moins une) | `AppPremierPlan` : service d'accessibilité « Verso · Glyph et apps » (`TYPE_WINDOW_STATE_CHANGED`, vraie activité seulement, menu déroulant et claviers ignorés) ; repli **« Accès aux données d'utilisation »** (lecture toutes les secondes, écran allumé, seulement si une règle l'utilise) |
+| Temps | Météo | soleil / nuages / pluie / neige / orage (plusieurs) | `Meteo` (Open-Meteo), mesure de plus de 3 h = inconnue |
 
 **Notification = règle « flash »** (partie 2, 28/10) : ni « pendant » ni « moment ». À chaque nouvelle notification d'une app acceptée, la première règle flash de la liste (avec « toutes », ses autres conditions doivent être vraies, moments exclus) affiche son modèle pendant la durée choisie, puis **fondu** : le dessin s'éteint en 480 ms, le modèle d'avant revient en 480 ms (8 images chacun) et reprend sa boucle (`ModelePlayer.flash`). Rien n'est mémorisé (ni modèle actif, ni mémoire des règles). Pas de flash si la matrice est éteinte, ni si personne ne peut la voir (app fermée et Toy pas lié : jamais de couche app). Un choix à la main, une règle ou un autre flash l'interrompt. Actions possibles : Modèle ou Hasard. Notifications ignorées : celles de Verso, permanentes / service au premier plan, résumés de groupe, « silencieuses » (`isAmbient`), mises à jour (`FLAG_ONLY_ALERT_ONCE`, ou même clé < 3 s). Verso ne lit que le paquet de l'app.
+
+**App ouverte** (partie 3, 28/10) : vraie tant qu'une des apps est au premier plan, téléphone déverrouillé. Une nouvelle règle « App ouverte » est ajoutée **en tête** (elle doit gagner tant que l'app est à l'écran). À la sortie, le modèle d'avant revient (comportement normal d'une règle « pendant »). Le service d'accessibilité du bouton Glyph (§3.8) n'est plus limité au menu déroulant : il reçoit les changements de fenêtre de toutes les apps (jamais leur contenu) ; il s'appelle désormais **« Verso · Glyph et apps »**.
+
+**Météo** (`auto/Meteo.kt`) : `api.open-meteo.com/v1/forecast?current=temperature_2m,weather_code,is_day` (gratuit, sans clé), ville de « Nuit / jour » ou Meylan par défaut. Code WMO → ciel : 0-1 soleil, 2-3 / 45-48 nuages, 51-67 / 80-82 pluie, 71-77 / 85-86 neige, 95-99 orage. Mesure gardée sur le téléphone (`verso_meteo`), redemandée si elle a plus de 30 min : quand le modèle Météo réelle est dessiné, ou par l'alarme des règles si une condition Météo existe (le récepteur attend alors 10 s). Un changement de ciel réévalue les règles.
+
+**Idées « App ouverte »** : l'app est cherchée sur le téléphone (nom contenant météo / weather ; Spotify, YouTube Music, Deezer… ; appareil photo par défaut) ; pas trouvée = l'éditeur s'ouvre directement sur le choix des apps.
 
 **Choix des apps** (`auto/ChoixApps.kt`) : apps du lanceur (`<queries>` MAIN/LAUNCHER), icône + nom, recherche sans accents, cochées en haut ; rien de coché = toutes. Carte d'autorisation avec bouton direct (`ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS`) et rappel « 🔒 Grisé ? Fiche de Verso › ⋮ › Autoriser les paramètres restreints » (app hors Play Store) ; elle disparaît dès que c'est accordé.
 
@@ -214,9 +222,14 @@ Format JSON d'une règle (`RegleStore`, ordre de la liste = priorité ; l'ancien
   "si": [ { "type": "plage", "debut": 1380, "fin": 420, "jours": [1,2,3,4,5,6,7] }, { "type": "charge" } ],
   "alors": { "type": "eteindre" } }
 ```
-Types `si` : `notif` (`apps` = [{`pkg`, `nom`}], vide = toutes ; `secondes`), `musique` (`apps`), `plage` (`debut`, `fin` en minutes, `jours` 1 = lundi), `aheure` (`minute`, `jours`), `reveil` (`debut`, `fin`), `soleil` (`nuit`, `decalage`), `date` (`jour`, `mois`), `alarme` (`minutes`), `charge` (`source` cable/sansfil), `batterie` (`seuil`), `pleine` (`seuil`), `economie`, `ecran` (`verrouille`), `dnd`, `sonnerie` (`mode` silencieux/vibreur), `avion`, `lampe`, `casque` (`appareil`), `bluetooth` (`appareil`), `reseau` (`reseau` wifi/donnees/aucun). `alors` : `modele` (+ `modele`), `hasard`, `defiler` (+ `minutes`), `eteindre`.
+Types `si` : `notif` (`apps` = [{`pkg`, `nom`}], vide = toutes ; `secondes`), `musique` (`apps`), `app` (`apps`), `meteo` (`ciels` : soleil / nuages / pluie / neige / orage), `plage` (`debut`, `fin` en minutes, `jours` 1 = lundi), `aheure` (`minute`, `jours`), `reveil` (`debut`, `fin`), `soleil` (`nuit`, `decalage`), `date` (`jour`, `mois`), `alarme` (`minutes`), `charge` (`source` cable/sansfil), `batterie` (`seuil`), `pleine` (`seuil`), `economie`, `ecran` (`verrouille`), `dnd`, `sonnerie` (`mode` silencieux/vibreur), `avion`, `lampe`, `casque` (`appareil`), `bluetooth` (`appareil`), `reseau` (`reseau` wifi/donnees/aucun). `alors` : `modele` (+ `modele`), `hasard`, `defiler` (+ `minutes`), `eteindre`.
 
-**À venir (partie 3)** : app ouverte (service d'accessibilité, repli « Accès aux données d'utilisation ») et modèles live (météo réelle Open-Meteo, musique). Le Wi-Fi par nom est **abandonné** (28/10, Nico : peu utile, coûte la localisation « Toujours »).
+Le Wi-Fi par nom est **abandonné** (28/10, Nico : peu utile, coûte la localisation « Toujours »).
+
+### 3.6 bis Modèles live (étape 9, partie 3)
+Rayon **Live**, en tête de la bibliothèque (`generateur/Live.kt`). Modèles dynamiques (comme l'horloge) qui se dessinent avec des données réelles ; marchent partout (tap, favoris, widget à la minute, règles).
+- **Météo réelle** (`meteo-live`, une image toutes les 90 ms) : icône animée reprise de la bibliothèque selon le ciel (soleil / lune la nuit, éclaircie, nuage, pluie V1, neige-nuage, orage) et température en chiffres 3×5 (« 12° », « -5° », « -12 »). Réglage *Afficher* : les deux à tour de rôle (5 s icône, 3 s température), icône, température. Pas encore de mesure : « -- ».
+- **Musique en direct** (`musique-live`, 100 ms) : 5 barres d'égaliseur qui dansent pendant la lecture (animation, pas le vrai son : ça demanderait le micro), ▮▮ en pause, et **anneau d'avancement** du titre sur le bord de la matrice (réglage). Rien ne joue : la note de la bibliothèque, à moitié éteinte. Demande l'accès aux notifications (sessions média).
 
 ### 3.7 Liquid Glass (interface)
 Vrai verre façon iOS, avec la bibliothèque **Backdrop** (`io.github.kyant0:backdrop:1.0.1`, Kyant, Apache 2.0) : réfraction des bords (shader AGSL `lens`, avec profondeur), flou, vibrance, reflet (`Highlight`) et ombre. Code dans `ui/verre/Verre.kt` :
@@ -238,6 +251,8 @@ Vrai verre façon iOS, avec la bibliothèque **Backdrop** (`io.github.kyant0:bac
 - Compose foundation/ui passent en 1.9.5 (exigé par Backdrop) ; Kotlin reste en 2.1.20.
 
 ### 3.8 Le vrai bouton Glyph (26/10)
+*Depuis le 28/10, le service s'appelle « Verso · Glyph et apps » et sert aussi à la condition « App ouverte » (§3.6).*
+
 Demande de Nico : quand la Glyph Interface est coupée (tuile « Glyph » du menu déroulant), ⏻ dans Verso ne servait à rien. Il veut que ⏻ appuie **réellement** sur ce bouton.
 
 **Analyse** : Nothing ne donne aucun moyen aux apps d'allumer / éteindre la Glyph Interface. Le SDK ne fait qu'afficher (`setMatrixFrame`, `setAppMatrixFrame`, `closeAppMatrix`), et le réglage système est protégé (`WRITE_SECURE_SETTINGS`, ADB seulement, abandonné par Nico).
@@ -298,7 +313,7 @@ Entrées (raccourcis, rien n'y est caché qui ne soit aussi sur l'écran) : Accu
 
 ## 4. Feuille de route après la V1 (dans cet ordre)
 
-1. **Modèles dynamiques avancés** : minuteur, visualiseur musique, notifications, météo réelle.
+1. **Modèles dynamiques avancés** : minuteur, texte défilant tout fait… (visualiseur musique, notifications et météo réelle faits à l'étape 9).
 2. **Modèles automatiques** : en cours (§3.6, étape 9).
 3. **Connexion Trame** : afficher la créature Trame au dos du téléphone. Pas urgent.
 4. **Intégration NCOS.**
@@ -332,4 +347,4 @@ Entrées (raccourcis, rien n'y est caché qui ne soit aussi sur l'écran) : Accu
 6. Plein de modèles (90) + bibliothèque par rayons.
 7. Créateur de modèles : éditeur dessin (statique et animé), import/export JSON (§3.5). Refait en version simple le 25/10 ; le créateur par blocs a été retiré (trop compliqué).
 8. Ordre des favoris (glisser-déposer) + finitions : correctif de l'essai « canal app » au démarrage, bouton Rallumer, tap sur la grande matrice = réglages, vibrations, onglet « Mes » dans la fenêtre ☰. **V1 complète.**
-9. Règles automatiques (§3.6) + Liquid Glass (§3.7). Fait : moteur, 20 déclencheurs, ET/OU, actions, éditeur en phrase ; partie 2 (28/10) : notifications (flash + fondu) et musique. À venir : app ouverte et modèles live (météo, musique).
+9. Règles automatiques (§3.6) + Liquid Glass (§3.7). Fait : moteur, 20 déclencheurs, ET/OU, actions, éditeur en phrase ; partie 2 (28/10) : notifications (flash + fondu) et musique ; partie 3 (28/10) : app ouverte, météo, modèles live (§3.6 bis). Wi-Fi par nom abandonné.

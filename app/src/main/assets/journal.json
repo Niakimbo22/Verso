@@ -1,7 +1,61 @@
 [
   {
-    "pr": 38,
+    "pr": 39,
     "version": null,
+    "date": "2026-10-28",
+    "titre": "📱 App ouverte et modèles live",
+    "sert": "Le dos réagit à l'app ouverte, et affiche la vraie météo ou ta musique en direct.",
+    "essentiel": [
+      "📱 App ouverte → modèle au choix",
+      "🌦️ Météo réelle en direct",
+      "🎧 Musique en direct (anneau d'avancement)",
+      "🌧️ Condition Météo : soleil, pluie, neige…",
+      "✨ 3 idées prêtes en un tap"
+    ],
+    "sections": [
+      {
+        "titre": "App ouverte",
+        "points": [
+          "📱 Une ou plusieurs apps, le modèle d'avant revient en quittant",
+          "⬆️ Ajoutée en tête : elle gagne sur les autres règles",
+          "⚡ Via « Verso · Glyph et apps » (Accessibilité), instantané",
+          "🐢 Sinon « Accès aux données d'utilisation » (1 s)"
+        ]
+      },
+      {
+        "titre": "Live",
+        "points": [
+          "🌦️ Météo réelle : icône animée du ciel + température (Open-Meteo, 30 min)",
+          "📍 Ville de « Nuit / jour », sinon Meylan",
+          "🎧 Musique en direct : égaliseur, pause, anneau du titre",
+          "🔴 Nouveau rayon « Live » dans la bibliothèque"
+        ]
+      },
+      {
+        "titre": "Idées",
+        "points": [
+          "🌦️ App météo → vraie météo",
+          "🎧 Spotify ouvert → musique en direct",
+          "📸 Appareil photo → un sourire au dos",
+          "🔍 Pas trouvée ? Verso te la fait choisir"
+        ]
+      },
+      {
+        "titre": "Abandonné",
+        "points": [
+          "📶 Wi-Fi par nom : peu utile, demandait la localisation"
+        ]
+      }
+    ],
+    "tester": [
+      "Idée 🌦️ App météo → ouvrir l'app météo",
+      "Idée 📸 → ouvrir l'appareil photo",
+      "Modèle Météo réelle dans ★"
+    ]
+  },
+  {
+    "pr": 38,
+    "version": "0.1.84",
     "date": "2026-10-28",
     "titre": "🔔 Notifs et musique au dos",
     "sert": "Une notif fait flasher la matrice, la musique peut changer le modèle, et le verre flottant est plus fluide.",

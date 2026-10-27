@@ -20,9 +20,9 @@
     <string name="raccourci_basculer">Éteindre / rallumer</string>
     <string name="raccourci_auto">Automatique</string>
     <string name="ecoute_notifs_nom">Verso · notifs et musique</string>
-    <string name="bouton_glyph_nom">Verso · bouton Glyph</string>
-    <string name="bouton_glyph_resume">Permet au bouton ⏻ de Verso d\'allumer et d\'éteindre vraiment la Glyph Interface.</string>
-    <string name="bouton_glyph_description">Quand tu touches ⏻ dans Verso (app, mini-lecteur, widget, tuile, raccourci), Verso ouvre le menu déroulant, appuie sur la tuile Glyph à ta place et referme le menu. Il ne fait rien d\'autre, ne lit que le menu déroulant et n\'envoie rien hors du téléphone.</string>
+    <string name="bouton_glyph_nom">Verso · Glyph et apps</string>
+    <string name="bouton_glyph_resume">Le vrai bouton Glyph de Verso, et les règles « App ouverte ».</string>
+    <string name="bouton_glyph_description">⏻ dans Verso : appuie sur la tuile Glyph du menu déroulant à ta place. Règles « App ouverte » : note quelle app est au premier plan, pour changer le modèle au dos. Verso ne lit jamais le contenu des apps et n\'envoie rien hors du téléphone.</string>
     <string name="widget_verso_1x1">Verso · Mini 1 × 1</string>
     <string name="widget_desc_verso_1x1">Horloge, matrice, batterie, tout-en-un ou message, au choix, en 1 × 1.</string>
     <string name="widget_verso_2x1">Verso · Bandeau 2 × 1</string>

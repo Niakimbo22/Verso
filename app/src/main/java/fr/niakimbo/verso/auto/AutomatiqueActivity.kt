@@ -78,6 +78,8 @@ import androidx.compose.foundation.border
 import java.time.DayOfWeek
 import java.util.Locale
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 
 /**
  * Règles automatiques, en Liquid Glass : la liste (avec des idées toutes faites), l'éditeur
@@ -96,7 +98,11 @@ class AutomatiqueActivity : ComponentActivity() {
     }
 }
 
-private data class Edition(val regle: Regle, val nouvelle: Boolean)
+/** [appsDAbord] : ouvrir tout de suite le choix des apps (idée dont l'app n'a pas été trouvée). */
+private data class Edition(val regle: Regle, val nouvelle: Boolean, val appsDAbord: Boolean = false)
+
+/** Une règle « App ouverte » passe en tête : elle doit gagner tant que l'app est à l'écran. */
+private fun enTete(r: Regle) = r.conditions.any { it is Declencheur.AppOuverte }
 
 /** Nom lisible d'un modèle. */
 private fun nomDe(contenu: Catalogue.Contenu?): (String) -> String = { id -> contenu?.parId(id)?.nom ?: id }
@@ -163,6 +169,7 @@ private fun ListeRegles(app: VersoApp, contenu: Catalogue.Contenu?, onFermer: ()
     val context = LocalContext.current
     val scroll = rememberScrollState()
     val nom = nomDe(contenu)
+    val portee = rememberCoroutineScope()
 
     fun nouvelle() = onEditer(
         Edition(
@@ -245,8 +252,23 @@ private fun ListeRegles(app: VersoApp, contenu: Catalogue.Contenu?, onFermer: ()
                         PanneauVerre(
                             Modifier.width(150.dp),
                             onClick = {
-                                moteur.store.enregistrer(r.regle(moteur.store.nouvelId()))
-                                Toast.makeText(context, "« ${r.nom} » ajoutée", Toast.LENGTH_SHORT).show()
+                                val genre = r.apps
+                                if (genre == null) {
+                                    moteur.store.enregistrer(r.regle(moteur.store.nouvelId()))
+                                    Toast.makeText(context, "« ${r.nom} » ajoutée", Toast.LENGTH_SHORT).show()
+                                } else portee.launch {
+                                    // Idée « App ouverte » : on cherche l'app sur le téléphone ; pas trouvée = on la fait choisir.
+                                    val apps = Apps.suggerees(context, genre)
+                                    val regle = r.regle(moteur.store.nouvelId()).let { base ->
+                                        base.copy(conditions = base.conditions.map { c -> if (c is Declencheur.AppOuverte) c.copy(apps = apps) else c })
+                                    }
+                                    if (apps.isEmpty()) {
+                                        onEditer(Edition(regle, nouvelle = true, appsDAbord = true))
+                                    } else {
+                                        moteur.store.enregistrer(regle, enHaut = true)
+                                        Toast.makeText(context, "« ${r.nom} » ajoutée · ${apps.noms("")}", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
                             },
                         ) {
                             Column(Modifier.padding(14.dp)) {
@@ -339,7 +361,7 @@ private fun EditeurRegle(app: VersoApp, edition: Edition, contenu: Catalogue.Con
     val store = app.moteurRegles.store
     val context = LocalContext.current
     var regle by remember(edition) { mutableStateOf(edition.regle) }
-    var vue by remember { mutableStateOf<Vue>(Vue.Regle) }
+    var vue by remember { mutableStateOf<Vue>(if (edition.appsDAbord) Vue.Apps(0) else Vue.Regle) }
     var ouverte by remember { mutableIntStateOf(regle.conditions.lastIndex) }
     var confirmer by remember { mutableStateOf(false) }
     var plus by remember { mutableStateOf(false) }
@@ -359,7 +381,8 @@ private fun EditeurRegle(app: VersoApp, edition: Edition, contenu: Catalogue.Con
             CatalogueConditions(onRetour = { vue = Vue.Regle }) { type ->
                 regle = regle.copy(conditions = regle.conditions + type.parDefaut())
                 ouverte = regle.conditions.lastIndex
-                vue = Vue.Regle
+                // « App ouverte » sans app ne sert à rien : on choisit l'app tout de suite.
+                vue = if (type == TypeQuand.APP) Vue.Apps(regle.conditions.lastIndex) else Vue.Regle
             }
             return
         }
@@ -378,17 +401,20 @@ private fun EditeurRegle(app: VersoApp, edition: Edition, contenu: Catalogue.Con
             val apps = when (d) {
                 is Declencheur.Notification -> d.apps
                 is Declencheur.Musique -> d.apps
+                is Declencheur.AppOuverte -> d.apps
                 else -> emptyList()
             }
             ChoixApps(
                 titre = "Chercher une app",
                 choisies = apps,
-                tout = "Toutes les apps",
+                // « App ouverte » : il faut au moins une app.
+                tout = if (d is Declencheur.AppOuverte) null else "Toutes les apps",
                 onRetour = { vue = Vue.Regle },
             ) { choix ->
                 val nouveau = when (d) {
                     is Declencheur.Notification -> d.copy(apps = choix)
                     is Declencheur.Musique -> d.copy(apps = choix)
+                    is Declencheur.AppOuverte -> d.copy(apps = choix)
                     else -> d
                 }
                 if (nouveau != null) regle = regle.copy(conditions = regle.conditions.mapIndexed { j, c -> if (j == i) nouveau else c })
@@ -408,8 +434,17 @@ private fun EditeurRegle(app: VersoApp, edition: Edition, contenu: Catalogue.Con
 
     fun enregistrer() {
         val nom = regle.nom.trim().ifBlank { TypeQuand.de(regle.conditions.first()).titre }
-        store.enregistrer(regle.copy(nom = nom))
-        Toast.makeText(context, if (edition.nouvelle) "Règle ajoutée" else "Règle enregistrée", Toast.LENGTH_SHORT).show()
+        val enHaut = edition.nouvelle && enTete(regle)
+        store.enregistrer(regle.copy(nom = nom), enHaut = enHaut)
+        Toast.makeText(
+            context,
+            when {
+                enHaut -> "Règle ajoutée ⬆ en tête"
+                edition.nouvelle -> "Règle ajoutée"
+                else -> "Règle enregistrée"
+            },
+            Toast.LENGTH_SHORT,
+        ).show()
         onFini()
     }
 
@@ -726,10 +761,54 @@ private fun ReglagesCondition(app: VersoApp, d: Declencheur, ctx: Contexte, onAp
                     else "⏸ Rien ne joue en ce moment",
                 )
             }
+            is Declencheur.AppOuverte -> {
+                CartePermission(
+                    emoji = "📱",
+                    titre = "Active « Verso · Glyph et apps » (Accessibilité)",
+                    bouton = "Ouvrir Accessibilité",
+                    autorise = AppPremierPlan::disponible,
+                    ouvrir = AppPremierPlan::ouvrirAccessibilite,
+                )
+                if (!AppPremierPlan.disponible(LocalContext.current)) {
+                    val context = LocalContext.current
+                    Text(
+                        "ou « Accès aux données d'utilisation » (un peu plus lent)",
+                        color = Discret, fontSize = 11.sp,
+                        modifier = Modifier.appui({ AppPremierPlan.ouvrirUsage(context) }).padding(vertical = 2.dp),
+                    )
+                }
+                BoutonApps(d.apps, "Choisis une app", onApps)
+                Aide("↩ Le modèle d'avant revient quand tu quittes l'app")
+            }
+            is Declencheur.Meteo -> ReglageMeteo(app, d, onChange)
             Declencheur.Economie, Declencheur.NePasDeranger, Declencheur.Avion, Declencheur.Lampe ->
                 Aide("Rien à régler.")
         }
     }
+}
+
+/** Les ciels qui déclenchent la règle (plusieurs possibles), la météo du moment et la ville. */
+@Composable
+private fun ReglageMeteo(app: VersoApp, d: Declencheur.Meteo, onChange: (Declencheur) -> Unit) {
+    val etat by Meteo.etat.collectAsStateWithLifecycle()
+    val erreur by Meteo.erreur.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { Meteo.rafraichir() }
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Meteo.CIELS.forEach { c ->
+            val dedans = c in d.ciels
+            PuceVerre(Meteo.emoji(c), dedans, Modifier.weight(1f)) {
+                val nouveaux = if (dedans) d.ciels - c else d.ciels + c
+                if (nouveaux.isNotEmpty()) onChange(d.copy(ciels = nouveaux))
+            }
+        }
+    }
+    Aide(
+        etat?.let { e ->
+            val min = ((System.currentTimeMillis() - e.luA) / 60_000).coerceAtLeast(0)
+            "${Meteo.emoji(e.ciel)} Maintenant : ${Meteo.nom(e.ciel)} · ${e.temperature}° · ${e.lieu} · il y a $min min"
+        } ?: erreur ?: "Météo en cours de lecture…",
+    )
+    ChoixVille(app)
 }
 
 /** « Accès aux notifications » (notifs + musique), avec bouton direct vers le réglage. */
@@ -887,7 +966,6 @@ private fun CatalogueConditions(onRetour: () -> Unit, onChoix: (TypeQuand) -> Un
                 }
                 Spacer(Modifier.height(16.dp))
             }
-            Aide("Bientôt : app ouverte, météo.")
         }
     }
 }

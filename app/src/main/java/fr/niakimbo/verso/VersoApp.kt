@@ -129,6 +129,8 @@ class VersoApp : Application() {
     override fun onCreate() {
         super.onCreate()
         Capteurs.init(this)
+        fr.niakimbo.verso.auto.Meteo.init(this)
+        fr.niakimbo.verso.auto.AppPremierPlan.init(this)
         surveillerLiaison()
         // Chaque (re)démarrage du processus est noté : on voit qui a réveillé Verso
         // (ouverture de l'app, liaison du Toy, démarrage du téléphone).

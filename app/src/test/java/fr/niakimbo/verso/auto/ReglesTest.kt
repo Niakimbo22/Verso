@@ -304,4 +304,49 @@ class ReglesTest {
         assertEquals("Spotify ou WhatsApp joue", Textes.quand(Declencheur.Musique(listOf(spotify, whatsapp))))
         assertEquals("de la musique joue", Textes.quand(Declencheur.Musique()))
     }
+
+    // ---- Étape 9, partie 3 : app ouverte et météo ----
+
+    @Test
+    fun appOuverte() {
+        val meteo = AppChoisie("com.nothing.weather", "Météo")
+        val d = Declencheur.AppOuverte(listOf(meteo))
+        assertTrue(Evaluation.vraie(d, Contexte(t(12), app = "com.nothing.weather")))
+        assertFalse(Evaluation.vraie(d, Contexte(t(12), app = "com.android.launcher")))
+        assertFalse(Evaluation.vraie(d, Contexte(t(12), app = null)))
+        assertFalse(Evaluation.vraie(Declencheur.AppOuverte(), Contexte(t(12), app = "com.nothing.weather")))
+        // Plus haute dans la liste : elle passe devant la nuit.
+        val r = Regle("a", "App météo", listOf(d), Action.Afficher("meteo-live"))
+        assertEquals("a", Evaluation.gagnante(listOf(r, nuit), Contexte(t(23), app = "com.nothing.weather"))?.id)
+        assertEquals("nuit", Evaluation.gagnante(listOf(r, nuit), Contexte(t(23), app = "autre"))?.id)
+        assertEquals("Si Météo est ouverte, afficher Météo réelle.", Textes.phrase(r) { "Météo réelle" })
+    }
+
+    @Test
+    fun meteo() {
+        assertEquals(Meteo.SOLEIL, Meteo.ciel(0))
+        assertEquals(Meteo.NUAGES, Meteo.ciel(3))
+        assertEquals(Meteo.NUAGES, Meteo.ciel(45))
+        assertEquals(Meteo.PLUIE, Meteo.ciel(61))
+        assertEquals(Meteo.PLUIE, Meteo.ciel(81))
+        assertEquals(Meteo.NEIGE, Meteo.ciel(73))
+        assertEquals(Meteo.ORAGE, Meteo.ciel(95))
+        val d = Declencheur.Meteo(setOf(Meteo.PLUIE, Meteo.ORAGE))
+        assertTrue(Evaluation.vraie(d, Contexte(t(12), ciel = Meteo.PLUIE)))
+        assertFalse(Evaluation.vraie(d, Contexte(t(12), ciel = Meteo.SOLEIL)))
+        assertFalse(Evaluation.vraie(d, Contexte(t(12), ciel = null)))
+        assertEquals("il pleut ou il y a de l'orage", Textes.quand(d))
+    }
+
+    @Test
+    fun meteoLive() {
+        fun e(code: Int, jour: Boolean = true) = EtatMeteo(code, 10, jour, "Meylan", 0)
+        assertEquals("soleil", fr.niakimbo.verso.generateur.MeteoLive.icone(e(0)))
+        assertEquals("lune", fr.niakimbo.verso.generateur.MeteoLive.icone(e(1, jour = false)))
+        assertEquals("eclaircie", fr.niakimbo.verso.generateur.MeteoLive.icone(e(2)))
+        assertEquals("pluie", fr.niakimbo.verso.generateur.MeteoLive.icone(e(63)))
+        assertEquals("orage", fr.niakimbo.verso.generateur.MeteoLive.icone(e(96)))
+        // Toutes les températures se dessinent (sans planter, et avec des LEDs allumées).
+        for (t in -40..50) assertTrue(fr.niakimbo.verso.generateur.Live.temperature(t).frame().litCount > 0)
+    }
 }

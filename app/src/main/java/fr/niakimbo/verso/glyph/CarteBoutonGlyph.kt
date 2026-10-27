@@ -117,7 +117,7 @@ fun CarteBoutonGlyph() {
                                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                         )
                     }, Modifier.fillMaxWidth(), taille = 13.sp)
-                    Etape("2", "Dans Accessibilité, touche « Verso · bouton Glyph » (parfois dans « Applications téléchargées »), puis active-le et accepte.")
+                    Etape("2", "Dans Accessibilité, touche « Verso · Glyph et apps » (parfois dans « Applications téléchargées »), puis active-le et accepte.")
                     BoutonVerre("Ouvrir Accessibilité", {
                         context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                     }, Modifier.fillMaxWidth(), principal = true, taille = 13.sp)

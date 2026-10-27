@@ -6,6 +6,9 @@ import fr.niakimbo.verso.generateur.Chargement
 import fr.niakimbo.verso.generateur.Coeur
 import fr.niakimbo.verso.generateur.Compteur
 import fr.niakimbo.verso.generateur.HorlogeReglable
+import fr.niakimbo.verso.generateur.Live
+import fr.niakimbo.verso.generateur.MeteoLive
+import fr.niakimbo.verso.generateur.MusiqueLive
 import fr.niakimbo.verso.generateur.Onde
 import fr.niakimbo.verso.generateur.Pluie
 import fr.niakimbo.verso.modele.Modele
@@ -84,7 +87,11 @@ class Catalogue(
         val biblio = repository.bibliotheque()
         val calcules = listOf(HorlogeReglable.entree, Coeur.entree, Onde.entree, Pluie.entree, Chargement.entree, Compteur.entree)
             .associateBy { it.id }
-        val entrees = biblio.modeles.map { m ->
+        // Modèles live (météo, musique) : ils reprennent les icônes de la bibliothèque. Rayon « Live », en tête.
+        val pluie = Pluie.entree.versions.first().construire(Valeurs())
+        val icone: (String) -> Modele? = { id -> if (id == "pluie") pluie else biblio.parId(id) }
+        val live = listOf(MeteoLive.entree(icone), MusiqueLive.entree(icone)).map { it.avecCategorie(Live.RAYON) }
+        val entrees = live + biblio.modeles.map { m ->
             (calcules[m.id] ?: EntreeCatalogue(
                 id = m.id,
                 nom = m.nom,
