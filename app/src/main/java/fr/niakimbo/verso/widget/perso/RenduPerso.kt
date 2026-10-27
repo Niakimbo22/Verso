@@ -27,6 +27,8 @@ object RenduPerso {
         val enCharge: Boolean,
         val regleAuto: String?,
         val glyphEteint: Boolean,
+        /** Le Glyph Toy de Verso est lié (le modèle reste au dos app fermée). */
+        val toyLie: Boolean = false,
     )
 
     fun construire(context: Context, w: WidgetPerso, etat: Etat, cliquable: Boolean = true, budget: Int = RenduWidget.BUDGET_OCTETS): RemoteViews {
@@ -55,6 +57,7 @@ object RenduPerso {
             WidgetPerso.Couleur.NORMALE -> couleurNormale
             WidgetPerso.Couleur.ROUGE -> 0xFFD71921.toInt()
             WidgetPerso.Couleur.DISCRETE -> couleurDiscrete
+            WidgetPerso.Couleur.PRINCIPALE -> w.accent ?: couleurNormale
         }
 
         var matricePosee = false
@@ -75,6 +78,15 @@ object RenduPerso {
                 WidgetPerso.Type.TEXTE -> b.texte.takeIf { it.isNotBlank() }?.let { texte(context, it, couleur(b), taille(b, 11f, 15f, 20f, 28f), gravite) }
                 WidgetPerso.Type.BOUTONS -> boutons(context, couleur(b), etat, cliquable, gravite)
                 WidgetPerso.Type.ESPACE -> RemoteViews(context.packageName, R.layout.perso_espace)
+                WidgetPerso.Type.GLYPH -> {
+                    val (t, c) = when {
+                        etat.glyphEteint -> "○ GLYPH ÉTEINT" to 0xFFD71921.toInt()
+                        etat.modele == null -> "○ MATRICE ÉTEINTE" to couleurDiscrete
+                        etat.toyLie -> "● AU DOS · TOY ACTIF" to 0xFF3DDC84.toInt()
+                        else -> "● GLYPH ALLUMÉ" to 0xFF3DDC84.toInt()
+                    }
+                    texte(context, t, c, taille(b, 9f, 11f, 13f, 15f), gravite)
+                }
             }
             enfant ?: continue
             if (ligne && b.type == WidgetPerso.Type.MATRICE) rv.addView(R.id.zone_matrice, enfant) else rv.addView(R.id.blocs, enfant)
@@ -117,15 +129,17 @@ object RenduPerso {
             taille = StyleWidget.Taille.MOYEN,
             accent = w.ledsRouges,
         )
-        val c = RenduWidget.couleurs(style)
+        val c0 = RenduWidget.couleurs(style)
+        val c = c0.copy(allumee = w.accent ?: c0.allumee)
         // Sur un fond « Aucun » ou « Verre », le disque et le masque prennent une teinte neutre.
         val disque = if (w.fond == WidgetPerso.Fond.PLEIN) c.disque else if (w.theme == WidgetPerso.Theme.CLAIR) 0xFFF2F2F2.toInt() else 0xFF000000.toInt()
         val rv = RemoteViews(context.packageName, layout)
-        rv.setInt(R.id.disque, "setColorFilter", c.eteinte)
+        // LEDs éteintes cachées : le disque prend la couleur du masque, seules les LEDs allumées se voient.
+        rv.setInt(R.id.disque, "setColorFilter", if (w.ledsEteintes) c.eteinte else disque)
         rv.setImageViewResource(R.id.masque, RenduWidget.masque(style))
         rv.setInt(R.id.masque, "setColorFilter", disque)
         rv.removeAllViews(R.id.flipper)
-        RenduWidget.sequence(modele, anime = true, budget = budget)?.let { seq ->
+        RenduWidget.sequence(modele, anime = w.anime, budget = budget)?.let { seq ->
             rv.setInt(R.id.flipper, "setFlipInterval", seq.intervalleMs)
             for (i in seq.ordre) {
                 val img = RemoteViews(context.packageName, R.layout.widget_image)
@@ -134,26 +148,38 @@ object RenduPerso {
                 rv.addView(R.id.flipper, img)
             }
         }
-        if (cliquable) {
-            rv.setOnClickPendingIntent(
-                R.id.matrice,
-                PendingIntent.getActivity(
-                    context, 0,
-                    Intent(context, ChoixRapideActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-                ),
-            )
-        }
+        if (cliquable) rv.setOnClickPendingIntent(R.id.matrice, actionTap(context, w))
         return rv
     }
+
+    /** Tap sur la matrice, selon le réglage du widget. */
+    private fun actionTap(context: Context, w: WidgetPerso): PendingIntent = when (w.tap) {
+        WidgetPerso.Tap.SUIVANT -> WidgetActions.intention(context, WidgetActions.SUIVANT)
+        WidgetPerso.Tap.ONOFF -> WidgetActions.intention(context, WidgetActions.ONOFF)
+        WidgetPerso.Tap.AFFICHER -> w.modeleFixe?.let { WidgetActions.afficher(context, it) }
+            ?: fenetreChoix(context)
+        WidgetPerso.Tap.VERSO -> PendingIntent.getActivity(
+            context, 1,
+            Intent(context, fr.niakimbo.verso.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        WidgetPerso.Tap.CHOISIR -> fenetreChoix(context)
+    }
+
+    private fun fenetreChoix(context: Context): PendingIntent = PendingIntent.getActivity(
+        context, 0,
+        Intent(context, ChoixRapideActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+    )
 
     private fun boutons(context: Context, couleur: Int, etat: Etat, cliquable: Boolean, gravite: Int): RemoteViews =
         RemoteViews(context.packageName, R.layout.perso_boutons).apply {
             setInt(R.id.rangee, "setGravity", gravite or Gravity.CENTER_VERTICAL)
-            for (id in intArrayOf(R.id.btn_prec, R.id.btn_suiv)) setTextColor(id, couleur)
+            // Icônes dessinées (et pas les caractères ‹ ⏻ ›) : la police du lanceur n'a pas « ⏻ ».
+            for (id in intArrayOf(R.id.btn_prec, R.id.btn_suiv)) setInt(id, "setColorFilter", couleur)
             val eteint = etat.modele == null || etat.glyphEteint
-            setTextViewText(R.id.btn_onoff, if (eteint) "▶" else "⏻")
-            setTextColor(R.id.btn_onoff, if (eteint) 0xFFD71921.toInt() else couleur)
+            setImageViewResource(R.id.btn_onoff, if (eteint) R.drawable.ic_w_lecture else R.drawable.ic_w_marche)
+            setInt(R.id.btn_onoff, "setColorFilter", if (eteint) 0xFFD71921.toInt() else couleur)
             if (cliquable) {
                 setOnClickPendingIntent(R.id.btn_prec, WidgetActions.intention(context, WidgetActions.PRECEDENT))
                 setOnClickPendingIntent(R.id.btn_suiv, WidgetActions.intention(context, WidgetActions.SUIVANT))

@@ -11,10 +11,21 @@ data class WidgetPerso(
     val fond: Fond = Fond.VERRE,
     val theme: Theme = Theme.SOMBRE,
     val alignement: Alignement = Alignement.CENTRE,
-    /** LEDs de la matrice en rouge Nothing. */
+    /** LEDs de la matrice en rouge Nothing (ancien réglage ; voir [accent]). */
     val ledsRouges: Boolean = false,
     val pointsCarres: Boolean = false,
+    /** Couleur des LEDs allumées et du texte principal (ARGB) ; null = blanc (noir en clair). */
+    val accent: Int? = null,
+    /** LEDs éteintes visibles (gris foncé) ou fondues dans le disque. */
+    val ledsEteintes: Boolean = true,
+    /** Animation jouée par le lanceur, ou image fixe. */
+    val anime: Boolean = true,
+    /** Ce que fait un tap sur la matrice. */
+    val tap: Tap = Tap.CHOISIR,
+    /** Modèle épinglé (null = celui affiché au dos). */
+    val modeleFixe: String? = null,
 ) {
+    enum class Tap { CHOISIR, SUIVANT, ONOFF, VERSO, AFFICHER }
     enum class Disposition { COLONNE, LIGNE }
     enum class Fond { PLEIN, VERRE, TRANSPARENT }
     enum class Theme { SOMBRE, CLAIR }
@@ -27,7 +38,8 @@ data class WidgetPerso(
         val texte: String = "",
     )
 
-    enum class Type { MATRICE, HEURE, DATE, NOM, BATTERIE, AUTO, TEXTE, BOUTONS, ESPACE }
+    enum class Type { MATRICE, HEURE, DATE, NOM, BATTERIE, AUTO, TEXTE, BOUTONS, ESPACE, GLYPH }
     enum class Taille { S, M, L, XL }
-    enum class Couleur { NORMALE, ROUGE, DISCRETE }
+    /** PRINCIPALE = la couleur choisie dans la galerie (sinon blanc / noir). */
+    enum class Couleur { NORMALE, ROUGE, DISCRETE, PRINCIPALE }
 }

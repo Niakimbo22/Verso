@@ -14,6 +14,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -105,11 +108,15 @@ open class GalerieActivity : ComponentActivity() {
                         WidgetMaj.majTous(app, forcer = true)
                         finish()
                     }
-                } else if (PoseRecepteur.poser(this, w)) {
-                    Toast.makeText(this, "Confirme l'ajout sur l'écran d'accueil", Toast.LENGTH_SHORT).show()
-                    finish()
                 } else {
-                    Toast.makeText(this, "Ton écran d'accueil ne le permet pas : appui long sur l'écran › Widgets › Verso · ${w.taille.nom} ${w.taille.label}", Toast.LENGTH_LONG).show()
+                    lifecycleScope.launch {
+                        if (PoseRecepteur.poser(this@GalerieActivity, w, modeleApercu(app, w))) {
+                            Toast.makeText(this@GalerieActivity, "Confirme l'ajout sur l'écran d'accueil", Toast.LENGTH_SHORT).show()
+                            finish()
+                        } else {
+                            Toast.makeText(this@GalerieActivity, "Ton écran d'accueil ne le permet pas : appui long sur l'écran › Widgets › Verso · ${w.taille.nom} ${w.taille.label}", Toast.LENGTH_LONG).show()
+                        }
+                    }
                 }
             }
         }
@@ -159,8 +166,12 @@ class PoseRecepteur : BroadcastReceiver() {
     companion object {
         private const val EXTRA_JETON = "jeton"
 
-        /** Demande au lanceur de poser le widget à SA taille ; faux si le lanceur ne sait pas faire. */
-        fun poser(context: Context, w: WidgetVerso): Boolean {
+        /**
+         * Demande au lanceur de poser le widget à SA taille ; faux si le lanceur ne sait pas faire.
+         * La fenêtre de confirmation montre le vrai widget choisi (`EXTRA_APPWIDGET_PREVIEW`),
+         * et plus l'aperçu fixe « 12:34 · VERSO PERSO » de la liste du lanceur.
+         */
+        fun poser(context: Context, w: WidgetVerso, modele: Modele?): Boolean {
             val app = context.applicationContext as VersoApp
             val manager = AppWidgetManager.getInstance(context)
             if (!manager.isRequestPinAppWidgetSupported) return false
@@ -171,7 +182,14 @@ class PoseRecepteur : BroadcastReceiver() {
                 Intent(context, PoseRecepteur::class.java).putExtra(EXTRA_JETON, jeton),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
             )
-            return manager.requestPinAppWidget(ComponentName(context, w.taille.classe), null, rappel)
+            val extras = Bundle()
+            try {
+                val rv = RenduPerso.construire(context, w.plan().copy(anime = false), WidgetMaj.etatPerso(app, modele), cliquable = false, budget = 60_000)
+                extras.putParcelable(AppWidgetManager.EXTRA_APPWIDGET_PREVIEW, rv)
+            } catch (e: Exception) {
+                app.journalToy.ajouter("Aperçu de pose du widget impossible : ${e.javaClass.simpleName}")
+            }
+            return manager.requestPinAppWidget(ComponentName(context, w.taille.classe), extras, rappel)
         }
     }
 }
@@ -184,11 +202,17 @@ class PoseRecepteur : BroadcastReceiver() {
 @Composable
 private fun caseEcran(): Dp = ((LocalConfiguration.current.screenWidthDp - 56) / 4).dp
 
+/** Modèle que montrera le widget : l'épinglé, sinon celui au dos, sinon le premier de la bibliothèque. */
+internal suspend fun modeleApercu(app: VersoApp, w: WidgetVerso): Modele? =
+    w.modele?.let { app.catalogue.resoudre(it) }
+        ?: app.player.actif.value
+        ?: app.catalogue.contenu().entrees.firstOrNull { !it.cache }?.let(app.catalogue::resoudre)
+
 @Composable
 fun ApercuWidget(app: VersoApp, w: WidgetVerso, modifier: Modifier = Modifier, echelle: Float = 1f) {
     val modele by app.player.actif.collectAsStateWithLifecycle()
-    val apercuModele by produceState<Modele?>(modele, modele) {
-        value = modele ?: app.catalogue.contenu().entrees.firstOrNull { !it.cache }?.let(app.catalogue::resoudre)
+    val apercuModele by produceState<Modele?>(modele, modele, w.modele) {
+        value = modeleApercu(app, w)
     }
     val c = caseEcran() * echelle
     val plan = remember(w) { w.plan() }
@@ -309,7 +333,7 @@ private fun EcranGalerie(
     }
 }
 
-/** Page d'un genre : les tailles défilent (comme sur l'iPhone), le style en dessous, puis « Ajouter ». */
+/** Page d'un genre : les tailles défilent (comme sur l'iPhone), les réglages en dessous, puis « Ajouter ». */
 @Composable
 private fun PageGenre(
     app: VersoApp,
@@ -322,11 +346,10 @@ private fun PageGenre(
 ) {
     val tailles = tailleImposee?.let { listOf(it) } ?: genre.tailles
     val pager = rememberPagerState(initialPage = tailles.indexOf(TailleW.T2x2).coerceAtLeast(0)) { tailles.size }
-    var style by remember { mutableStateOf(actuel?.style ?: WidgetVerso.Style.VERRE) }
-    var rouge by remember { mutableStateOf(actuel?.rouge ?: false) }
-    var texte by remember { mutableStateOf(actuel?.texte ?: "") }
+    // Tous les réglages du widget (le genre et la taille viennent de la page et du défilement).
+    var r by remember { mutableStateOf(actuel ?: WidgetVerso(genre, tailles.first())) }
     val scroll = rememberScrollState()
-    fun courant(page: Int) = WidgetVerso(genre, tailles[page], style, rouge, texte)
+    fun courant(page: Int) = r.copy(genre = genre, taille = tailles[page])
 
     EcranVerre(
         defilement = scroll,
@@ -347,7 +370,7 @@ private fun PageGenre(
             Text(genre.description, color = Discret, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 18.dp))
             Spacer(Modifier.height(16.dp))
 
-            // Les tailles, à faire défiler.
+            // Les tailles, à faire défiler. L'aperçu est le VRAI widget (mêmes vues que sur l'écran d'accueil).
             val hauteur = caseEcran() * 4 * 0.86f + 40.dp
             HorizontalPager(pager, Modifier.fillMaxWidth().height(hauteur)) { page ->
                 Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -376,43 +399,149 @@ private fun PageGenre(
                 Text("Taille du widget posé (pour une autre taille, ajoute un nouveau widget)", color = Discret, fontSize = 11.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
             }
 
-            // Style.
+            val base = courant(pager.currentPage).blocsDeBase().map { it.type }.toSet()
+            val avecMatrice = WidgetPerso.Type.MATRICE in base
+
+            // ---- Apparence
             Spacer(Modifier.height(24.dp))
-            PanneauVerre(Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Panneau("APPARENCE") {
+                Choix("STYLE", WidgetVerso.Style.entries, r.style, { it.label }) { r = r.copy(style = it) }
+                Choix("COULEUR", WidgetVerso.CouleurW.entries, r.couleur, {
+                    if (it == WidgetVerso.CouleurW.BLANC && r.style == WidgetVerso.Style.CLAIR) "Noir" else it.label
+                }, defile = true) { r = r.copy(couleur = it, rouge = it == WidgetVerso.CouleurW.ROUGE) }
+                if (genre == Genre.MESSAGE) {
                     Column {
-                        Etiquette("STYLE")
+                        Etiquette("TON TEXTE")
                         Spacer(Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            WidgetVerso.Style.entries.forEach { s -> PuceVerre(s.label, s == style, Modifier.weight(1f)) { style = s } }
-                        }
-                    }
-                    Column {
-                        Etiquette("COULEUR")
-                        Spacer(Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            PuceVerre(if (style == WidgetVerso.Style.CLAIR) "Noir" else "Blanc", !rouge, Modifier.weight(1f)) { rouge = false }
-                            PuceVerre("Rouge Nothing", rouge, Modifier.weight(1f)) { rouge = true }
-                        }
-                    }
-                    if (genre == Genre.MESSAGE) {
-                        Column {
-                            Etiquette("TON TEXTE")
-                            Spacer(Modifier.height(8.dp))
-                            PanneauVerre(Modifier.fillMaxWidth(), forme = RoundedCornerShape(50)) {
-                                BasicTextField(
-                                    value = texte, onValueChange = { texte = it.take(40) }, singleLine = true,
-                                    textStyle = TextStyle(color = Color.White, fontSize = 16.sp), cursorBrush = SolidColor(Rouge),
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 13.dp),
-                                    decorationBox = { champ ->
-                                        if (texte.isEmpty()) Text("Bonne journée", color = Discret, fontSize = 16.sp)
-                                        champ()
-                                    },
-                                )
-                            }
+                        PanneauVerre(Modifier.fillMaxWidth(), forme = RoundedCornerShape(50)) {
+                            BasicTextField(
+                                value = r.texte, onValueChange = { r = r.copy(texte = it.take(40)) }, singleLine = true,
+                                textStyle = TextStyle(color = Color.White, fontSize = 16.sp), cursorBrush = SolidColor(Rouge),
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 13.dp),
+                                decorationBox = { champ ->
+                                    if (r.texte.isEmpty()) Text("Bonne journée", color = Discret, fontSize = 16.sp)
+                                    champ()
+                                },
+                            )
                         }
                     }
                 }
+            }
+
+            // ---- Matrice (Glyph)
+            Spacer(Modifier.height(14.dp))
+            Panneau("MATRICE") {
+                if (!avecMatrice) {
+                    Text("Cette taille n'a pas de matrice : glisse vers une plus grande pour la voir.", color = Discret, fontSize = 12.sp)
+                }
+                Column {
+                    Etiquette("MODÈLE")
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        PuceVerre("Suit le dos", r.modele == null, Modifier.weight(1f)) {
+                            r = r.copy(modele = null, tap = if (r.tap == WidgetVerso.TapW.AFFICHER) WidgetVerso.TapW.CHOISIR else r.tap)
+                        }
+                        PuceVerre("📌 Épinglé", r.modele != null, Modifier.weight(1f)) {
+                            if (r.modele == null) r = r.copy(modele = app.player.actif.value?.id ?: app.store.dernierModele ?: "pluie")
+                        }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        if (r.modele == null) "Le widget montre le modèle affiché au dos du téléphone."
+                        else "Le widget montre toujours ce modèle. Avec « Au toucher : Afficher ce modèle », c'est un raccourci.",
+                        color = Discret, fontSize = 11.sp, lineHeight = 15.sp,
+                    )
+                    if (r.modele != null) {
+                        Spacer(Modifier.height(10.dp))
+                        ChoixModele(app, r.modele) { r = r.copy(modele = it) }
+                    }
+                }
+                Choix("POINTS", WidgetVerso.Points.entries, r.points, { it.label }) { r = r.copy(points = it) }
+                Choix("LEDS ÉTEINTES", listOf(true, false), r.ledsEteintes, { if (it) "Visibles" else "Cachées" }) { r = r.copy(ledsEteintes = it) }
+                Choix("ANIMATION", listOf(true, false), r.anime, { if (it) "Animée" else "Image fixe" }) { r = r.copy(anime = it) }
+                Choix(
+                    "AU TOUCHER",
+                    WidgetVerso.TapW.entries.filter { it != WidgetVerso.TapW.AFFICHER || r.modele != null },
+                    r.tap, { it.label }, defile = true,
+                ) { r = r.copy(tap = it) }
+            }
+
+            // ---- Ce qui est affiché
+            Spacer(Modifier.height(14.dp))
+            Panneau("AFFICHER") {
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (WidgetPerso.Type.NOM in base) PuceVerre(coche(r.nom) + "Nom du modèle", r.nom) { r = r.copy(nom = !r.nom) }
+                    if (WidgetPerso.Type.BOUTONS in base) PuceVerre(coche(r.boutons) + "Boutons ‹ ⏻ ›", r.boutons) { r = r.copy(boutons = !r.boutons) }
+                    if (WidgetPerso.Type.AUTO in base) PuceVerre(coche(r.regle) + "Règle auto", r.regle) { r = r.copy(regle = !r.regle) }
+                    PuceVerre(coche(r.etatGlyph) + "État du Glyph", r.etatGlyph) { r = r.copy(etatGlyph = !r.etatGlyph) }
+                }
+                Text(
+                    "État du Glyph : « ● Au dos · Toy actif », « ● Glyph allumé » ou « ○ Glyph éteint », à jour tout seul.",
+                    color = Discret, fontSize = 11.sp, lineHeight = 15.sp,
+                )
+            }
+        }
+    }
+}
+
+private fun coche(v: Boolean) = if (v) "✓ " else ""
+
+@Composable
+private fun Panneau(titre: String, contenu: @Composable () -> Unit) {
+    PanneauVerre(Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text(titre, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+            contenu()
+        }
+    }
+}
+
+/** Une rangée de puces à choix unique ; [defile] = rangée qui défile (beaucoup de choix). */
+@Composable
+private fun <T> Choix(titre: String, options: List<T>, choisi: T, label: (T) -> String, defile: Boolean = false, onChoix: (T) -> Unit) {
+    Column {
+        Etiquette(titre)
+        Spacer(Modifier.height(8.dp))
+        if (defile) {
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                options.forEach { o -> PuceVerre(label(o), o == choisi) { onChoix(o) } }
+            }
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                options.forEach { o -> PuceVerre(label(o), o == choisi, Modifier.weight(1f)) { onChoix(o) } }
+            }
+        }
+    }
+}
+
+/** Choix du modèle épinglé : la bibliothèque en une rangée (aperçus fixes, calculés à l'affichage). */
+@Composable
+private fun ChoixModele(app: VersoApp, choisi: String?, onChoix: (String) -> Unit) {
+    val contenu by produceState<fr.niakimbo.verso.reglage.Catalogue.Contenu?>(null) { value = app.catalogue.contenu() }
+    val entrees = contenu?.entrees?.filter { !it.cache }.orEmpty()
+    val cache = remember(contenu) { fr.niakimbo.verso.ui.CacheModeles(app.catalogue) }
+    val etat = androidx.compose.foundation.lazy.rememberLazyListState(
+        initialFirstVisibleItemIndex = entrees.indexOfFirst { it.id == choisi }.coerceAtLeast(0),
+    )
+    androidx.compose.foundation.lazy.LazyRow(state = etat, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(entrees.size, key = { entrees[it].id }) { i ->
+            val e = entrees[i]
+            val m = cache.modele(e)
+            val sel = e.id == choisi
+            val forme = RoundedCornerShape(14.dp)
+            Column(
+                Modifier
+                    .width(70.dp)
+                    .clip(forme)
+                    .background(if (sel) Rouge.copy(alpha = 0.25f) else Color.Black.copy(alpha = 0.35f))
+                    .border(if (sel) 1.5.dp else 0.5.dp, if (sel) Rouge else Color.White.copy(alpha = 0.15f), forme)
+                    .clickable { onChoix(e.id) }
+                    .padding(6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                fr.niakimbo.verso.ui.DotMatrix(m?.let { fr.niakimbo.verso.ui.imageFixe(it) }, Modifier.size(56.dp))
+                Spacer(Modifier.height(4.dp))
+                Text(e.nom, color = Color.White, fontSize = 10.sp, fontFamily = FontFamily.Monospace, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
@@ -446,7 +575,7 @@ fun SectionMesWidgets(app: VersoApp, titre: Boolean = true) {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text("${w.genre.titre} · ${t.nom} ${t.label}", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                                Text("Sur ton écran d'accueil · ${w.style.label}" + if (w.rouge) " · rouge" else "", color = Discret, fontSize = 12.sp)
+                                Text("Sur ton écran d'accueil · ${w.resume()}", color = Discret, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                             Text("Modifier ›", color = Discret, fontSize = 13.sp)
                         }

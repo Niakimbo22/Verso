@@ -164,10 +164,15 @@ class VersoApp : Application() {
             combine(
                 listOf(
                     player.actif, reglages.revision, stylesWidget.revision, mesModeles.revision,
-                    widgetsPerso.revision, moteurRegles.enCours, fr.niakimbo.verso.glyph.BoutonGlyph.allume,
+                    widgetsPerso.revision, moteurRegles.enCours, fr.niakimbo.verso.glyph.BoutonGlyph.allume, toyLie,
                 ),
             ) { valeurs -> valeurs.map { (it as? fr.niakimbo.verso.modele.Modele)?.id ?: it } }
                 .collectLatest { WidgetMaj.majTous(this@VersoApp) }
+        }
+        // Liste des widgets du lanceur : le vrai rendu de chaque taille (Android 15+), peu après le démarrage.
+        appScope.launch {
+            kotlinx.coroutines.delay(8_000)
+            runCatching { WidgetMaj.publierApercus(this@VersoApp) }
         }
     }
 }

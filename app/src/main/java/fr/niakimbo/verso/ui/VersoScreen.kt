@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -104,6 +105,13 @@ fun VersoScreen(
     val cache = remember(bibliotheque, revisionReglages) { CacheModeles(catalogue) }
 
     var bibliothequeOuverte by rememberSaveable { mutableStateOf(false) }
+    var menuOuvert by rememberSaveable { mutableStateOf(false) }
+    var journalOuvert by rememberSaveable { mutableStateOf(false) }
+    var nouveautesOuvertes by rememberSaveable { mutableStateOf(false) }
+    var detailsStatut by rememberSaveable { mutableStateOf(false) }
+    // Position (dans la page) des sections qu'on rejoint depuis le menu.
+    var yStatut by remember { mutableIntStateOf(0) }
+    var yReglages by remember { mutableIntStateOf(0) }
     var fiche by remember { mutableStateOf<EntreeCatalogue?>(null) }
     var widgetsOuverts by rememberSaveable { mutableStateOf(false) }
     var plusOuvert by rememberSaveable { mutableStateOf(false) }
@@ -120,7 +128,60 @@ fun VersoScreen(
         filtre.chercher = false
         bibliothequeOuverte = true
     }
-    BackHandler(enabled = bibliothequeOuverte) { bibliothequeOuverte = false }
+    BackHandler(enabled = bibliothequeOuverte || journalOuvert || nouveautesOuvertes) {
+        when {
+            nouveautesOuvertes -> nouveautesOuvertes = false
+            journalOuvert -> journalOuvert = false
+            else -> bibliothequeOuverte = false
+        }
+    }
+    // Déclaré après : passe en premier quand le menu est ouvert.
+    BackHandler(enabled = menuOuvert) { menuOuvert = false }
+
+    // Après une mise à jour : la fenêtre « Nouveautés » s'ouvre une fois.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (Journal.nouveauteAMontrer(context)) {
+            kotlinx.coroutines.delay(700)
+            Journal.marquerVue(context)
+            if (!banc.enCours) nouveautesOuvertes = true
+        }
+    }
+
+    fun fermerFeuilles() {
+        bibliothequeOuverte = false
+        journalOuvert = false
+        nouveautesOuvertes = false
+    }
+
+    fun aller(d: Destination) {
+        menuOuvert = false
+        when (d) {
+            Destination.ACCUEIL -> { fermerFeuilles(); portee.launch { defilement.animateScrollTo(0) } }
+            Destination.MODELES -> { fermerFeuilles(); ouvrir(TOUS) }
+            Destination.FAVORIS -> { fermerFeuilles(); ouvrir(FAVORIS) }
+            Destination.RECENTS -> { fermerFeuilles(); ouvrir(RECENTS) }
+            Destination.DESSINS -> { fermerFeuilles(); ouvrir(MES) }
+            Destination.CREER -> fr.niakimbo.verso.createur.CreateurActivity.ouvrir(context)
+            Destination.AUTO -> fr.niakimbo.verso.auto.AutomatiqueActivity.ouvrir(context)
+            Destination.WIDGET_AJOUT -> fr.niakimbo.verso.widget.perso.GalerieActivity.ouvrir(context)
+            Destination.WIDGETS -> {
+                fermerFeuilles(); widgetsOuverts = true
+                portee.launch { defilement.animateScrollTo(yReglages) }
+            }
+            Destination.GLYPH -> {
+                fermerFeuilles(); detailsStatut = true
+                portee.launch { defilement.animateScrollTo(yStatut) }
+            }
+            Destination.TOY -> onChoisirToy()
+            Destination.NOUVEAUTES -> { fermerFeuilles(); nouveautesOuvertes = true }
+            Destination.JOURNAL -> { fermerFeuilles(); journalOuvert = true }
+            Destination.PLUS, Destination.DIAGNOSTIC -> {
+                fermerFeuilles(); plusOuvert = true; diagnosticOuvert = d == Destination.DIAGNOSTIC || diagnosticOuvert
+                portee.launch { defilement.animateScrollTo(yReglages) }
+            }
+            Destination.FIGEE -> app.redemarrer("menu Matrice figée", rouvrir = true)
+        }
+    }
     DisposableEffect(banc) {
         banc.defilerPage = { bas, ms -> defilement.animateScrollTo(if (bas) defilement.maxValue else 0, tween(ms)) }
         banc.ouvrirBibliotheque = { o -> if (o) ouvrir(TOUS) else bibliothequeOuverte = false }
@@ -133,7 +194,7 @@ fun VersoScreen(
     // Le mini-lecteur n'apparaît que quand la grande matrice n'est plus à l'écran (ou bibliothèque ouverte).
     var basHeros by remember { mutableIntStateOf(Int.MAX_VALUE) }
     val herosCache by remember { derivedStateOf { defilement.value > basHeros } }
-    val miniVisible = ModePerf.ancien || bibliothequeOuverte || herosCache
+    val miniVisible = (ModePerf.ancien || bibliothequeOuverte || herosCache) && !journalOuvert && !nouveautesOuvertes
 
     EcranVerre(
         defilement = defilement,
@@ -151,6 +212,7 @@ fun VersoScreen(
                     portee.launch { defilement.animateScrollTo(0) }
                 }
             }
+            MenuLateral(menuOuvert, onFermer = { menuOuvert = false }, onAller = ::aller)
             if (banc.enCours) {
                 PanneauVerre(
                     Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(12.dp),
@@ -180,9 +242,20 @@ fun VersoScreen(
                     onFiche = { fiche = it },
                 )
             }
+            val entree = slideInVertically(spring(dampingRatio = 0.86f, stiffness = 420f)) { it } + fadeIn()
+            val sortie = slideOutVertically(tween(260)) { it } + fadeOut(tween(260))
+            AnimatedVisibility(visible = journalOuvert, enter = entree, exit = sortie) {
+                FeuilleJournal(onFermer = { journalOuvert = false })
+            }
+            AnimatedVisibility(visible = nouveautesOuvertes, enter = entree, exit = sortie) {
+                FeuilleNouveautes(
+                    onFermer = { nouveautesOuvertes = false },
+                    onJournal = { nouveautesOuvertes = false; journalOuvert = true },
+                )
+            }
         },
     ) {
-        androidx.compose.runtime.CompositionLocalProvider(LocalFige provides (bibliothequeOuverte && !ModePerf.ancien)) {
+        androidx.compose.runtime.CompositionLocalProvider(LocalFige provides ((bibliothequeOuverte || journalOuvert || nouveautesOuvertes) && !ModePerf.ancien)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -197,7 +270,7 @@ fun VersoScreen(
                 val f by matrix.lastFrame.collectAsStateWithLifecycle()
                 f.hashCode()
             }
-            EnTete(state, onUpdate, onRetry)
+            EnTete(state, onUpdate, onRetry, onMenu = { menuOuvert = true })
             Spacer(Modifier.height(14.dp))
             Heros(
                 app, entrees, onFiche = { fiche = it },
@@ -205,7 +278,10 @@ fun VersoScreen(
             )
             Spacer(Modifier.height(18.dp))
             CarteErreurMatrice(app)
-            LigneStatut(etatToy, onChoisirToy)
+            LigneStatut(
+                etatToy, onChoisirToy, detailsStatut, { detailsStatut = it },
+                Modifier.onGloballyPositioned { yStatut = (it.positionInParent().y - 120f).toInt().coerceAtLeast(0) },
+            )
 
             Spacer(Modifier.height(30.dp))
             Titre("ACCÈS RAPIDE", Modifier.fillMaxWidth())
@@ -218,7 +294,7 @@ fun VersoScreen(
             sectionAuto()
 
             Spacer(Modifier.height(30.dp))
-            Titre("RÉGLAGES", Modifier.fillMaxWidth())
+            Titre("RÉGLAGES", Modifier.fillMaxWidth().onGloballyPositioned { yReglages = (it.positionInParent().y - 120f).toInt().coerceAtLeast(0) })
             Spacer(Modifier.height(12.dp))
             val revisionWidgets by app.widgetsPerso.revision.collectAsStateWithLifecycle()
             val nbWidgets = remember(revisionWidgets) { app.widgetsPerso.poses(context).size }
@@ -290,17 +366,21 @@ private fun EnTete(
     state: UpdateState,
     onUpdate: (UpdateState.Available) -> Unit,
     onRetry: (UpdateState.Error) -> Unit,
+    onMenu: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Verso", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            // Menu latéral : raccourci vers chaque endroit de l'app.
+            fr.niakimbo.verso.ui.verre.RondVerre("☰", onMenu, taille = 18.sp)
+            Spacer(Modifier.width(12.dp))
+            Text("Verso", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             Text(
                 "v${BuildConfig.VERSION_NAME}" + when (state) {
                     UpdateState.Checking -> " · recherche…"
                     UpdateState.UpToDate -> " · à jour"
                     else -> ""
                 },
-                color = Dim, fontSize = 13.sp, modifier = Modifier.padding(bottom = 6.dp),
+                color = Dim, fontSize = 13.sp,
             )
         }
         when (state) {
@@ -308,6 +388,10 @@ private fun EnTete(
             is UpdateState.Available -> {
                 Spacer(Modifier.height(10.dp))
                 BoutonVerre("Mettre à jour · v${state.release.version}", { onUpdate(state) }, Modifier.fillMaxWidth(), principal = true)
+                state.release.sert?.let {
+                    Spacer(Modifier.height(6.dp))
+                    Text(it, color = Dim, fontSize = 12.sp, lineHeight = 16.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                }
                 if (state.awaitingPermission) {
                     Spacer(Modifier.height(8.dp))
                     Note("Autorise l'installation d'apps depuis Verso, puis reviens ici.")

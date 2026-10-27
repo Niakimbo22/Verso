@@ -92,7 +92,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          # Notes = l'entrée la plus récente du journal (1re ligne : à quoi sert la mise à jour).
+          python3 outils/notes_release.py > notes.md
+          printf '\n\nBuild automatique du commit %s.\n' "${GITHUB_SHA}" >> notes.md
           gh release create "v${VERSION}" "verso-v${VERSION}.apk" \
             --title "Verso v${VERSION}" \
-            --notes "Build automatique du commit ${GITHUB_SHA}." \
+            --notes-file notes.md \
             --target "${GITHUB_SHA}"
