@@ -413,10 +413,9 @@ internal fun SectionBanc(banc: BancFluidite) {
         if (!banc.enCours) portee.launch { banc.lancer(fenetre, rapide) }
     }
     Column(Modifier.fillMaxWidth()) {
-        SectionTitle("📊 FLUIDITÉ")
-        Spacer(Modifier.height(6.dp))
-        Hint("Fait défiler l'app tout seul, avec l'ancien moteur puis le nouveau, puis règle ce qui rame. L'écran reste allumé. Ne touche à rien. Pire cas : affiche Pluie avant.")
-        Spacer(Modifier.height(10.dp))
+        Text("📊 Fluidité", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Text("Mesure, compare, puis règle ce qui rame. Ne touche à rien.", color = Discret, fontSize = 12.sp)
+        Spacer(Modifier.height(12.dp))
         if (banc.enCours) {
             ProgressionBanc(banc)
         } else {
@@ -429,8 +428,12 @@ internal fun SectionBanc(banc: BancFluidite) {
             Spacer(Modifier.height(14.dp))
             ResultatsBanc(banc, r)
         }
-        Spacer(Modifier.height(14.dp))
-        ReglagesPerf()
+        Spacer(Modifier.height(10.dp))
+        var reglages by rememberSaveable { mutableStateOf(false) }
+        Lien(if (reglages) "▾ Réglages à la main" else "▸ Réglages à la main", { reglages = !reglages })
+        AnimatedVisibility(reglages, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+            Column { Spacer(Modifier.height(6.dp)); ReglagesPerf() }
+        }
     }
 }
 
@@ -451,49 +454,67 @@ internal fun ProgressionBanc(banc: BancFluidite, modifier: Modifier = Modifier) 
     }
 }
 
-/** Résultats en un coup d'œil : verdict, une carte par scène avec barres ancien / nouveau, réglages faits. */
+/** Verdict d'une comparaison de retards (le bruit d'une mesure courte est grand : ±25 % = « pareil »). */
+private fun verdict(ancien: Double, nouveau: Double): Pair<String, Color> {
+    val f = java.util.Locale.FRANCE
+    return when {
+        nouveau <= 0.5 && ancien > 0.5 -> "✅ parfait" to Vert
+        nouveau < ancien * 0.75 -> {
+            val x = ancien / nouveau
+            "✅ " + (if (x >= 2) String.format(f, "%.0f×", x) else String.format(f, "%.1f×", x)) + " mieux" to Vert
+        }
+        nouveau > ancien * 1.33 && nouveau - ancien > 3 -> "⚠️ moins bien" to Ambre
+        else -> "➖ pareil" to Discret
+    }
+}
+
+/** Résultats d'un coup d'œil : un verdict, une ligne par scène, ce qui ralentit, ce qui a été réglé. Les chiffres sont cachés. */
 @Composable
 private fun ResultatsBanc(banc: BancFluidite, r: BancFluidite.Rapport) {
     val context = LocalContext.current
     val portee = rememberCoroutineScope()
     var details by rememberSaveable { mutableStateOf(false) }
-    val gains = r.lignes.mapNotNull { BancFluidite.gain(it.ancien.pourcentRetard, it.nouveau.pourcentRetard, plusEstMieux = false) }
-    val moyen = if (gains.isEmpty()) null else gains.average().toInt()
+    val totalA = r.lignes.sumOf { it.ancien.pourcentRetard }
+    val totalN = r.lignes.sumOf { it.nouveau.pourcentRetard }
+    val (global, _) = verdict(totalA, totalN)
+    val lent = r.lignes.firstOrNull { it.scene == "Écran principal" }?.nouveau?.plusLente
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        PanneauVerre(Modifier.fillMaxWidth(), forme = RoundedCornerShape(22.dp), actif = true) {
-            Column(Modifier.padding(16.dp)) {
+        PanneauVerre(Modifier.fillMaxWidth(), forme = RoundedCornerShape(24.dp), actif = true) {
+            Column(Modifier.padding(18.dp)) {
                 Text(
                     when {
-                        moyen == null -> "📊 Mesure faite"
-                        moyen >= 10 -> "🚀 Nouveau moteur : $moyen % d'images en retard en moins"
-                        moyen > -10 -> "🤝 Pareil que l'ancien moteur"
-                        else -> "⚠️ Nouveau moteur moins fluide (${-moyen} %)"
+                        global.startsWith("✅") -> "🚀 " + global.removePrefix("✅ ").replaceFirstChar { it.uppercase() }
+                        global.startsWith("⚠️") -> "⚠️ Moins fluide qu'avant"
+                        else -> "➖ Pareil qu'avant"
                     },
-                    color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, lineHeight = 21.sp,
+                    color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold,
                 )
-                Text("${r.quand} · écran ${r.hz} Hz" + if (r.rapide) " · rapide" else "", color = Discret, fontSize = 11.sp)
-            }
-        }
-        r.lignes.forEach { l -> CarteScene(l) }
-        if (r.ouvAncien != null || r.ouvNouveau != null || Demarrage.ms != null) {
-            PanneauVerre(Modifier.fillMaxWidth(), forme = RoundedCornerShape(18.dp)) {
-                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (r.ouvAncien != null || r.ouvNouveau != null) {
-                        Text("📚 Ouverture bibliothèque : ${r.ouvAncien ?: "?"} → ${r.ouvNouveau ?: "?"} ms", color = Color.White, fontSize = 13.sp)
+                Text("${r.quand.substringAfter(' ').take(5)} · ${r.hz} Hz" + if (r.rapide) " · rapide" else "", color = Discret, fontSize = 11.sp)
+                Spacer(Modifier.height(14.dp))
+                r.lignes.forEach { l ->
+                    val (v, c) = verdict(l.ancien.pourcentRetard, l.nouveau.pourcentRetard)
+                    Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("${l.symbole}  ${l.scene.substringBefore(" (")}", color = Color.White, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        Text(v, color = c, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     }
-                    Demarrage.ms?.let { Text("🚀 Ouverture de l'app : $it ms", color = Color.White, fontSize = 13.sp) }
+                }
+                lent?.let { (etape, ms) ->
+                    Spacer(Modifier.height(10.dp))
+                    Text("🐢 Freine le plus : ${etape.substringAfter(' ')} (${ms.toInt()} ms)", color = Discret, fontSize = 12.sp)
                 }
             }
         }
-        // Optimisation automatique.
-        PanneauVerre(Modifier.fillMaxWidth(), forme = RoundedCornerShape(18.dp)) {
-            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(if (banc.ajustements.isEmpty()) "✅ Rien à changer : c'est fluide" else "🛠️ Réglé automatiquement", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                banc.ajustements.forEach { Text(it, color = Color(0xFFDDDDDD), fontSize = 13.sp, lineHeight = 18.sp) }
-                if (banc.ajustements.isNotEmpty()) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
+        // Optimisation automatique : une ligne courte par changement.
+        PanneauVerre(Modifier.fillMaxWidth(), forme = RoundedCornerShape(20.dp)) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (banc.ajustements.isEmpty()) {
+                    Text("✅ Rien à régler", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                } else {
+                    Text("🛠️ Réglé tout seul", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    banc.ajustements.forEach { Text(it.substringBefore(" ("), color = Color(0xFFDDDDDD), fontSize = 14.sp) }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
                         if (banc.peutAnnuler) PuceVerre("↩️  Annuler", false, Modifier.weight(1f)) { banc.annulerAjustements() }
-                        PuceVerre("🔁  Re-mesurer", false, Modifier.weight(1f)) {
+                        PuceVerre("🔁  Vérifier", false, Modifier.weight(1f)) {
                             val f = context.activite()?.window ?: return@PuceVerre
                             if (!banc.enCours) portee.launch { banc.lancer(f, rapide = true) }
                         }
@@ -510,7 +531,12 @@ private fun ResultatsBanc(banc: BancFluidite, r: BancFluidite.Rapport) {
                 android.widget.Toast.makeText(context, "Rapport copié", android.widget.Toast.LENGTH_SHORT).show()
             }
         }
-        if (details) PanelBox { MonoLine(ReglagesUi.derniereMesure ?: BancFluidite.texte(r)) }
+        AnimatedVisibility(details, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                r.lignes.forEach { l -> CarteScene(l) }
+                PanelBox { MonoLine(ReglagesUi.derniereMesure ?: BancFluidite.texte(r)) }
+            }
+        }
     }
 }
 

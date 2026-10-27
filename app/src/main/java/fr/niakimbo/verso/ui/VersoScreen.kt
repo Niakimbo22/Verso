@@ -336,12 +336,21 @@ fun VersoScreen(
                     if (diagnosticOuvert) {
                         Spacer(Modifier.height(8.dp))
                         SectionBanc(banc)
-                        Spacer(Modifier.height(24.dp))
-                        DiagnosticToy(matrix, journalToy, store)
-                        Spacer(Modifier.height(24.dp))
-                        MatrixTestSection(matrix, player, matrixHistory, erreurs, onCompteur = {
-                            bibliotheque?.parId(Compteur.ID)?.let { player.jouer(catalogue.resoudre(it)) }
-                        })
+                        Spacer(Modifier.height(20.dp))
+                        // Le reste (journal du Toy, tests de la matrice) : pour chercher une panne, replié.
+                        var avance by rememberSaveable { mutableStateOf(false) }
+                        Lien(
+                            (if (avance) "▾" else "▸") + " 🔧 Outils avancés · journal du Toy, tests" + if (erreurs.isNotEmpty()) " · ${erreurs.size} ⚠" else "",
+                            { avance = !avance },
+                        )
+                        if (avance) {
+                            Spacer(Modifier.height(12.dp))
+                            DiagnosticToy(matrix, journalToy, store)
+                            Spacer(Modifier.height(24.dp))
+                            MatrixTestSection(matrix, player, matrixHistory, erreurs, onCompteur = {
+                                bibliotheque?.parId(Compteur.ID)?.let { player.jouer(catalogue.resoudre(it)) }
+                            })
+                        }
                     }
                 }
             }
