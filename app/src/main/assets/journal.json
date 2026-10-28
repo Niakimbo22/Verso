@@ -1,5 +1,27 @@
 [
   {
+    "pr": 47,
+    "version": null,
+    "date": "2026-10-28",
+    "titre": "🐛 Égaliseur qui restait après Deezer",
+    "sert": "Quand la musique s'arrête, l'égaliseur part et le modèle d'avant revient.",
+    "essentiel": [
+      "⏹️ Musique arrêtée → modèle d'avant",
+      "🎯 Seule l'app qui joue vraiment compte"
+    ],
+    "sections": [
+      {
+        "titre": "Détail",
+        "points": [
+          "🐢 Android disait « un son joue » encore quelques secondes après l'arrêt, sans prévenir ensuite → règle bloquée",
+          "🎧 Verso lit maintenant l'état réel des lecteurs",
+          "🔁 Revérification 2,5 s après l'arrêt de la musique",
+          "🔔 Accès aux notifs accordé : un son d'une autre app ne garde plus la règle Deezer"
+        ]
+      }
+    ]
+  },
+  {
     "pr": 46,
     "version": null,
     "date": "2026-10-28",

@@ -63,6 +63,14 @@ class MoteurRegles(private val app: VersoApp) {
     /** Dernière situation lue : l'éditeur montre en direct si une condition est vraie. */
     val contexteActuel: StateFlow<Contexte?> = _contexte
 
+    /** Un lecteur de musique / média joue en ce moment (n'importe quelle app). */
+    @Volatile
+    private var sonActif = false
+
+    private fun sonEnCours(configs: List<android.media.AudioPlaybackConfiguration>) = configs.any {
+        it.isActive && it.audioAttributes.usage == android.media.AudioAttributes.USAGE_MEDIA
+    }
+
     private var dernierEtatBatterie: Triple<Boolean, Int, Int>? = null
     private val lampes = ConcurrentHashMap<String, Boolean>()
 
@@ -117,14 +125,17 @@ class MoteurRegles(private val app: VersoApp) {
         val principal = Handler(Looper.getMainLooper())
         audio.registerAudioDeviceCallback(casques, principal)
         // Un son démarre ou s'arrête (n'importe quelle app, sans autorisation) : on réévalue.
-        Musique.signalerAudio(audio.isMusicActive)
+        // On lit l'état des lecteurs fourni par le rappel, pas AudioManager.isMusicActive :
+        // celui-ci reste « vrai » quelques secondes après l'arrêt et aucun rappel ne suit
+        // → la règle Deezer → Égaliseur restait bloquée après la fermeture de Deezer.
+        sonActif = sonEnCours(audio.activePlaybackConfigurations)
+        Musique.signalerAudio(sonActif)
         audio.registerAudioPlaybackCallback(object : AudioManager.AudioPlaybackCallback() {
-            private var avant: Boolean? = null
             override fun onPlaybackConfigChanged(configs: MutableList<android.media.AudioPlaybackConfiguration>?) {
-                val joue = audio.isMusicActive
+                val joue = sonEnCours(configs.orEmpty())
                 Musique.signalerAudio(joue)
-                if (joue != avant) {
-                    avant = joue
+                if (joue != sonActif) {
+                    sonActif = joue
                     evaluer("son")
                 }
             }
@@ -292,8 +303,10 @@ class MoteurRegles(private val app: VersoApp) {
             prochaineAlarme = alarmes.nextAlarmClock?.triggerTime?.let { LocalDateTime.ofInstant(Instant.ofEpochMilli(it), zone) },
             lieu = store.lieu.value,
             zone = zone,
-            // Sans l'accès aux notifications, on sait quand même qu'un son joue (sans savoir quelle app).
-            musique = Musique.lecteurs.ifEmpty { if (audio.isMusicActive) listOf(SON_INCONNU) else emptyList() },
+            // Avec l'accès aux notifications, les sessions média disent exactement qui joue.
+            // Sans lui, on sait quand même qu'un son joue (sans savoir quelle app).
+            musique = if (EcouteNotifs.actif.value) Musique.lecteurs
+            else Musique.lecteurs.ifEmpty { if (sonActif) listOf(SON_INCONNU) else emptyList() },
             app = if (keyguard.isKeyguardLocked) null else AppPremierPlan.pkg,
             // Une mesure de plus de 3 h ne dit plus rien du ciel.
             ciel = Meteo.etat.value?.takeIf { System.currentTimeMillis() - it.luA < 3 * 3_600_000L }?.ciel,

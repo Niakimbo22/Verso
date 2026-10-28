@@ -149,7 +149,7 @@ object Musique {
     val joue: StateFlow<Boolean> = _joue
     private val arret = Runnable { _joue.value = false }
 
-    /** [actif] : AudioManager.isMusicActive, relevé par le moteur de règles. */
+    /** [actif] : un lecteur média joue (rappel AudioPlaybackCallback), relevé par le moteur de règles. */
     fun signalerAudio(actif: Boolean) {
         audioActif = actif
         principal.post { majJoue() }
@@ -169,6 +169,8 @@ object Musique {
     @Volatile
     var lecteurs: List<String> = emptyList()
         private set
+
+    private val reverifier = Runnable { (appli as? VersoApp)?.moteurRegles?.evaluer("musique arrêtée") }
 
     private val surSessions = MediaSessionManager.OnActiveSessionsChangedListener { suivre(it.orEmpty()) }
 
@@ -235,6 +237,9 @@ object Musique {
         if (lecteurs != derniersLecteurs) {
             derniersLecteurs = lecteurs
             (appli as? VersoApp)?.moteurRegles?.evaluer("musique")
+            // Arrêt de la musique : le système met un peu de temps à couper le son, on revérifie.
+            principal.removeCallbacks(reverifier)
+            if (lecteurs.isEmpty()) principal.postDelayed(reverifier, 2_500)
         }
     }
 }
