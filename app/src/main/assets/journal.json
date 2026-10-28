@@ -1,7 +1,41 @@
 [
   {
-    "pr": 39,
+    "pr": 40,
     "version": null,
+    "date": "2026-10-28",
+    "titre": "🎚️ Égaliseur sur la vraie musique",
+    "sert": "L'égaliseur suit enfin le vrai son, et une nouvelle règle commence vide.",
+    "essentiel": [
+      "🎚️ Barres = vraies fréquences de la musique",
+      "🆕 Nouvelle règle : « On commence par quoi ? »",
+      "🎤 Une autorisation à donner (Micro)"
+    ],
+    "sections": [
+      {
+        "titre": "Égaliseur",
+        "points": [
+          "🎚️ 5 barres : graves à gauche → aigus à droite",
+          "🔊 Gain automatique : ça bouge même à faible volume",
+          "🎤 « Micro » demandé par Android, mais Verso lit le son qui sort, pas le micro",
+          "🔁 Pas de son mesuré (autorisation refusée, app fermée…) : l'animation revient"
+        ]
+      },
+      {
+        "titre": "Nouvelle règle",
+        "points": [
+          "🆕 Plus d'horaire mis d'office : tu choisis d'abord la condition",
+          "↩ Retour sur cet écran = règle abandonnée"
+        ]
+      }
+    ],
+    "tester": [
+      "Musique en direct + Spotify : les barres suivent le rythme ?",
+      "Pareil app fermée, téléphone retourné"
+    ]
+  },
+  {
+    "pr": 39,
+    "version": "0.1.86",
     "date": "2026-10-28",
     "titre": "📱 App ouverte et modèles live",
     "sert": "Le dos réagit à l'app ouverte, et affiche la vraie météo ou ta musique en direct.",
