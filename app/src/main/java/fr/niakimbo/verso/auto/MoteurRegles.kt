@@ -117,10 +117,12 @@ class MoteurRegles(private val app: VersoApp) {
         val principal = Handler(Looper.getMainLooper())
         audio.registerAudioDeviceCallback(casques, principal)
         // Un son démarre ou s'arrête (n'importe quelle app, sans autorisation) : on réévalue.
+        Musique.signalerAudio(audio.isMusicActive)
         audio.registerAudioPlaybackCallback(object : AudioManager.AudioPlaybackCallback() {
             private var avant: Boolean? = null
             override fun onPlaybackConfigChanged(configs: MutableList<android.media.AudioPlaybackConfiguration>?) {
                 val joue = audio.isMusicActive
+                Musique.signalerAudio(joue)
                 if (joue != avant) {
                     avant = joue
                     evaluer("son")

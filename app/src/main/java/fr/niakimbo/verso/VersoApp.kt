@@ -169,6 +169,7 @@ class VersoApp : Application() {
                 listOf(
                     player.actif, reglages.revision, stylesWidget.revision, mesModeles.revision,
                     widgetsPerso.revision, moteurRegles.enCours, fr.niakimbo.verso.glyph.BoutonGlyph.allume, toyLie,
+                    fr.niakimbo.verso.auto.Musique.joue,
                 ),
             ) { valeurs -> valeurs.map { (it as? fr.niakimbo.verso.modele.Modele)?.id ?: it } }
                 .collectLatest { WidgetMaj.majTous(this@VersoApp) }

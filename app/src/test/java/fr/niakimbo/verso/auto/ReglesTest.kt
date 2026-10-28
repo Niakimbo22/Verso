@@ -376,4 +376,14 @@ class ReglesTest {
         assertFalse(Evaluation.vraie(Declencheur.AppOuverte(listOf(AppChoisie("com.whatsapp", "WhatsApp"))), Contexte(t(12), musique = listOf("?"))))
         assertFalse(Evaluation.vraie(d, Contexte(t(12))))
     }
+
+    @org.junit.Test
+    fun egaliseurWidget_fixeSansMusique_animeAvecMusique() {
+        val v = fr.niakimbo.verso.reglage.Valeurs()
+        val eg = fr.niakimbo.verso.generateur.EgaliseurLive
+        org.junit.Assert.assertEquals(1, eg.pourWidget(v, false).images.size)
+        org.junit.Assert.assertTrue(eg.pourWidget(v, true).images.size > 1)
+        org.junit.Assert.assertTrue(eg.pourWidget(v.avec("mouvement", "toujours"), false).images.size > 1)
+        org.junit.Assert.assertEquals(1, eg.pourWidget(v.avec("mouvement", "jamais"), true).images.size)
+    }
 }
