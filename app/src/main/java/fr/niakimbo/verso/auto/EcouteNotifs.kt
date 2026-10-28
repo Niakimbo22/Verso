@@ -149,7 +149,7 @@ object Musique {
     val joue: StateFlow<Boolean> = _joue
     private val arret = Runnable { _joue.value = false }
 
-    /** [actif] : un lecteur média joue (rappel AudioPlaybackCallback), relevé par le moteur de règles. */
+    /** [actif] : AudioManager.isMusicActive, relevé par le moteur de règles. */
     fun signalerAudio(actif: Boolean) {
         audioActif = actif
         principal.post { majJoue() }

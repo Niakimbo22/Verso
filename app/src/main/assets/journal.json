@@ -14,7 +14,7 @@
         "titre": "Détail",
         "points": [
           "🐢 Android disait « un son joue » encore quelques secondes après l'arrêt, sans prévenir ensuite → règle bloquée",
-          "🎧 Verso lit maintenant l'état réel des lecteurs",
+          "🎧 Verso revérifie le son 1,5 s et 4 s après chaque changement",
           "🔁 Revérification 2,5 s après l'arrêt de la musique",
           "🔔 Accès aux notifs accordé : un son d'une autre app ne garde plus la règle Deezer"
         ]

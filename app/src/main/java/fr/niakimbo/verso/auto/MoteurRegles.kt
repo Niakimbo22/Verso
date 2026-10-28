@@ -67,8 +67,18 @@ class MoteurRegles(private val app: VersoApp) {
     @Volatile
     private var sonActif = false
 
-    private fun sonEnCours(configs: List<android.media.AudioPlaybackConfiguration>) = configs.any {
-        it.isActive && it.audioAttributes.usage == android.media.AudioAttributes.USAGE_MEDIA
+    private val principalSon = Handler(Looper.getMainLooper())
+
+    /** Relit AudioManager.isMusicActive et réévalue s'il a changé. */
+    private val relireSon = Runnable { majSon() }
+
+    private fun majSon() {
+        val joue = audio.isMusicActive
+        Musique.signalerAudio(joue)
+        if (joue != sonActif) {
+            sonActif = joue
+            evaluer("son")
+        }
     }
 
     private var dernierEtatBatterie: Triple<Boolean, Int, Int>? = null
@@ -125,19 +135,16 @@ class MoteurRegles(private val app: VersoApp) {
         val principal = Handler(Looper.getMainLooper())
         audio.registerAudioDeviceCallback(casques, principal)
         // Un son démarre ou s'arrête (n'importe quelle app, sans autorisation) : on réévalue.
-        // On lit l'état des lecteurs fourni par le rappel, pas AudioManager.isMusicActive :
-        // celui-ci reste « vrai » quelques secondes après l'arrêt et aucun rappel ne suit
-        // → la règle Deezer → Égaliseur restait bloquée après la fermeture de Deezer.
-        sonActif = sonEnCours(audio.activePlaybackConfigurations)
+        // AudioManager.isMusicActive reste « vrai » quelques secondes après l'arrêt, sans nouveau rappel
+        // ensuite → la règle Deezer → Égaliseur restait bloquée. On relit donc 1,5 s et 4 s après.
+        sonActif = audio.isMusicActive
         Musique.signalerAudio(sonActif)
         audio.registerAudioPlaybackCallback(object : AudioManager.AudioPlaybackCallback() {
             override fun onPlaybackConfigChanged(configs: MutableList<android.media.AudioPlaybackConfiguration>?) {
-                val joue = sonEnCours(configs.orEmpty())
-                Musique.signalerAudio(joue)
-                if (joue != sonActif) {
-                    sonActif = joue
-                    evaluer("son")
-                }
+                majSon()
+                principalSon.removeCallbacks(relireSon)
+                principalSon.postDelayed(relireSon, 1_500)
+                principalSon.postDelayed(relireSon, 4_000)
             }
         }, principal)
         try {
