@@ -170,6 +170,8 @@ object Musique {
     var lecteurs: List<String> = emptyList()
         private set
 
+    private val reverifier = Runnable { (appli as? VersoApp)?.moteurRegles?.evaluer("musique arrêtée") }
+
     private val surSessions = MediaSessionManager.OnActiveSessionsChangedListener { suivre(it.orEmpty()) }
 
     fun brancher(context: Context) = principal.post {
@@ -235,6 +237,9 @@ object Musique {
         if (lecteurs != derniersLecteurs) {
             derniersLecteurs = lecteurs
             (appli as? VersoApp)?.moteurRegles?.evaluer("musique")
+            // Arrêt de la musique : le système met un peu de temps à couper le son, on revérifie.
+            principal.removeCallbacks(reverifier)
+            if (lecteurs.isEmpty()) principal.postDelayed(reverifier, 2_500)
         }
     }
 }
