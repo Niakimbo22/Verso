@@ -116,6 +116,17 @@ class MoteurRegles(private val app: VersoApp) {
         }, Context.RECEIVER_NOT_EXPORTED)
         val principal = Handler(Looper.getMainLooper())
         audio.registerAudioDeviceCallback(casques, principal)
+        // Un son démarre ou s'arrête (n'importe quelle app, sans autorisation) : on réévalue.
+        audio.registerAudioPlaybackCallback(object : AudioManager.AudioPlaybackCallback() {
+            private var avant: Boolean? = null
+            override fun onPlaybackConfigChanged(configs: MutableList<android.media.AudioPlaybackConfiguration>?) {
+                val joue = audio.isMusicActive
+                if (joue != avant) {
+                    avant = joue
+                    evaluer("son")
+                }
+            }
+        }, principal)
         try {
             reseaux.registerDefaultNetworkCallback(reseau, principal)
         } catch (_: Exception) {
@@ -279,7 +290,8 @@ class MoteurRegles(private val app: VersoApp) {
             prochaineAlarme = alarmes.nextAlarmClock?.triggerTime?.let { LocalDateTime.ofInstant(Instant.ofEpochMilli(it), zone) },
             lieu = store.lieu.value,
             zone = zone,
-            musique = Musique.lecteurs,
+            // Sans l'accès aux notifications, on sait quand même qu'un son joue (sans savoir quelle app).
+            musique = Musique.lecteurs.ifEmpty { if (audio.isMusicActive) listOf(SON_INCONNU) else emptyList() },
             app = if (keyguard.isKeyguardLocked) null else AppPremierPlan.pkg,
             // Une mesure de plus de 3 h ne dit plus rien du ciel.
             ciel = Meteo.etat.value?.takeIf { System.currentTimeMillis() - it.luA < 3 * 3_600_000L }?.ciel,
@@ -364,6 +376,9 @@ class MoteurRegles(private val app: VersoApp) {
     }
 
     private companion object {
+        /** Un son joue, app inconnue (pas d'accès aux notifications). */
+        const val SON_INCONNU = "?"
+
         val TYPES_CASQUE = setOf(
             AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
             AudioDeviceInfo.TYPE_BLE_HEADSET,

@@ -216,20 +216,25 @@ object MusiqueLive {
 }
 
 /**
- * Égaliseur (28/10, Nico : « qu'il bouge vraiment selon la musique ») : même id que l'ancien modèle
- * animé, qui reste en V1. La V2 suit le vrai son ([Spectre]) : 9 barres, graves à gauche, aigus à droite.
+ * Égaliseur (28/10, Nico : « qu'il bouge vraiment selon la musique », puis « il ressemble à rien ») :
+ * même id que l'ancien modèle animé, qui reste en V1. La V2 suit le vrai son ([Spectre]) avec le
+ * dessin classique de la V1 : barres épaisses espacées, base douce, sommet brillant et un point de
+ * crête qui retombe doucement.
  * Pas de mesure possible (autorisation Micro, Android qui refuse) : l'animation V1 à la place.
- * Mesure active mais silence : une ligne de points au repos.
  */
 object EgaliseurLive {
     const val ID = "egaliseur"
 
     private val STYLE = Reglage.Choix(
-        cle = "v2.style", titre = "Style",
-        description = "Barres qui montent du bas, ou qui s'ouvrent depuis le centre (haut et bas).",
-        options = listOf("centre" to "Centre", "bas" to "Du bas"),
-        defaut = "centre",
+        cle = "v2.forme", titre = "Style",
+        description = "4 grosses barres (comme l'original), 6 barres fines, ou 6 barres qui s'ouvrent depuis le centre.",
+        options = listOf("barres" to "Grosses", "fines" to "Fines", "centre" to "Centre"),
+        defaut = "barres",
     )
+
+    /** Crêtes : hauteur et heure du dernier maximum, par barre (un seul égaliseur affiché à la fois). */
+    private val cretes = FloatArray(6)
+    private val cretesA = LongArray(6)
 
     fun entree(icones: (String) -> Modele?): EntreeCatalogue {
         val ancien = icones(ID)
@@ -241,48 +246,72 @@ object EgaliseurLive {
             "Suit le vrai son du téléphone (autorisation Micro). Sans mesure possible : l'animation V1.",
             listOf(STYLE),
         ) { v ->
-            val centre = v.s(STYLE) == "centre"
+            val style = v.s(STYLE)
             val rendu: (LocalTime) -> MatrixFrame = { _ ->
                 val n = Spectre.niveaux()
-                when {
-                    n == null -> ancien?.let { Live.imageA(it, System.currentTimeMillis()) } ?: Grille().frame()
-                    else -> dessiner(n, centre).frame()
-                }
+                if (n == null) ancien?.let { Live.imageA(it, System.currentTimeMillis()) } ?: Grille().frame()
+                else dessiner(n, style, System.currentTimeMillis()).frame()
             }
+            val exemple = FloatArray(Spectre.BANDES) { listOf(0.55f, 0.9f, 0.7f, 0.45f, 0.8f, 0.6f, 0.35f, 0.5f, 0.3f)[it] }
             Modele(
                 id = ID,
                 nom = "Égaliseur",
                 type = Modele.Type.STATIQUE,
-                images = listOf(Modele.Image(dessiner(FloatArray(Spectre.BANDES) { (0.3f + 0.6f * sin(it * 1.3f)).coerceIn(0.1f, 1f) }, centre).frame(), 1000)),
+                images = listOf(Modele.Image(dessiner(exemple, style, 0, cretesFixes = true).frame(), 1000)),
                 dynamique = Modele.Dynamique.HORLOGE,
                 rendu = rendu,
-                periodeMs = 60,
+                periodeMs = 50,
             )
         }
         return EntreeCatalogue(ID, "Égaliseur", listOf(v1, v2))
     }
 
-    private fun dessiner(n: FloatArray, centre: Boolean): Grille {
+    /** Colonnes de chaque barre selon le style. */
+    private fun colonnes(style: String): List<List<Int>> = when (style) {
+        "barres" -> listOf(listOf(1, 2), listOf(4, 5), listOf(7, 8), listOf(10, 11))
+        else -> listOf(1, 3, 5, 7, 9, 11).map { listOf(it) }
+    }
+
+    private fun dessiner(niv: FloatArray, style: String, ms: Long, cretesFixes: Boolean = false): Grille {
         val g = Grille()
-        val c = Grille.C
-        for (i in 0 until Spectre.BANDES) {
-            val x = 2 + i
-            // Hauteur possible dans le rond de la matrice, pour cette colonne.
-            val demi = kotlin.math.sqrt(42.0 - (x - c) * (x - c)).toInt().coerceAtMost(6)
-            val v = n.getOrElse(i) { 0f }
+        val barres = colonnes(style)
+        val n = Spectre.regrouper(niv, barres.size)
+        val centre = style == "centre"
+        // Bas de la zone : ligne 10 ; haut : ligne 2 (9 lignes, comme l'original).
+        val bas = 10
+        val hauteurMax = 9
+        barres.forEachIndexed { i, cols ->
+            val v = n[i].coerceIn(0f, 1f)
             if (centre) {
-                val h = (v * demi).roundToInt()
-                g.allumer(x, c, Grille.niveau(if (h == 0) 2 else 6))
-                for (k in 1..h) {
-                    val bout = k == h
-                    g.allumer(x, c - k, if (bout) MatrixFrame.MAX else Grille.niveau(6))
-                    g.allumer(x, c + k, if (bout) MatrixFrame.MAX else Grille.niveau(6))
+                val c = Grille.C
+                val demi = (v * 5).roundToInt()
+                for (x in cols) {
+                    g.allumer(x, c, Grille.niveau(if (demi == 0) 2 else 7))
+                    for (k in 1..demi) {
+                        val lum = if (k == demi) MatrixFrame.MAX else Grille.niveau(3 + k)
+                        g.allumer(x, c - k, lum); g.allumer(x, c + k, lum)
+                    }
                 }
-            } else {
-                val bas = c + demi
-                val h = (v * (2 * demi)).roundToInt()
-                g.allumer(x, bas, Grille.niveau(if (h == 0) 2 else 6))
-                for (k in 1..h) g.allumer(x, bas - k, if (k == h) MatrixFrame.MAX else Grille.niveau(6))
+                return@forEachIndexed
+            }
+            val h = (v * hauteurMax).roundToInt().coerceIn(1, hauteurMax)
+            // Crête : remonte tout de suite, retombe d'une ligne toutes les 120 ms après 300 ms de pause.
+            val crete = if (cretesFixes) (h + 1).coerceAtMost(hauteurMax) else synchronized(cretes) {
+                if (h >= cretes[i]) { cretes[i] = h.toFloat(); cretesA[i] = ms }
+                else {
+                    val chute = ((ms - cretesA[i] - 300).coerceAtLeast(0) / 120f)
+                    cretes[i] = (cretes[i] - chute).coerceAtLeast(h.toFloat())
+                    if (chute > 0) cretesA[i] = ms - 300
+                }
+                cretes[i].roundToInt()
+            }
+            for (x in cols) {
+                for (k in 0 until h) {
+                    // Dégradé : base douce, sommet brillant.
+                    val lum = if (k == h - 1) MatrixFrame.MAX else Grille.niveau((3 + k * 5 / hauteurMax).coerceAtMost(8))
+                    g.allumer(x, bas - k, lum)
+                }
+                if (crete > h) g.allumer(x, bas - (crete - 1), Grille.niveau(6))
             }
         }
         return g

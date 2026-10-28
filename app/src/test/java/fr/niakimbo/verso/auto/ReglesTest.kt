@@ -349,4 +349,23 @@ class ReglesTest {
         // Toutes les températures se dessinent (sans planter, et avec des LEDs allumées).
         for (t in -40..50) assertTrue(fr.niakimbo.verso.generateur.Live.temperature(t).frame().litCount > 0)
     }
+
+    // ---- Le son en TOP 1 (28/10) ----
+
+    @Test
+    fun son_top1() {
+        val deezer = AppChoisie("deezer.android.app", "Deezer")
+        val ega = Regle("ega", "Égaliseur", listOf(Declencheur.AppOuverte(listOf(deezer))), Action.Afficher("egaliseur"))
+        val c = Contexte(t(23), app = "fr.niakimbo.verso", musique = listOf("deezer.android.app"))
+        // Deezer joue en arrière-plan : l'app compte comme ouverte.
+        assertTrue(Evaluation.vraie(ega, c))
+        // Règle de son en bas de la liste : elle gagne quand même sur la nuit.
+        assertEquals("ega", Evaluation.gagnante(listOf(nuit, ega), c)?.id)
+        // Plus de son : la nuit reprend.
+        assertEquals("nuit", Evaluation.gagnante(listOf(nuit, ega), Contexte(t(23)))?.id)
+        val musique = Regle("m", "M", listOf(Declencheur.Musique()), Action.Afficher("lune"))
+        assertTrue(Evaluation.estSon(musique))
+        assertFalse(Evaluation.estSon(nuit))
+        assertEquals("m", Evaluation.gagnante(listOf(nuit, musique), Contexte(t(23), musique = listOf("?")))?.id)
+    }
 }
