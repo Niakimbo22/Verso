@@ -22,6 +22,8 @@ class WidgetActions : BroadcastReceiver() {
                     ONOFF -> basculer(app)
                     MINUTE -> WidgetMaj.majTous(app)
                     AFFICHER -> intent.getStringExtra(EXTRA_MODELE)?.let { afficher(app, it) }
+                    CHRONO -> fr.niakimbo.verso.rapide.Chrono.basculer(app)
+                    CHRONO_ZERO -> fr.niakimbo.verso.rapide.Chrono.remettre(app)
                 }
             } finally {
                 attente.finish()
@@ -57,6 +59,8 @@ class WidgetActions : BroadcastReceiver() {
         const val PRECEDENT = "fr.niakimbo.verso.widget.PRECEDENT"
         const val MINUTE = "fr.niakimbo.verso.widget.MINUTE"
         const val AFFICHER = "fr.niakimbo.verso.widget.AFFICHER"
+        const val CHRONO = "fr.niakimbo.verso.widget.CHRONO"
+        const val CHRONO_ZERO = "fr.niakimbo.verso.widget.CHRONO_ZERO"
         private const val EXTRA_MODELE = "modele"
 
         /** Une intention par modèle (l'adresse les distingue : sinon Android les confondrait). */

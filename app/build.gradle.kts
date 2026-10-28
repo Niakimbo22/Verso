@@ -58,7 +58,10 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8 (28/10) : l'APK passait les 22 Mo (Compose non réduit), d'où des MAJ de plus en plus longues.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = if (hasReleaseSigning) {
                 signingConfigs.getByName("release")
             } else {

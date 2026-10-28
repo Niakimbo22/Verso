@@ -38,7 +38,7 @@ data class WidgetPerso(
         val texte: String = "",
     )
 
-    enum class Type { MATRICE, HEURE, DATE, NOM, BATTERIE, AUTO, TEXTE, BOUTONS, ESPACE, GLYPH }
+    enum class Type { MATRICE, HEURE, DATE, NOM, BATTERIE, AUTO, TEXTE, BOUTONS, ESPACE, GLYPH, CHRONO, BOUTONS_CHRONO }
     enum class Taille { S, M, L, XL }
     /** PRINCIPALE = la couleur choisie dans la galerie (sinon blanc / noir). */
     enum class Couleur { NORMALE, ROUGE, DISCRETE, PRINCIPALE }

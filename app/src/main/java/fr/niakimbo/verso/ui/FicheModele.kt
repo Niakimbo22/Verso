@@ -158,6 +158,22 @@ fun FicheModele(
             }
             Spacer(Modifier.height(8.dp))
             Text(version.description, color = Dim, fontSize = 12.sp, lineHeight = 16.sp, modifier = Modifier.fillMaxWidth())
+            if (entree.id == fr.niakimbo.verso.rapide.Chrono.ID) {
+                Spacer(Modifier.height(12.dp))
+                val app = LocalContext.current.applicationContext as fr.niakimbo.verso.VersoApp
+                val chrono by fr.niakimbo.verso.rapide.Chrono.etat.collectAsStateWithLifecycle()
+                val portee = rememberCoroutineScope()
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    fr.niakimbo.verso.ui.verre.BoutonVerre(
+                        if (chrono.enMarche) "⏸  Pause" else "▶  Démarrer",
+                        { portee.launch { fr.niakimbo.verso.rapide.Chrono.basculer(app) } },
+                        Modifier.weight(1f), principal = !chrono.enMarche, taille = 15.sp,
+                    )
+                    if (!chrono.aZero) fr.niakimbo.verso.ui.verre.BoutonVerre(
+                        "↺  Zéro", { portee.launch { fr.niakimbo.verso.rapide.Chrono.remettre(app) } }, Modifier.weight(1f), taille = 15.sp,
+                    )
+                }
+            }
             if (entree.id == fr.niakimbo.verso.generateur.MusiqueLive.ID || entree.id == fr.niakimbo.verso.generateur.EgaliseurLive.ID) {
                 Spacer(Modifier.height(12.dp))
                 fr.niakimbo.verso.auto.PermissionSpectre()
