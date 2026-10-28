@@ -116,6 +116,7 @@ private fun EcranAuto(app: VersoApp, onFermer: () -> Unit) {
     val contenu by produceState<Catalogue.Contenu?>(null, revision) { value = app.catalogue.contenu() }
     var edition by remember { mutableStateOf<Edition?>(null) }
 
+    if (edition == null) DemandeNotifs(app)
     val ed = edition
     if (ed != null) {
         BackHandler { edition = null }

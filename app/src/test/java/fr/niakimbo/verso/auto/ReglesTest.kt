@@ -368,4 +368,12 @@ class ReglesTest {
         assertFalse(Evaluation.estSon(nuit))
         assertEquals("m", Evaluation.gagnante(listOf(nuit, musique), Contexte(t(23), musique = listOf("?")))?.id)
     }
+
+    @Test
+    fun sonSansAccesNotifs() {
+        val d = Declencheur.AppOuverte(listOf(AppChoisie("deezer.android.app", "Deezer"), AppChoisie("com.whatsapp", "WhatsApp")))
+        assertTrue(Evaluation.vraie(d, Contexte(t(12), musique = listOf("?"))))
+        assertFalse(Evaluation.vraie(Declencheur.AppOuverte(listOf(AppChoisie("com.whatsapp", "WhatsApp"))), Contexte(t(12), musique = listOf("?"))))
+        assertFalse(Evaluation.vraie(d, Contexte(t(12))))
+    }
 }
