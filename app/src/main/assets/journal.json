@@ -1,7 +1,49 @@
 [
   {
-    "pr": 41,
+    "pr": 42,
     "version": null,
+    "date": "2026-10-28",
+    "titre": "🎵 Le son en TOP 1",
+    "sert": "Dès que ta musique joue, sa règle passe devant tout, et l'égaliseur a enfin de la gueule.",
+    "essentiel": [
+      "🥇 Règle de son = priorité n°1",
+      "🎵 Deezer qui joue = « ouverte », même en fond",
+      "🎚️ Égaliseur redessiné : grosses barres + crêtes",
+      "🔊 Son détecté même sans accès aux notifs"
+    ],
+    "sections": [
+      {
+        "titre": "Priorité",
+        "points": [
+          "🥇 Condition Musique, ou modèle Égaliseur / Musique en direct : gagne toujours",
+          "↩ Le son s'arrête : la règle d'avant reprend"
+        ]
+      },
+      {
+        "titre": "Détection",
+        "points": [
+          "🎵 App ouverte : une app qui joue compte, même écran sur une autre app",
+          "🔊 Sans accès aux notifs : Verso sait qu'un son joue (pas laquelle)",
+          "▶ La carte montre ce qui joue maintenant"
+        ]
+      },
+      {
+        "titre": "Égaliseur",
+        "points": [
+          "🎚️ Style : Grosses (4 barres, défaut), Fines (6), Centre",
+          "✨ Base douce, sommet brillant, crête qui retombe",
+          "⚡ 20 images/s"
+        ]
+      }
+    ],
+    "tester": [
+      "Deezer en fond → l'égaliseur prend le dos",
+      "L'égaliseur te plaît ?"
+    ]
+  },
+  {
+    "pr": 41,
+    "version": "0.1.90",
     "date": "2026-10-28",
     "titre": "🔴 Égaliseur vraiment live",
     "sert": "L'Égaliseur suit enfin la musique, et tout ce qui est live est rangé dans Live.",
