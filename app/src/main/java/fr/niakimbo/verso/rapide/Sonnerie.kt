@@ -68,13 +68,13 @@ class Sonnerie : Service() {
         eveil = getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "verso:sonnerie").apply { acquire(11 * 60_000L) }
         val audio = getSystemService(AudioManager::class.java)
-        if (Minuteur.volumeMax(this)) {
-            volumeAvant = audio.getStreamVolume(AudioManager.STREAM_ALARM)
-            try {
-                audio.setStreamVolume(AudioManager.STREAM_ALARM, audio.getStreamMaxVolume(AudioManager.STREAM_ALARM), 0)
-            } catch (_: Exception) {
-                volumeAvant = -1
-            }
+        // Le volume choisi (en % du volume « alarme »), remis comme avant à la fin.
+        volumeAvant = audio.getStreamVolume(AudioManager.STREAM_ALARM)
+        try {
+            val max = audio.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+            audio.setStreamVolume(AudioManager.STREAM_ALARM, (max * Minuteur.volume(this) / 100f).toInt().coerceIn(1, max), 0)
+        } catch (_: Exception) {
+            volumeAvant = -1
         }
         val attributs = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_ALARM)
@@ -90,6 +90,7 @@ class Sonnerie : Service() {
                         setDataSource(this@Sonnerie, uri)
                         isLooping = true
                         prepare()
+                        if (Minuteur.progressif(this@Sonnerie)) setVolume(0.04f, 0.04f)
                         start()
                     }
                 } catch (_: Exception) {
@@ -99,10 +100,29 @@ class Sonnerie : Service() {
             }
             else -> jouerSynthese(Minuteur.son(this), attributs)
         }
+        if (Minuteur.progressif(this)) monter(if (test) 4_000L else 30_000L) else gain(1f)
         if (Minuteur.vibre(this)) vibreur().vibrate(
             VibrationEffect.createWaveform(longArrayOf(0, 500, 250, 500, 250, 900, 700), if (test) -1 else 0),
             android.os.VibrationAttributes.createForUsage(android.os.VibrationAttributes.USAGE_ALARM),
         )
+    }
+
+    /** Le son part bas et monte jusqu'au volume choisi en [dureeMs] (courbe douce pour l'oreille). */
+    private fun monter(dureeMs: Long) {
+        val debut = android.os.SystemClock.elapsedRealtime()
+        val pas = object : Runnable {
+            override fun run() {
+                val t = ((android.os.SystemClock.elapsedRealtime() - debut).toFloat() / dureeMs).coerceIn(0f, 1f)
+                gain(0.04f + 0.96f * t * t)
+                if (t < 1f) principal.postDelayed(this, 200)
+            }
+        }
+        principal.post(pas)
+    }
+
+    private fun gain(g: Float) {
+        piste?.setVolume(g)
+        lecteur?.setVolume(g, g)
     }
 
     private fun jouerSynthese(son: Minuteur.Son, attributs: AudioAttributes) {
@@ -116,6 +136,7 @@ class Sonnerie : Service() {
             .apply {
                 write(pcm, 0, pcm.size)
                 setLoopPoints(0, pcm.size, -1)
+                setVolume(if (Minuteur.progressif(this@Sonnerie)) 0.04f else 1f)
                 play()
             }
     }
@@ -206,7 +227,7 @@ class Sonnerie : Service() {
                     i > n - attaque -> (n - i).toDouble() / attaque
                     else -> 1.0
                 }
-                val v = (s * 0.78 * env * volume * Short.MAX_VALUE).toInt().coerceIn(-32767, 32767)
+                val v = (s * 0.6 * env * volume * Short.MAX_VALUE).toInt().coerceIn(-32767, 32767)
                 if (debut + i < out.size) out[debut + i] = v.toShort()
             }
         }

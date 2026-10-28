@@ -83,8 +83,13 @@ object Minuteur {
 
     fun son(c: Context): Son = Son.entries.firstOrNull { it.name == prefs(c).getString("son", null) } ?: Son.PULSE
     fun setSon(c: Context, s: Son) = prefs(c).edit().putString("son", s.name).apply()
-    fun volumeMax(c: Context) = prefs(c).getBoolean("volume_max", true)
-    fun setVolumeMax(c: Context, v: Boolean) = prefs(c).edit().putBoolean("volume_max", v).apply()
+    /** Volume de la sonnerie, en % du volume « alarme » du téléphone (réglé pendant qu'elle sonne, remis après). */
+    fun volume(c: Context) = prefs(c).getInt("volume", 60)
+    fun setVolume(c: Context, v: Int) = prefs(c).edit().putInt("volume", v.coerceIn(5, 100)).apply()
+
+    /** Progressif : le son monte doucement jusqu'au volume choisi (en 30 s). */
+    fun progressif(c: Context) = prefs(c).getBoolean("progressif", true)
+    fun setProgressif(c: Context, v: Boolean) = prefs(c).edit().putBoolean("progressif", v).apply()
     fun vibre(c: Context) = prefs(c).getBoolean("vibre", true)
     fun setVibre(c: Context, v: Boolean) = prefs(c).edit().putBoolean("vibre", v).apply()
 

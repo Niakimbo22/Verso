@@ -193,10 +193,11 @@ private fun ChoixDuree(app: VersoApp, onDemarrer: (Long) -> Unit) {
                     .background(Color.White.copy(alpha = 0.09f)),
             )
             androidx.compose.runtime.key(cle) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                    RoueEtiquette(h, 24, "h") { h = it }
-                    RoueEtiquette(m, 60, "min") { m = it }
-                    RoueEtiquette(s, 60, "s") { s = it }
+                // Chaque roue prend un tiers de la largeur : on peut la faire tourner n'importe où dans sa colonne.
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    RoueEtiquette(h, 24, "h", Modifier.weight(1f)) { h = it }
+                    RoueEtiquette(m, 60, "min", Modifier.weight(1f)) { m = it }
+                    RoueEtiquette(s, 60, "s", Modifier.weight(1f)) { s = it }
                 }
             }
             // Fondu en haut et en bas : effet cylindre.
@@ -234,14 +235,18 @@ private fun ChoixDuree(app: VersoApp, onDemarrer: (Long) -> Unit) {
     }
 }
 
-private val ITEM = 46.dp
+private val ITEM = 50.dp
 private const val VISIBLES = 5
 
 @Composable
-private fun RoueEtiquette(valeur: Int, n: Int, etiquette: String, onChange: (Int) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Roue(valeur, n, onChange, Modifier.width(62.dp))
-        Text(etiquette, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(38.dp))
+private fun RoueEtiquette(valeur: Int, n: Int, etiquette: String, modifier: Modifier, onChange: (Int) -> Unit) {
+    // La roue couvre toute la colonne (zone de glissement large) ; l'étiquette est posée par-dessus, à droite.
+    Box(modifier.height(ITEM * VISIBLES), contentAlignment = Alignment.CenterEnd) {
+        Roue(valeur, n, onChange, Modifier.fillMaxWidth())
+        Text(
+            etiquette, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.width(44.dp).padding(start = 2.dp),
+        )
     }
 }
 
@@ -303,7 +308,7 @@ private fun Roue(valeur: Int, n: Int, onChange: (Int) -> Unit, modifier: Modifie
                 Text(
                     "${i % n}", color = Color.White, fontSize = 25.sp, textAlign = TextAlign.End,
                     style = androidx.compose.ui.text.TextStyle(fontFeatureSettings = Tnum),
-                    modifier = Modifier.padding(end = 8.dp),
+                    modifier = Modifier.padding(end = 50.dp),
                 )
             }
         }
@@ -384,12 +389,13 @@ private fun RondIos(texte: String, couleur: Color, actif: Boolean, taille: Dp = 
     }
 }
 
-/** 🔔 Sonnerie : repliée par défaut (son, volume au max, vibration, essai). */
+/** 🔔 Sonnerie : repliée par défaut (son, volume, progressif, vibration, essai). */
 @Composable
 private fun ReglagesSonnerie(app: VersoApp) {
     var ouvert by remember { mutableStateOf(false) }
     var son by remember { mutableStateOf(Minuteur.son(app)) }
-    var volMax by remember { mutableStateOf(Minuteur.volumeMax(app)) }
+    var volume by remember { mutableStateOf(Minuteur.volume(app).toFloat()) }
+    var progressif by remember { mutableStateOf(Minuteur.progressif(app)) }
     var vibre by remember { mutableStateOf(Minuteur.vibre(app)) }
     val forme = RoundedCornerShape(18.dp)
     Column(
@@ -414,8 +420,23 @@ private fun ReglagesSonnerie(app: VersoApp) {
                         ) { son = x; Minuteur.setSon(app, x) }
                     }
                 }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (volume < 35) "🔈" else if (volume < 70) "🔉" else "🔊", fontSize = 18.sp)
+                    androidx.compose.material3.Slider(
+                        value = volume,
+                        onValueChange = { volume = it },
+                        onValueChangeFinished = { Minuteur.setVolume(app, volume.toInt()) },
+                        valueRange = 5f..100f,
+                        modifier = Modifier.weight(1f).padding(horizontal = 10.dp),
+                        colors = androidx.compose.material3.SliderDefaults.colors(
+                            thumbColor = Color.White, activeTrackColor = Rouge, inactiveTrackColor = Color.White.copy(alpha = 0.15f),
+                        ),
+                    )
+                    Text("${volume.toInt()} %", color = Color.White, fontSize = 14.sp, modifier = Modifier.width(48.dp), textAlign = TextAlign.End)
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    PuceVerre(if (volMax) "🔊 Volume max" else "🔉 Volume actuel", volMax) { volMax = !volMax; Minuteur.setVolumeMax(app, volMax) }
+                    PuceVerre("📈 Progressif", progressif) { progressif = true; Minuteur.setProgressif(app, true) }
+                    PuceVerre("⚡ Direct", !progressif) { progressif = false; Minuteur.setProgressif(app, false) }
                     PuceVerre("📳 Vibrer", vibre) { vibre = !vibre; Minuteur.setVibre(app, vibre) }
                 }
                 val contexte = LocalContext.current

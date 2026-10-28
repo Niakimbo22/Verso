@@ -1,5 +1,27 @@
 [
   {
+    "pr": 49,
+    "version": null,
+    "date": "2026-10-28",
+    "titre": "🔉 Minuteur : volume réglable, roues plus faciles",
+    "sert": "La sonnerie n'arrache plus les oreilles et la roulette se tourne sans viser.",
+    "essentiel": [
+      "🔉 Volume de la sonnerie au curseur",
+      "📈 Progressif ou ⚡ direct",
+      "🎡 Roues glissables sur toute leur largeur"
+    ],
+    "sections": [
+      {
+        "titre": "Détail",
+        "points": [
+          "🔊 60 % par défaut, remis comme avant après",
+          "📈 Progressif : monte en 30 s (4 s à l'essai)",
+          "🎡 Chaque roue prend un tiers de l'écran, crans plus grands"
+        ]
+      }
+    ]
+  },
+  {
     "pr": 48,
     "version": null,
     "date": "2026-10-28",
