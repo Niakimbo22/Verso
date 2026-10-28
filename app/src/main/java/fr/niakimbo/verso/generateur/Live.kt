@@ -165,7 +165,7 @@ object MusiqueLive {
                 } else {
                     if (!e.enLecture) pause(g)
                     // Le vrai son quand Android le donne (autorisation Micro), sinon l'animation.
-                    else Spectre.niveaux()?.let { barres(g, it) } ?: egaliseur(g, System.currentTimeMillis())
+                    else Spectre.niveaux()?.let { barres(g, Spectre.regrouper(it, 5)) } ?: egaliseur(g, System.currentTimeMillis())
                     if (anneau) e.avancement()?.let { p -> progression(g, p) }
                 }
                 g.frame()
@@ -212,5 +212,79 @@ object MusiqueLive {
     private fun progression(g: Grille, p: Float) {
         val n = (p * BORD.size).roundToInt()
         BORD.forEachIndexed { i, (x, y) -> g.allumer(x, y, if (i < n) MatrixFrame.MAX else Grille.niveau(1)) }
+    }
+}
+
+/**
+ * Égaliseur (28/10, Nico : « qu'il bouge vraiment selon la musique ») : même id que l'ancien modèle
+ * animé, qui reste en V1. La V2 suit le vrai son ([Spectre]) : 9 barres, graves à gauche, aigus à droite.
+ * Pas de mesure possible (autorisation Micro, Android qui refuse) : l'animation V1 à la place.
+ * Mesure active mais silence : une ligne de points au repos.
+ */
+object EgaliseurLive {
+    const val ID = "egaliseur"
+
+    private val STYLE = Reglage.Choix(
+        cle = "v2.style", titre = "Style",
+        description = "Barres qui montent du bas, ou qui s'ouvrent depuis le centre (haut et bas).",
+        options = listOf("centre" to "Centre", "bas" to "Du bas"),
+        defaut = "centre",
+    )
+
+    fun entree(icones: (String) -> Modele?): EntreeCatalogue {
+        val ancien = icones(ID)
+        val v1 = VersionModele("v1", "V1", "Animation d'origine (ne suit pas le son).", emptyList()) {
+            ancien ?: Modele(ID, "Égaliseur", Modele.Type.STATIQUE, listOf(Modele.Image(Grille().frame(), 1000)))
+        }
+        val v2 = VersionModele(
+            "v2", "V2",
+            "Suit le vrai son du téléphone (autorisation Micro). Sans mesure possible : l'animation V1.",
+            listOf(STYLE),
+        ) { v ->
+            val centre = v.s(STYLE) == "centre"
+            val rendu: (LocalTime) -> MatrixFrame = { _ ->
+                val n = Spectre.niveaux()
+                when {
+                    n == null -> ancien?.let { Live.imageA(it, System.currentTimeMillis()) } ?: Grille().frame()
+                    else -> dessiner(n, centre).frame()
+                }
+            }
+            Modele(
+                id = ID,
+                nom = "Égaliseur",
+                type = Modele.Type.STATIQUE,
+                images = listOf(Modele.Image(dessiner(FloatArray(Spectre.BANDES) { (0.3f + 0.6f * sin(it * 1.3f)).coerceIn(0.1f, 1f) }, centre).frame(), 1000)),
+                dynamique = Modele.Dynamique.HORLOGE,
+                rendu = rendu,
+                periodeMs = 60,
+            )
+        }
+        return EntreeCatalogue(ID, "Égaliseur", listOf(v1, v2))
+    }
+
+    private fun dessiner(n: FloatArray, centre: Boolean): Grille {
+        val g = Grille()
+        val c = Grille.C
+        for (i in 0 until Spectre.BANDES) {
+            val x = 2 + i
+            // Hauteur possible dans le rond de la matrice, pour cette colonne.
+            val demi = kotlin.math.sqrt(42.0 - (x - c) * (x - c)).toInt().coerceAtMost(6)
+            val v = n.getOrElse(i) { 0f }
+            if (centre) {
+                val h = (v * demi).roundToInt()
+                g.allumer(x, c, Grille.niveau(if (h == 0) 2 else 6))
+                for (k in 1..h) {
+                    val bout = k == h
+                    g.allumer(x, c - k, if (bout) MatrixFrame.MAX else Grille.niveau(6))
+                    g.allumer(x, c + k, if (bout) MatrixFrame.MAX else Grille.niveau(6))
+                }
+            } else {
+                val bas = c + demi
+                val h = (v * (2 * demi)).roundToInt()
+                g.allumer(x, bas, Grille.niveau(if (h == 0) 2 else 6))
+                for (k in 1..h) g.allumer(x, bas - k, if (k == h) MatrixFrame.MAX else Grille.niveau(6))
+            }
+        }
+        return g
     }
 }

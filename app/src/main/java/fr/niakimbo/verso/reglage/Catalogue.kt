@@ -6,6 +6,7 @@ import fr.niakimbo.verso.generateur.Chargement
 import fr.niakimbo.verso.generateur.Coeur
 import fr.niakimbo.verso.generateur.Compteur
 import fr.niakimbo.verso.generateur.HorlogeReglable
+import fr.niakimbo.verso.generateur.EgaliseurLive
 import fr.niakimbo.verso.generateur.Live
 import fr.niakimbo.verso.generateur.MeteoLive
 import fr.niakimbo.verso.generateur.MusiqueLive
@@ -90,14 +91,17 @@ class Catalogue(
         // Modèles live (météo, musique) : ils reprennent les icônes de la bibliothèque. Rayon « Live », en tête.
         val pluie = Pluie.entree.versions.first().construire(Valeurs())
         val icone: (String) -> Modele? = { id -> if (id == "pluie") pluie else biblio.parId(id) }
-        val live = listOf(MeteoLive.entree(icone), MusiqueLive.entree(icone)).map { it.avecCategorie(Live.RAYON) }
-        val entrees = live + biblio.modeles.map { m ->
+        // Tout ce qui suit le vrai monde (heure, météo, musique, son) : rayon « Live », en tête.
+        val live = listOf(HorlogeReglable.entree, MeteoLive.entree(icone), MusiqueLive.entree(icone), EgaliseurLive.entree(icone))
+            .map { it.avecCategorie(Live.RAYON) }
+        val idsLive = live.map { it.id }.toSet()
+        val entrees = live + biblio.modeles.filter { it.id !in idsLive }.map { m ->
             (calcules[m.id] ?: EntreeCatalogue(
                 id = m.id,
                 nom = m.nom,
                 versions = listOf(VersionModele("v1", "V1", "Dessin d'origine.", emptyList()) { m }),
             )).avecCategorie(m.categorie)
-        } + calcules.values.filter { c -> biblio.modeles.none { it.id == c.id } }
+        } + calcules.values.filter { c -> c.id !in idsLive && biblio.modeles.none { it.id == c.id } }
         return Contenu(entrees, biblio.erreurs)
     }
 
