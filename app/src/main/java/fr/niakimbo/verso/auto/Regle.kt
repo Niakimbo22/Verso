@@ -286,8 +286,18 @@ data class Contexte(
 object Evaluation {
 
     /** La règle « pendant » qui gagne maintenant : la première de la liste (ordre = priorité). */
-    fun gagnante(regles: List<Regle>, ctx: Contexte): Regle? =
-        regles.firstOrNull { it.active && it.estPendant && vraie(it, ctx) }
+    fun gagnante(regles: List<Regle>, ctx: Contexte): Regle? {
+        val vraies = regles.filter { it.active && it.estPendant && vraie(it, ctx) }
+        // Le son passe en TOP 1 (Nico, 28/10) : une règle de son vraie gagne, où qu'elle soit dans la liste.
+        return vraies.firstOrNull { estSon(it) } ?: vraies.firstOrNull()
+    }
+
+    /** Modèles qui suivent le son : une règle qui les affiche est une règle « son ». */
+    val MODELES_SON = setOf("egaliseur", "musique-live")
+
+    /** Règle « son » : condition Musique, ou elle affiche un modèle qui suit le son. */
+    fun estSon(r: Regle): Boolean =
+        r.conditions.any { it is Declencheur.Musique } || (r.action as? Action.Afficher)?.modele in MODELES_SON
 
     /**
      * La règle « flash » qui réagit à une notification de [pkg] : la première de la liste dont la
@@ -342,7 +352,8 @@ object Evaluation {
         is Declencheur.Reseau -> ctx.reseau == d.type_
         is Declencheur.Notification -> false // un évènement, pas un état
         is Declencheur.Musique -> if (d.apps.isEmpty()) ctx.musique.isNotEmpty() else d.apps.any { it.pkg in ctx.musique }
-        is Declencheur.AppOuverte -> ctx.app != null && d.apps.any { it.pkg == ctx.app }
+        // Une app qui joue du son compte comme ouverte, même en arrière-plan (Deezer qui joue, écran sur une autre app).
+        is Declencheur.AppOuverte -> d.apps.any { it.pkg == ctx.app || it.pkg in ctx.musique }
         is Declencheur.Meteo -> ctx.ciel != null && ctx.ciel in d.ciels
     }
 

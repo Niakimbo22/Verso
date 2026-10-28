@@ -797,7 +797,14 @@ private fun ReglagesCondition(app: VersoApp, d: Declencheur, ctx: Contexte, onAp
                     )
                 }
                 BoutonApps(d.apps, "Choisis une app", onApps)
-                Aide("↩ Le modèle d'avant revient quand tu quittes l'app")
+                // Une app qui joue du son compte aussi : il faut savoir ce qui joue.
+                PermissionNotifs()
+                val joue = Musique.etat.collectAsStateWithLifecycle().value
+                Aide(
+                    if (joue?.enLecture == true) "▶ En ce moment : ${Apps.nom(LocalContext.current, joue.pkg) ?: joue.pkg} joue"
+                    else "⏸ Aucune app ne joue en ce moment",
+                )
+                Aide("🎵 Une app qui joue compte même en arrière-plan · ↩ le modèle d'avant revient ensuite")
             }
             is Declencheur.Meteo -> ReglageMeteo(app, d, onChange)
             Declencheur.Economie, Declencheur.NePasDeranger, Declencheur.Avion, Declencheur.Lampe ->
