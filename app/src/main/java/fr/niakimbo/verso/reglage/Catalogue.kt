@@ -145,6 +145,18 @@ class Catalogue(
         return ressources()
     }
 
+    /**
+     * Modèle pour un widget. Le lanceur ne peut que faire défiler des images déjà prêtes : un modèle qui suit
+     * le son en direct (Égaliseur V2, Musique en direct) y serait figé. Il est remplacé par l'animation
+     * de l'égaliseur d'origine (même nom, même id), avec les réglages communs (luminosité, vitesse…).
+     */
+    suspend fun resoudreWidget(id: String): Modele? {
+        if (id !in fr.niakimbo.verso.auto.Evaluation.MODELES_SON) return resoudre(id)
+        val vrai = resoudre(id) ?: return null
+        val anim = repository.bibliotheque().parId("egaliseur") ?: return vrai
+        return Personnalisation.appliquer(anim, store.lire(id).valeurs).copy(id = vrai.id, nom = vrai.nom)
+    }
+
     /** Modèle prêt à jouer : version choisie, réglages propres puis réglages communs. */
     suspend fun resoudre(id: String): Modele? = contenu().parId(id)?.let(::resoudre)
 

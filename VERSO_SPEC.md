@@ -317,6 +317,8 @@ Entrées (raccourcis, rien n'y est caché qui ne soit aussi sur l'écran) : Accu
 - **Pas de « ⏻ »** dans les textes : la police du téléphone ne l'a pas (boîte vide). Icône `ic_w_marche` ou 🔌.
 - **Release GitHub** : notes = l'entrée de tête (`outils/notes_release.py`, 1re ligne = phrase « sert à »). Le bouton « Mettre à jour » de l'app affiche cette phrase (`Release.sert`).
 
+> **Égaliseur réel, réglage du 28/10 (v0.1.96)** : chaque bande est comparée à sa moyenne récente (~1,5 s) : son régulier ≈ 30 % de hauteur, coup (basse, batterie) jusqu'à ~75 %, montée 65 % / descente 20 % par mesure. **Widgets** : le lanceur ne fait que défiler des images toutes prêtes → un modèle de son y est remplacé par l'animation de l'égaliseur d'origine (`Catalogue.resoudreWidget`).
+
 ## 4. Feuille de route après la V1 (dans cet ordre)
 
 1. **Modèles dynamiques avancés** : minuteur, texte défilant tout fait… (visualiseur musique, notifications et météo réelle faits à l'étape 9).

@@ -40,8 +40,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.hypot
-import kotlin.math.ln
-import kotlin.math.max
 import kotlin.math.pow
 
 /**
@@ -103,7 +101,8 @@ object Spectre {
     private var echantillonnage = 48_000f
 
     private val niveaux = FloatArray(BANDES)
-    private val maxi = FloatArray(BANDES) { 1f }
+    /** Moyenne récente (~1,5 s) de chaque bande. */
+    private val moyennes = FloatArray(BANDES)
 
     /** Bornes des bandes (Hz), réparties en log de 40 Hz à 14 kHz. */
     private val BORNES = FloatArray(BANDES + 1) { i -> 40f * (14_000f / 40f).pow(i / BANDES.toFloat()) }
@@ -270,17 +269,21 @@ object Spectre {
             for (k in de until a) somme += hypot(fft[2 * k].toFloat(), fft[2 * k + 1].toFloat())
             val moyenne = somme / (a - de)
             total += moyenne
-            bruts[b] = ln(1f + moyenne)
+            bruts[b] = moyenne
         }
         val maintenant = SystemClock.elapsedRealtime()
         derniereCapture = maintenant
         if (total > 2f) dernierSon = maintenant
         synchronized(niveaux) {
             for (b in 0 until BANDES) {
-                maxi[b] = max(max(bruts[b], 1f), maxi[b] * 0.995f)
-                // Un peu de plancher retiré : le bruit de fond ne fait pas lever les barres.
-                val cible = ((bruts[b] / maxi[b] - 0.25f) / 0.75f).coerceIn(0f, 1f)
-                niveaux[b] = if (cible > niveaux[b]) cible else niveaux[b] * 0.75f + cible * 0.25f
+                // Barre = énergie par rapport à la moyenne récente de sa bande (~1,5 s) : un son régulier
+                // reste vers le milieu, un coup (batterie, basse) fait monter. Avant (28/10) : gain auto
+                // en log, tout restait collé en haut (« les 4 barres sont tout le temps à fond »).
+                moyennes[b] = if (moyennes[b] <= 0f) bruts[b] else moyennes[b] * 0.965f + bruts[b] * 0.035f
+                val rapport = if (moyennes[b] > 0.5f) bruts[b] / moyennes[b] else 0f
+                val cible = (0.12f + 0.42f * (rapport - 0.55f)).coerceIn(0f, 0.95f)
+                // Montée franche, descente douce.
+                niveaux[b] = if (cible > niveaux[b]) niveaux[b] * 0.35f + cible * 0.65f else niveaux[b] * 0.8f + cible * 0.2f
             }
         }
     }
