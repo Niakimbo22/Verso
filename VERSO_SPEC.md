@@ -319,6 +319,12 @@ Entrées (raccourcis, rien n'y est caché qui ne soit aussi sur l'écran) : Accu
 
 > **Égaliseur réel, réglage du 28/10 (v0.1.96)** : chaque bande est comparée à sa moyenne récente (~1,5 s) : son régulier ≈ 30 % de hauteur, coup (basse, batterie) jusqu'à ~75 %, montée 65 % / descente 20 % par mesure. **Widgets** : le lanceur ne fait que défiler des images toutes prêtes → un modèle de son y est remplacé par l'animation de l'égaliseur d'origine (`Catalogue.resoudreWidget`).
 
+### 3.12 Chrono Glyph (28/10)
+Nico : « Nothing le propose déjà mais c'est sous-coté ». `rapide/Chrono` (état en heure murale dans `verso_chrono` : survit au processus et au redémarrage) + modèle **Chrono** (`chrono`, rayon Live, `generateur/ChronoLive`) : MM en haut / SS en bas (HH / MM après 1 h), point qui fait le tour du bord en 1 min (réglage), chiffres qui clignotent en pause. ▶ = démarre et affiche Chrono au dos (choix à la main ; le modèle d'avant est retenu) ; ⏸ = pause ; ↺ = zéro et retour au modèle d'avant. Commandes : widget de la galerie **Chrono** (`Type.CHRONO` = `Chronometer` des RemoteViews, le lanceur fait tourner le temps ; `Type.BOUTONS_CHRONO` = ▶/⏸, ↺ via `WidgetActions.CHRONO / CHRONO_ZERO`), et la fiche du modèle.
+
+### 3.13 Taille de l'APK (28/10)
+Les MAJ étaient de plus en plus longues : APK 22 Mo (Compose non réduit). **R8** activé (`isMinifyEnabled`, `isShrinkResources`) → ~4 Mo ; `proguard-rules.pro` garde tout `fr.niakimbo.verso.**`, le SDK Glyph (`com.nothing.**`) et Backdrop, sans obscurcir (journaux lisibles). Téléchargement : barre de progression rafraîchie au plus 1 fois par %, `Accept-Encoding: identity`.
+
 ## 4. Feuille de route après la V1 (dans cet ordre)
 
 1. **Modèles dynamiques avancés** : minuteur, texte défilant tout fait… (visualiseur musique, notifications et météo réelle faits à l'étape 9).

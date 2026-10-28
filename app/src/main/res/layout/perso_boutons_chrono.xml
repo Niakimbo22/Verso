@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Boutons ▶/⏸ et ↺ du widget Chrono (icônes : la police du lanceur n'a pas tous les symboles). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rangee"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center"
+    android:orientation="horizontal">
+
+    <ImageView
+        android:id="@+id/btn_chrono"
+        android:layout_width="52dp"
+        android:layout_height="40dp"
+        android:contentDescription="@string/widget_chrono"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="6dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_w_lecture" />
+
+    <ImageView
+        android:id="@+id/btn_zero"
+        android:layout_width="52dp"
+        android:layout_height="40dp"
+        android:contentDescription="@string/widget_chrono_zero"
+        android:paddingHorizontal="13dp"
+        android:paddingVertical="7dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_w_zero" />
+</LinearLayout>

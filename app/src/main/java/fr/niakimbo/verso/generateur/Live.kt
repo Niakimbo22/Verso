@@ -317,3 +317,78 @@ object EgaliseurLive {
         return g
     }
 }
+
+/**
+ * Chronomètre au dos (28/10) : minutes en haut, secondes en bas (heures / minutes au-delà d'une heure),
+ * et un point qui fait le tour du bord en une minute. En pause : les chiffres clignotent doucement.
+ * Démarré / arrêté depuis le widget Chrono, la fiche du modèle ou un tap sur la matrice du widget.
+ */
+object ChronoLive {
+    const val ID = fr.niakimbo.verso.rapide.Chrono.ID
+
+    private val TOUR = Reglage.Interrupteur(
+        cle = "v1.tour", titre = "Tour des secondes",
+        description = "Un point fait le tour de la matrice en une minute.",
+        defaut = true,
+    )
+
+    /** LEDs du bord, dans le sens des aiguilles d'une montre depuis midi. */
+    private val BORD: List<Pair<Int, Int>> = run {
+        val n = MatrixFrame.SIDE
+        val c = n / 2
+        val bord = mutableListOf<Pair<Int, Int>>()
+        for (y in 0 until n) for (x in 0 until n) {
+            if (!MatrixFrame.isOnMatrix(x, y)) continue
+            val v = listOf(x - 1 to y, x + 1 to y, x to y - 1, x to y + 1)
+            if (v.any { (a, b) -> a !in 0 until n || b !in 0 until n || !MatrixFrame.isOnMatrix(a, b) }) bord += x to y
+        }
+        bord.sortedBy { (x, y) -> atan2((x - c).toDouble(), (c - y).toDouble()).let { if (it < 0) it + 2 * PI else it } }
+    }
+
+    fun frame(ms: Long, enMarche: Boolean, tour: Boolean, maintenant: Long): MatrixFrame {
+        val g = Grille()
+        val s = ms / 1000
+        val (haut, bas) = if (s >= 3600) (s / 3600) % 100 to (s / 60) % 60 else (s / 60) to s % 60
+        // En pause : les chiffres respirent (pleins / à moitié), pour qu'on voie que c'est arrêté.
+        val v = if (enMarche || maintenant % 1200 < 800) MatrixFrame.MAX else Grille.niveau(3)
+        fun nombre(n: Long, y0: Int) {
+            Live.chiffre(g, (n / 10 % 10).toInt(), 3, y0, v)
+            Live.chiffre(g, (n % 10).toInt(), 7, y0, v)
+        }
+        nombre(haut, 1)
+        nombre(bas, 7)
+        if (tour) {
+            val i = ((ms % 60_000) * BORD.size / 60_000).toInt()
+            BORD.forEachIndexed { k, (x, y) ->
+                val d = (i - k).mod(BORD.size)
+                if (d < 3) g.allumer(x, y, if (d == 0) MatrixFrame.MAX else Grille.niveau(if (d == 1) 4 else 2))
+            }
+        }
+        return g.frame()
+    }
+
+    val entree: EntreeCatalogue = run {
+        val v1 = VersionModele(
+            id = "v1", nom = "V1",
+            description = "▶ / ⏸ / ↺ depuis le widget Chrono ou cette fiche.",
+            reglages = listOf(TOUR),
+        ) { v ->
+            val tour = v.b(TOUR)
+            val rendu: (LocalTime) -> MatrixFrame = { _ ->
+                val e = fr.niakimbo.verso.rapide.Chrono.etat.value
+                val now = System.currentTimeMillis()
+                frame(e.ms(now), e.enMarche, tour, now)
+            }
+            Modele(
+                id = ID,
+                nom = "Chrono",
+                type = Modele.Type.STATIQUE,
+                images = listOf(Modele.Image(frame(83_000, true, tour, 0), 1000)),
+                dynamique = Modele.Dynamique.HORLOGE,
+                rendu = rendu,
+                periodeMs = 100,
+            )
+        }
+        EntreeCatalogue(ID, "Chrono", listOf(v1))
+    }
+}

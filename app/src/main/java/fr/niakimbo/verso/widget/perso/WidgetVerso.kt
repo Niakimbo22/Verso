@@ -183,6 +183,7 @@ enum class Genre(val titre: String, val description: String, val tailles: List<T
     INFOS("Tout-en-un", "Heure, date, batterie, règle auto et matrice.", listOf(TailleW.T2x2, TailleW.T3x2, TailleW.T4x2, TailleW.T4x3, TailleW.T4x4)),
     BATTERIE("Batterie", "Le niveau de batterie en grand, ⚡ en charge.", listOf(TailleW.T1x1, TailleW.T2x1, TailleW.T2x2, TailleW.T4x1, TailleW.T4x2)),
     MESSAGE("Message", "Ton texte à toi, avec la date.", listOf(TailleW.T2x1, TailleW.T2x2, TailleW.T4x1, TailleW.T4x2, TailleW.T4x4)),
+    CHRONO("Chrono", "Un chronomètre ▶ ⏸ ↺, affiché au dos pendant qu'il tourne.", listOf(TailleW.T2x1, TailleW.T2x2, TailleW.T3x2, TailleW.T4x1, TailleW.T4x2)),
     ;
 
     /** Contenu de ce genre pour la taille [t]. [p] = couleur du texte principal, [msg] = texte du genre Message. */
@@ -226,6 +227,12 @@ enum class Genre(val titre: String, val description: String, val tailles: List<T
                 TailleW.T2x1, TailleW.T4x1 -> col to listOf(Bloc(Type.BATTERIE, Taille.L, p))
                 TailleW.T4x2 -> lig to listOf(Bloc(Type.MATRICE, Taille.L), Bloc(Type.BATTERIE, Taille.XL, p), Bloc(Type.TEXTE, Taille.S, d, "BATTERIE"))
                 else -> col to listOf(Bloc(Type.BATTERIE, Taille.XL, p), Bloc(Type.TEXTE, Taille.S, d, "BATTERIE"))
+            }
+            CHRONO -> when (t) {
+                TailleW.T2x1 -> lig to listOf(Bloc(Type.CHRONO, Taille.M, p), Bloc(Type.BOUTONS_CHRONO))
+                TailleW.T4x1 -> lig to listOf(Bloc(Type.MATRICE, Taille.S), Bloc(Type.CHRONO, Taille.L, p), Bloc(Type.BOUTONS_CHRONO))
+                TailleW.T4x2, TailleW.T3x2 -> lig to listOf(Bloc(Type.MATRICE, Taille.L), Bloc(Type.CHRONO, Taille.L, p), Bloc(Type.BOUTONS_CHRONO))
+                else -> col to listOf(Bloc(Type.CHRONO, Taille.L, p), Bloc(Type.BOUTONS_CHRONO))
             }
             MESSAGE -> when (t) {
                 TailleW.T2x1, TailleW.T4x1 -> col to listOf(Bloc(Type.TEXTE, Taille.L, p, msg))

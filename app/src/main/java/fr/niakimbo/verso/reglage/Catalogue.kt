@@ -92,7 +92,7 @@ class Catalogue(
         val pluie = Pluie.entree.versions.first().construire(Valeurs())
         val icone: (String) -> Modele? = { id -> if (id == "pluie") pluie else biblio.parId(id) }
         // Tout ce qui suit le vrai monde (heure, météo, musique, son) : rayon « Live », en tête.
-        val live = listOf(HorlogeReglable.entree, MeteoLive.entree(icone), MusiqueLive.entree(icone), EgaliseurLive.entree(icone))
+        val live = listOf(HorlogeReglable.entree, fr.niakimbo.verso.generateur.ChronoLive.entree, MeteoLive.entree(icone), MusiqueLive.entree(icone), EgaliseurLive.entree(icone))
             .map { it.avecCategorie(Live.RAYON) }
         val idsLive = live.map { it.id }.toSet()
         val entrees = live + biblio.modeles.filter { it.id !in idsLive }.map { m ->

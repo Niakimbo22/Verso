@@ -1,7 +1,50 @@
 [
   {
-    "pr": 44,
+    "pr": 45,
     "version": null,
+    "date": "2026-10-28",
+    "titre": "⏱️ Chrono Glyph + MAJ 5× plus légères",
+    "sert": "Un vrai chrono au dos et en widget, et des mises à jour bien plus rapides à télécharger.",
+    "essentiel": [
+      "⏱️ Widget Chrono ▶ ⏸ ↺",
+      "🔴 Modèle Chrono au dos (rayon Live)",
+      "📦 MAJ : 22 Mo → ~4 Mo"
+    ],
+    "sections": [
+      {
+        "titre": "Chrono",
+        "points": [
+          "▶ Démarre et passe au dos automatiquement",
+          "⏸ Pause : les chiffres clignotent",
+          "↺ Zéro : le modèle d'avant revient",
+          "🔄 Un point fait le tour en 1 min",
+          "⏰ Minutes / secondes, puis heures / minutes après 1 h",
+          "💾 Tient même si Verso est fermé ou le téléphone redémarre"
+        ]
+      },
+      {
+        "titre": "Widget",
+        "points": [
+          "▣ Galerie › Chrono : 2×1, 2×2, 3×2, 4×1, 4×2",
+          "⏱️ Le temps tourne tout seul (sans réveiller Verso)"
+        ]
+      },
+      {
+        "titre": "Mises à jour",
+        "points": [
+          "📦 APK réduit (R8) : ~5× plus petit",
+          "⚡ Barre de progression moins gourmande pendant le téléchargement"
+        ]
+      }
+    ],
+    "tester": [
+      "Galerie › Chrono → poser → ▶",
+      "La prochaine MAJ télécharge plus vite ?"
+    ]
+  },
+  {
+    "pr": 44,
+    "version": "0.1.96",
     "date": "2026-10-28",
     "titre": "🎚️ Égaliseur qui respire",
     "sert": "L'égaliseur ne reste plus collé en haut, et il bouge dans les widgets.",

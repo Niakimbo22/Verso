@@ -78,6 +78,8 @@ object RenduPerso {
                 WidgetPerso.Type.TEXTE -> b.texte.takeIf { it.isNotBlank() }?.let { texte(context, it, couleur(b), taille(b, 11f, 15f, 20f, 28f), gravite) }
                 WidgetPerso.Type.BOUTONS -> boutons(context, couleur(b), etat, cliquable, gravite)
                 WidgetPerso.Type.ESPACE -> RemoteViews(context.packageName, R.layout.perso_espace)
+                WidgetPerso.Type.CHRONO -> chrono(context, couleur(b), taille(b, 20f, 28f, 40f, 60f), gravite)
+                WidgetPerso.Type.BOUTONS_CHRONO -> boutonsChrono(context, couleur(b), cliquable, gravite)
                 WidgetPerso.Type.GLYPH -> {
                     val (t, c) = when {
                         etat.glyphEteint -> "○ GLYPH ÉTEINT" to 0xFFD71921.toInt()
@@ -171,6 +173,32 @@ object RenduPerso {
         Intent(context, ChoixRapideActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
+
+    /** Chronometer : le lanceur fait tourner le temps lui-même, sans réveiller Verso. */
+    private fun chrono(context: Context, couleur: Int, sp: Float, gravite: Int): RemoteViews {
+        val e = fr.niakimbo.verso.rapide.Chrono.lire(context)
+        return RemoteViews(context.packageName, R.layout.perso_chrono).apply {
+            setChronometer(R.id.chrono, fr.niakimbo.verso.rapide.Chrono.baseWidget(e), null, e.enMarche)
+            setTextColor(R.id.chrono, if (e.enMarche || e.aZero) couleur else 0xFFD71921.toInt())
+            setTextViewTextSize(R.id.chrono, TypedValue.COMPLEX_UNIT_SP, sp)
+            setInt(R.id.chrono, "setGravity", gravite)
+        }
+    }
+
+    private fun boutonsChrono(context: Context, couleur: Int, cliquable: Boolean, gravite: Int): RemoteViews {
+        val e = fr.niakimbo.verso.rapide.Chrono.lire(context)
+        return RemoteViews(context.packageName, R.layout.perso_boutons_chrono).apply {
+            setInt(R.id.rangee, "setGravity", gravite or Gravity.CENTER_VERTICAL)
+            setImageViewResource(R.id.btn_chrono, if (e.enMarche) R.drawable.ic_w_pause else R.drawable.ic_w_lecture)
+            setInt(R.id.btn_chrono, "setColorFilter", if (e.enMarche) couleur else 0xFFD71921.toInt())
+            setInt(R.id.btn_zero, "setColorFilter", couleur)
+            setViewVisibility(R.id.btn_zero, if (e.aZero) android.view.View.GONE else android.view.View.VISIBLE)
+            if (cliquable) {
+                setOnClickPendingIntent(R.id.btn_chrono, WidgetActions.intention(context, WidgetActions.CHRONO))
+                setOnClickPendingIntent(R.id.btn_zero, WidgetActions.intention(context, WidgetActions.CHRONO_ZERO))
+            }
+        }
+    }
 
     private fun boutons(context: Context, couleur: Int, etat: Etat, cliquable: Boolean, gravite: Int): RemoteViews =
         RemoteViews(context.packageName, R.layout.perso_boutons).apply {

@@ -22,6 +22,8 @@ object ApkInstaller {
                 readTimeout = 30_000
                 instanceFollowRedirects = true
                 setRequestProperty("User-Agent", "Verso-Android")
+                // Pas de compression à la volée : l'APK est déjà compressé, ça ne ferait que ralentir.
+                setRequestProperty("Accept-Encoding", "identity")
             }
             try {
                 if (connection.responseCode != HttpURLConnection.HTTP_OK) {
@@ -30,14 +32,21 @@ object ApkInstaller {
                 val total = connection.contentLengthLong
                 connection.inputStream.use { input ->
                     target.outputStream().use { output ->
-                        val buffer = ByteArray(64 * 1024)
+                        val buffer = ByteArray(256 * 1024)
                         var done = 0L
+                        var dernier = -1
                         while (true) {
                             val read = input.read(buffer)
                             if (read < 0) break
                             output.write(buffer, 0, read)
                             done += read
-                            onProgress(if (total > 0) done.toFloat() / total else -1f)
+                            // Avant (28/10) : un rafraîchissement de l'écran (tout en verre) tous les 64 Ko.
+                            // Maintenant : au plus une fois par % (≈ 100 fois en tout).
+                            val pc = if (total > 0) (done * 100 / total).toInt() else -1
+                            if (pc != dernier) {
+                                dernier = pc
+                                onProgress(if (total > 0) done.toFloat() / total else -1f)
+                            }
                         }
                     }
                 }
