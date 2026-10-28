@@ -71,6 +71,13 @@ data class WidgetVerso(
     /** Ce que la taille choisie montre, avant les réglages « afficher » (pour ne proposer que ce qui existe). */
     fun blocsDeBase(): List<Bloc> = genre.contenu(taille, Couleur.PRINCIPALE, texte.ifBlank { "Bonne journée" }).second
 
+    /**
+     * Le modèle que montre la matrice du widget : l'épinglé, sinon pour le Minuteur le sablier
+     * (ou le chrono, selon l'onglet) d'office, sans rien régler ; sinon celui au dos (null).
+     */
+    fun modeleEffectif(c: android.content.Context): String? = modele
+        ?: if (genre == Genre.CHRONO) (if (fr.niakimbo.verso.rapide.Minuteur.modeChrono(c)) fr.niakimbo.verso.rapide.Chrono.ID else fr.niakimbo.verso.rapide.Minuteur.ID) else null
+
     /** Le plan de dessin pour [RenduPerso]. */
     fun plan(): WidgetPerso {
         val (disposition, base) = genre.contenu(taille, Couleur.PRINCIPALE, texte.ifBlank { "Bonne journée" })
@@ -103,7 +110,12 @@ data class WidgetVerso(
             accent = couleur.argb,
             ledsEteintes = ledsEteintes,
             anime = anime,
-            tap = if (tap == TapW.AFFICHER && modele == null) WidgetPerso.Tap.CHOISIR else tap.tap,
+            tap = when {
+                // Minuteur : un tap ouvre la roulette (c'est tout l'intérêt du widget).
+                genre == Genre.CHRONO && tap == TapW.CHOISIR -> WidgetPerso.Tap.MINUTEUR
+                tap == TapW.AFFICHER && modele == null -> WidgetPerso.Tap.CHOISIR
+                else -> tap.tap
+            },
             modeleFixe = modele,
         )
     }
@@ -183,7 +195,8 @@ enum class Genre(val titre: String, val description: String, val tailles: List<T
     INFOS("Tout-en-un", "Heure, date, batterie, règle auto et matrice.", listOf(TailleW.T2x2, TailleW.T3x2, TailleW.T4x2, TailleW.T4x3, TailleW.T4x4)),
     BATTERIE("Batterie", "Le niveau de batterie en grand, ⚡ en charge.", listOf(TailleW.T1x1, TailleW.T2x1, TailleW.T2x2, TailleW.T4x1, TailleW.T4x2)),
     MESSAGE("Message", "Ton texte à toi, avec la date.", listOf(TailleW.T2x1, TailleW.T2x2, TailleW.T4x1, TailleW.T4x2, TailleW.T4x4)),
-    CHRONO("Chrono", "Un chronomètre ▶ ⏸ ↺, affiché au dos pendant qu'il tourne.", listOf(TailleW.T2x1, TailleW.T2x2, TailleW.T3x2, TailleW.T4x1, TailleW.T4x2)),
+    /** Nom gardé (widgets déjà posés) : c'est le widget Minuteur, avec le chrono en onglet secondaire. */
+    CHRONO("Minuteur", "Minuteur à la roulette, sablier au dos et vraie sonnerie. Chrono en onglet.", listOf(TailleW.T2x1, TailleW.T2x2, TailleW.T3x2, TailleW.T4x1, TailleW.T4x2)),
     ;
 
     /** Contenu de ce genre pour la taille [t]. [p] = couleur du texte principal, [msg] = texte du genre Message. */

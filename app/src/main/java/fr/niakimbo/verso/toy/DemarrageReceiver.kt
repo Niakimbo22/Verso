@@ -30,6 +30,8 @@ class DemarrageReceiver : BroadcastReceiver() {
         }
         app.journalToy.ajouter(quoi)
         app.matrix.connect()
+        // Minuteur en cours : son alarme ne survit pas au redémarrage, on la reprogramme.
+        app.appScope.launch { fr.niakimbo.verso.rapide.Minuteur.reprendre(app) }
 
         val debut = System.currentTimeMillis()
         app.essaiDemarrage?.cancel()

@@ -19,8 +19,9 @@
     <string name="raccourci_aleatoire">Au hasard</string>
     <string name="raccourci_basculer">Éteindre / rallumer</string>
     <string name="raccourci_auto">Automatique</string>
-    <string name="widget_chrono">Démarrer ou mettre en pause le chrono</string>
-    <string name="widget_chrono_zero">Remettre le chrono à zéro</string>
+    <string name="widget_chrono">Démarrer ou mettre en pause</string>
+    <string name="widget_chrono_zero">Remettre à zéro</string>
+    <string name="widget_roulette">Régler le minuteur</string>
     <string name="ecoute_notifs_nom">Verso · notifs et musique</string>
     <string name="bouton_glyph_nom">Verso · Glyph et apps</string>
     <string name="bouton_glyph_resume">Le vrai bouton Glyph de Verso, et les règles « App ouverte ».</string>

@@ -158,6 +158,15 @@ fun FicheModele(
             }
             Spacer(Modifier.height(8.dp))
             Text(version.description, color = Dim, fontSize = 12.sp, lineHeight = 16.sp, modifier = Modifier.fillMaxWidth())
+            if (entree.id == fr.niakimbo.verso.rapide.Minuteur.ID) {
+                Spacer(Modifier.height(12.dp))
+                val ctx = LocalContext.current
+                fr.niakimbo.verso.ui.verre.BoutonVerre(
+                    "⏳  Régler le minuteur",
+                    { ctx.startActivity(android.content.Intent(ctx, fr.niakimbo.verso.rapide.MinuteurActivity::class.java)) },
+                    Modifier.fillMaxWidth(), principal = true, taille = 15.sp,
+                )
+            }
             if (entree.id == fr.niakimbo.verso.rapide.Chrono.ID) {
                 Spacer(Modifier.height(12.dp))
                 val app = LocalContext.current.applicationContext as fr.niakimbo.verso.VersoApp

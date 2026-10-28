@@ -25,7 +25,7 @@ data class WidgetPerso(
     /** Modèle épinglé (null = celui affiché au dos). */
     val modeleFixe: String? = null,
 ) {
-    enum class Tap { CHOISIR, SUIVANT, ONOFF, VERSO, AFFICHER }
+    enum class Tap { CHOISIR, SUIVANT, ONOFF, VERSO, AFFICHER, MINUTEUR }
     enum class Disposition { COLONNE, LIGNE }
     enum class Fond { PLEIN, VERRE, TRANSPARENT }
     enum class Theme { SOMBRE, CLAIR }

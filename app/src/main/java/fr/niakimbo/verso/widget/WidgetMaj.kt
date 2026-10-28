@@ -53,10 +53,11 @@ object WidgetMaj {
             for ((w, taille) in persos) {
                 val reglage = app.widgetsPerso.pour(w, taille)
                 // Modèle épinglé : ce widget montre toujours le même, quel que soit celui au dos.
-                val m = reglage.modele?.let { e -> epingles.getOrPut(e) { app.catalogue.resoudreWidget(e) } } ?: modele
-                if (m?.dynamique != null && reglage.modele != null) horlogeEpinglee = true
+                val fixe = reglage.modeleEffectif(app)
+                val m = fixe?.let { e -> epingles.getOrPut(e) { app.catalogue.resoudreWidget(e) } } ?: modele
+                if (m?.dynamique != null && fixe != null) horlogeEpinglee = true
                 val min = if (m?.dynamique != null) LocalTime.now().truncatedTo(ChronoUnit.MINUTES).toString() else ""
-                val signature = "galerie|${reglage.versJson()}|$id|$revision|$min|${fr.niakimbo.verso.auto.Musique.joue.value}|${fr.niakimbo.verso.rapide.Chrono.signature(app)}|${etat.batterie}|${etat.enCharge}|${etat.regleAuto}|${etat.glyphEteint}|${etat.toyLie}"
+                val signature = "galerie|${reglage.versJson()}|$id|$revision|$min|${fr.niakimbo.verso.auto.Musique.joue.value}|${fr.niakimbo.verso.rapide.Chrono.signature(app)}|${fr.niakimbo.verso.rapide.Minuteur.signature(app)}|${etat.batterie}|${etat.enCharge}|${etat.regleAuto}|${etat.glyphEteint}|${etat.toyLie}"
                 if (!forcer && signatures[w] == signature) continue
                 if (envoyerPerso(app, manager, w, reglage.plan(), etat.copy(modele = m))) signatures[w] = signature
             }
