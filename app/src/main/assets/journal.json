@@ -1,7 +1,48 @@
 [
   {
-    "pr": 40,
+    "pr": 41,
     "version": null,
+    "date": "2026-10-28",
+    "titre": "🔴 Égaliseur vraiment live",
+    "sert": "L'Égaliseur suit enfin la musique, et tout ce qui est live est rangé dans Live.",
+    "essentiel": [
+      "🎚️ Égaliseur V2 : 9 barres sur le vrai son",
+      "🔴 Live : Horloge, Météo, Musique, Égaliseur",
+      "🩺 La fiche dit si le son arrive (✅ / ❌ / 🔇)"
+    ],
+    "sections": [
+      {
+        "titre": "Égaliseur",
+        "points": [
+          "🎚️ Graves à gauche → aigus à droite",
+          "↕️ Style : depuis le centre ou du bas",
+          "🔇 Silence = ligne de points au repos",
+          "🎞️ V1 = l'ancienne animation, toujours là",
+          "🔁 Si la sortie du téléphone reste muette : essai sur la session de l'app de musique"
+        ]
+      },
+      {
+        "titre": "Rangement",
+        "points": [
+          "🔴 Horloge quitte Infos, Égaliseur quitte Effets"
+        ]
+      },
+      {
+        "titre": "Diagnostic",
+        "points": [
+          "🩺 Fiche de l'Égaliseur / Musique en direct : état de la mesure en direct",
+          "📓 Journal du Toy : lignes « Égaliseur réel : … »"
+        ]
+      }
+    ],
+    "tester": [
+      "Fiche de l'Égaliseur avec Spotify : ✅ ?",
+      "Sinon : capture de la ligne rouge"
+    ]
+  },
+  {
+    "pr": 40,
+    "version": "0.1.88",
     "date": "2026-10-28",
     "titre": "🎚️ Égaliseur sur la vraie musique",
     "sert": "L'égaliseur suit enfin le vrai son, et une nouvelle règle commence vide.",

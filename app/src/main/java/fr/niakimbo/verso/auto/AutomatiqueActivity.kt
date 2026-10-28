@@ -560,7 +560,7 @@ private fun EditeurRegle(app: VersoApp, edition: Edition, contenu: Catalogue.Con
                         Text("›", color = Discret, fontSize = 24.sp)
                     }
                 }
-                    if (a.modele == fr.niakimbo.verso.generateur.MusiqueLive.ID) PermissionSpectre()
+                    if (a.modele == fr.niakimbo.verso.generateur.MusiqueLive.ID || a.modele == fr.niakimbo.verso.generateur.EgaliseurLive.ID) PermissionSpectre()
                 }
                 Action.Hasard -> Aide("Un favori au hasard à chaque déclenchement (toute la bibliothèque si tu n'as pas de favori).")
                 is Action.Defiler -> Column {
