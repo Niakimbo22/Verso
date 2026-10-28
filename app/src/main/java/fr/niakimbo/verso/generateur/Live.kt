@@ -3,6 +3,7 @@ package fr.niakimbo.verso.generateur
 import fr.niakimbo.verso.auto.EtatMeteo
 import fr.niakimbo.verso.auto.Meteo
 import fr.niakimbo.verso.auto.Musique
+import fr.niakimbo.verso.auto.Spectre
 import fr.niakimbo.verso.matrix.MatrixFrame
 import fr.niakimbo.verso.modele.Modele
 import fr.niakimbo.verso.reglage.EntreeCatalogue
@@ -151,7 +152,7 @@ object MusiqueLive {
     fun entree(icones: (String) -> Modele?): EntreeCatalogue {
         val v1 = VersionModele(
             id = "v1", nom = "V1",
-            description = "Suit la musique du téléphone (Spotify, YouTube Music…). Demande l'accès aux notifications.",
+            description = "Suit la musique du téléphone (Spotify, YouTube Music…). Accès aux notifications pour le titre ; autorisation Micro pour que l'égaliseur suive le vrai son.",
             reglages = listOf(ANNEAU),
         ) { v ->
             val anneau = v.b(ANNEAU)
@@ -162,7 +163,9 @@ object MusiqueLive {
                 if (e == null) {
                     note?.let { f -> for (y in 0 until Grille.N) for (x in 0 until Grille.N) g.allumer(x, y, f[x, y] / 2) }
                 } else {
-                    if (e.enLecture) egaliseur(g, System.currentTimeMillis()) else pause(g)
+                    if (!e.enLecture) pause(g)
+                    // Le vrai son quand Android le donne (autorisation Micro), sinon l'animation.
+                    else Spectre.niveaux()?.let { barres(g, it) } ?: egaliseur(g, System.currentTimeMillis())
                     if (anneau) e.avancement()?.let { p -> progression(g, p) }
                 }
                 g.frame()
@@ -180,7 +183,16 @@ object MusiqueLive {
         return EntreeCatalogue(ID, "Musique en direct", listOf(v1))
     }
 
-    /** Cinq barres qui montent et descendent doucement, chacune à son rythme. */
+    /** Cinq barres réglées par le vrai son : graves à gauche, aigus à droite (0..1 chacune). */
+    private fun barres(g: Grille, n: FloatArray) {
+        for (i in 0 until 5) {
+            val h = (1 + 6 * n[i]).roundToInt().coerceIn(1, 7)
+            val x = 2 + i * 2
+            for (k in 0 until h) g.allumer(x, 9 - k, if (k == h - 1) MatrixFrame.MAX else Grille.niveau(6))
+        }
+    }
+
+    /** Cinq barres qui montent et descendent doucement, chacune à son rythme (sans le vrai son). */
     private fun egaliseur(g: Grille, ms: Long) {
         val t = ms / 1000.0
         val vitesses = doubleArrayOf(5.1, 7.3, 6.2, 8.4, 5.7)

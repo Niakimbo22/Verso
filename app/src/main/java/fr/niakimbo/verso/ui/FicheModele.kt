@@ -158,6 +158,10 @@ fun FicheModele(
             }
             Spacer(Modifier.height(8.dp))
             Text(version.description, color = Dim, fontSize = 12.sp, lineHeight = 16.sp, modifier = Modifier.fillMaxWidth())
+            if (entree.id == fr.niakimbo.verso.generateur.MusiqueLive.ID) {
+                Spacer(Modifier.height(12.dp))
+                fr.niakimbo.verso.auto.PermissionSpectre()
+            }
 
             // ----- Réglages de la version -----
             if (version.reglages.isNotEmpty()) {

@@ -101,6 +101,9 @@ class AutomatiqueActivity : ComponentActivity() {
 /** [appsDAbord] : ouvrir tout de suite le choix des apps (idée dont l'app n'a pas été trouvée). */
 private data class Edition(val regle: Regle, val nouvelle: Boolean, val appsDAbord: Boolean = false)
 
+/** Nouvelle règle vide : on commence par choisir sa première condition (« On commence par quoi ? »). */
+private val Edition.vide get() = regle.conditions.isEmpty()
+
 /** Une règle « App ouverte » passe en tête : elle doit gagner tant que l'app est à l'écran. */
 private fun enTete(r: Regle) = r.conditions.any { it is Declencheur.AppOuverte }
 
@@ -173,7 +176,7 @@ private fun ListeRegles(app: VersoApp, contenu: Catalogue.Contenu?, onFermer: ()
 
     fun nouvelle() = onEditer(
         Edition(
-            Regle(moteur.store.nouvelId(), "", listOf(TypeQuand.HORAIRE.parDefaut()), Action.Afficher(app.store.modeleActif ?: "lune")),
+            Regle(moteur.store.nouvelId(), "", emptyList(), Action.Afficher(app.store.modeleActif ?: "lune")),
             nouvelle = true,
         ),
     )
@@ -361,7 +364,15 @@ private fun EditeurRegle(app: VersoApp, edition: Edition, contenu: Catalogue.Con
     val store = app.moteurRegles.store
     val context = LocalContext.current
     var regle by remember(edition) { mutableStateOf(edition.regle) }
-    var vue by remember { mutableStateOf<Vue>(if (edition.appsDAbord) Vue.Apps(0) else Vue.Regle) }
+    var vue by remember {
+        mutableStateOf<Vue>(
+            when {
+                edition.vide -> Vue.Catalogue
+                edition.appsDAbord -> Vue.Apps(0)
+                else -> Vue.Regle
+            },
+        )
+    }
     var ouverte by remember { mutableIntStateOf(regle.conditions.lastIndex) }
     var confirmer by remember { mutableStateOf(false) }
     var plus by remember { mutableStateOf(false) }
@@ -377,8 +388,13 @@ private fun EditeurRegle(app: VersoApp, edition: Edition, contenu: Catalogue.Con
 
     when (vue) {
         Vue.Catalogue -> {
-            BackHandler { vue = Vue.Regle }
-            CatalogueConditions(onRetour = { vue = Vue.Regle }) { type ->
+            // Règle encore vide : revenir en arrière = abandonner la création.
+            val retour = { if (regle.conditions.isEmpty()) onFini() else { vue = Vue.Regle } }
+            BackHandler(onBack = retour)
+            CatalogueConditions(
+                titre = if (regle.conditions.isEmpty()) "On commence par quoi ?" else "Ajouter une condition",
+                onRetour = retour,
+            ) { type ->
                 regle = regle.copy(conditions = regle.conditions + type.parDefaut())
                 ouverte = regle.conditions.lastIndex
                 // « App ouverte » sans app ne sert à rien : on choisit l'app tout de suite.
@@ -532,7 +548,8 @@ private fun EditeurRegle(app: VersoApp, edition: Edition, contenu: Catalogue.Con
             }
             Spacer(Modifier.height(10.dp))
             when (a) {
-                is Action.Afficher -> PanneauVerre(Modifier.fillMaxWidth(), onClick = { vue = Vue.Modele }) {
+                is Action.Afficher -> Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    PanneauVerre(Modifier.fillMaxWidth(), onClick = { vue = Vue.Modele }) {
                     Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                         ApercuAction(app, a, contenu, Modifier.size(56.dp), anime = false)
                         Spacer(Modifier.width(14.dp))
@@ -542,6 +559,8 @@ private fun EditeurRegle(app: VersoApp, edition: Edition, contenu: Catalogue.Con
                         }
                         Text("›", color = Discret, fontSize = 24.sp)
                     }
+                }
+                    if (a.modele == fr.niakimbo.verso.generateur.MusiqueLive.ID) PermissionSpectre()
                 }
                 Action.Hasard -> Aide("Un favori au hasard à chaque déclenchement (toute la bibliothèque si tu n'as pas de favori).")
                 is Action.Defiler -> Column {
@@ -938,9 +957,9 @@ private fun BoutonGrand(titre: String, valeur: String, modifier: Modifier, onCli
 // --------------------------------------------------------------------------------------------
 
 @Composable
-private fun CatalogueConditions(onRetour: () -> Unit, onChoix: (TypeQuand) -> Unit) {
+private fun CatalogueConditions(titre: String, onRetour: () -> Unit, onChoix: (TypeQuand) -> Unit) {
     val scroll = rememberScrollState()
-    EcranVerre(defilement = scroll, dessus = { BarreHaut("Ajouter une condition", onRetour) }) {
+    EcranVerre(defilement = scroll, dessus = { BarreHaut(titre, onRetour) }) {
         Defilant(scroll) {
             Famille.entries.forEach { f ->
                 Etiquette(f.titre.uppercase())
