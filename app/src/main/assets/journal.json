@@ -1,5 +1,37 @@
 [
   {
+    "pr": 48,
+    "version": null,
+    "date": "2026-10-28",
+    "titre": "⏳ Minuteur : roulette, sablier, vraie sonnerie",
+    "sert": "Un vrai minuteur : durée à la roulette, sablier au dos, et ça sonne fort même en veille.",
+    "essentiel": [
+      "🎡 Roulette h / min / s façon iPhone",
+      "⏳ Sablier au dos qui s'écoule",
+      "🔔 Sonnerie Verso forte, même verrouillé"
+    ],
+    "sections": [
+      {
+        "titre": "Minuteur",
+        "points": [
+          "🎡 Roues qui bouclent, tic à chaque cran, récents en un tap",
+          "⭕ Anneau qui se vide, heure de fin 🔔, +1 min, pause",
+          "🧩 Widget Minuteur : sablier d'office, tap = roulette",
+          "⏱️ Chrono gardé en onglet"
+        ]
+      },
+      {
+        "titre": "Sonnerie",
+        "points": [
+          "🔊 Volume alarme au max (remis après)",
+          "🎵 Verso Pulse, Verso Sirène ou alarme du téléphone",
+          "📳 Vibration, écran « Terminé » par-dessus tout",
+          "🚫 Pas une alarme de l'app Horloge"
+        ]
+      }
+    ]
+  },
+  {
     "pr": 47,
     "version": null,
     "date": "2026-10-28",

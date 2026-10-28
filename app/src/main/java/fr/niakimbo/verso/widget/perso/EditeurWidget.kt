@@ -204,7 +204,7 @@ private fun caseEcran(): Dp = ((LocalConfiguration.current.screenWidthDp - 56) /
 
 /** Modèle que montrera le widget : l'épinglé, sinon celui au dos, sinon le premier de la bibliothèque. */
 internal suspend fun modeleApercu(app: VersoApp, w: WidgetVerso): Modele? =
-    w.modele?.let { app.catalogue.resoudre(it) }
+    w.modeleEffectif(app)?.let { app.catalogue.resoudre(it) }
         ?: app.player.actif.value
         ?: app.catalogue.contenu().entrees.firstOrNull { !it.cache }?.let(app.catalogue::resoudre)
 
@@ -438,7 +438,7 @@ private fun PageGenre(
                     Etiquette("MODÈLE")
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        PuceVerre("Suit le dos", r.modele == null, Modifier.weight(1f)) {
+                        PuceVerre(if (r.genre == Genre.CHRONO) "⏳ Sablier" else "Suit le dos", r.modele == null, Modifier.weight(1f)) {
                             r = r.copy(modele = null, tap = if (r.tap == WidgetVerso.TapW.AFFICHER) WidgetVerso.TapW.CHOISIR else r.tap)
                         }
                         PuceVerre("📌 Épinglé", r.modele != null, Modifier.weight(1f)) {
@@ -447,7 +447,8 @@ private fun PageGenre(
                     }
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        if (r.modele == null) "Le widget montre le modèle affiché au dos du téléphone."
+                        if (r.modele == null && r.genre == Genre.CHRONO) "Le widget montre le sablier du minuteur (ou le chrono)."
+                        else if (r.modele == null) "Le widget montre le modèle affiché au dos du téléphone."
                         else "Le widget montre toujours ce modèle. Avec « Au toucher : Afficher ce modèle », c'est un raccourci.",
                         color = Discret, fontSize = 11.sp, lineHeight = 15.sp,
                     )
@@ -462,7 +463,7 @@ private fun PageGenre(
                 Choix(
                     "AU TOUCHER",
                     WidgetVerso.TapW.entries.filter { it != WidgetVerso.TapW.AFFICHER || r.modele != null },
-                    r.tap, { it.label }, defile = true,
+                    r.tap, { if (r.genre == Genre.CHRONO && it == WidgetVerso.TapW.CHOISIR) "⏳ Roulette" else it.label }, defile = true,
                 ) { r = r.copy(tap = it) }
             }
 

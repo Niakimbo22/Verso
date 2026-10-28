@@ -29,6 +29,12 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
+    <!-- Minuteur : sonnerie forte au premier plan, vibration, écran « Terminé » par-dessus tout -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+
     <!-- Relancer le modèle après un redémarrage du téléphone -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
@@ -125,6 +131,37 @@
         <receiver
             android:name=".rapide.MinuteurVeille"
             android:exported="false" />
+
+        <!-- Minuteur (28/10) : fin du décompte (alarme exacte Verso, pas l'app Horloge) -->
+        <receiver
+            android:name=".rapide.AlarmeMinuteur"
+            android:exported="false" />
+
+        <!-- Sonnerie du minuteur : joue fort sur le flux « alarme », même téléphone en veille -->
+        <service
+            android:name=".rapide.Sonnerie"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
+        <!-- Roulette du minuteur (et onglet Chrono), par-dessus l'écran d'accueil -->
+        <activity
+            android:name=".rapide.MinuteurActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity="fr.niakimbo.verso.minuteur"
+            android:theme="@style/Theme.Verso.Fenetre" />
+
+        <!-- Écran « Terminé » : par-dessus tout, même verrouillé -->
+        <activity
+            android:name=".rapide.SonneActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:taskAffinity="fr.niakimbo.verso.sonne"
+            android:theme="@style/Theme.Verso" />
 
         <!-- Créateur de modèles (éditeur dessin, éditeur par blocs) -->
         <activity

@@ -133,6 +133,7 @@ class VersoApp : Application() {
         fr.niakimbo.verso.auto.AppPremierPlan.init(this)
         fr.niakimbo.verso.auto.Spectre.init(this)
         fr.niakimbo.verso.rapide.Chrono.lire(this)
+        fr.niakimbo.verso.rapide.Minuteur.lire(this)
         surveillerLiaison()
         // Chaque (re)démarrage du processus est noté : on voit qui a réveillé Verso
         // (ouverture de l'app, liaison du Toy, démarrage du téléphone).

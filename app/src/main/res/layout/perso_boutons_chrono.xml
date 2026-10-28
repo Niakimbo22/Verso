@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Boutons ▶/⏸ et ↺ du widget Chrono (icônes : la police du lanceur n'a pas tous les symboles). -->
+<!-- Boutons ▶/⏸, ↺ et roulette du widget Minuteur (icônes : la police du lanceur n'a pas tous les symboles). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/rangee"
     android:layout_width="match_parent"
@@ -26,4 +26,14 @@
         android:paddingVertical="7dp"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_w_zero" />
+
+    <ImageView
+        android:id="@+id/btn_roulette"
+        android:layout_width="52dp"
+        android:layout_height="40dp"
+        android:contentDescription="@string/widget_roulette"
+        android:paddingHorizontal="13dp"
+        android:paddingVertical="7dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_w_sablier" />
 </LinearLayout>
