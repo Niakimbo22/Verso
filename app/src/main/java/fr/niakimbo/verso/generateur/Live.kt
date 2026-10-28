@@ -215,6 +215,13 @@ object MusiqueLive {
     }
 }
 
+/** Regroupe les bandes en [n] barres (hors de Spectre, qui a besoin d'Android pour exister). */
+private fun regrouper(v: FloatArray, n: Int): FloatArray = FloatArray(n) { i ->
+    val de = i * v.size / n
+    val a = ((i + 1) * v.size / n).coerceAtLeast(de + 1)
+    (de until a).maxOf { v[it] }
+}
+
 /**
  * Égaliseur (28/10, Nico : « qu'il bouge vraiment selon la musique », puis « il ressemble à rien ») :
  * même id que l'ancien modèle animé, qui reste en V1. La V2 suit le vrai son ([Spectre]) avec le
@@ -232,27 +239,81 @@ object EgaliseurLive {
         defaut = "barres",
     )
 
+    private val MOUVEMENT = Reglage.Choix(
+        cle = "mouvement", titre = "Mouvement",
+        description = "Au son : immobile sans musique, il bouge avec elle. Toujours : il bouge tout le temps, au hasard. Jamais : il ne bouge pas.",
+        options = listOf("son" to "Au son", "toujours" to "Toujours", "jamais" to "Jamais"),
+        defaut = "son",
+    )
+
+    /** Barres au repos (aussi l'aperçu). */
+    private val REPOS = FloatArray(Spectre.BANDES) { listOf(0.55f, 0.9f, 0.7f, 0.45f, 0.8f, 0.6f, 0.35f, 0.5f, 0.3f)[it] }
+
+    /** Niveaux inventés, doux et irréguliers (jamais tous au maximum), pour « Toujours » et les widgets. */
+    private fun hasard(ms: Long): FloatArray = FloatArray(Spectre.BANDES) { i ->
+        val t = ms / 1000.0
+        val a = sin(t * (2.1 + 0.37 * i) + i * 1.7)
+        val b = sin(t * (3.3 + 0.21 * i) + i * 0.9)
+        (0.12 + 0.7 * abs(a * 0.6 + b * 0.4)).toFloat().coerceIn(0.1f, 0.85f)
+    }
+
+    /**
+     * Ce que le widget du lanceur montre (il ne peut que boucler des images toutes prêtes) :
+     * une image fixe, ou une boucle de 2,4 s de barres inventées quand le mouvement est actif.
+     */
+    fun pourWidget(v: fr.niakimbo.verso.reglage.Valeurs, joue: Boolean): Modele {
+        val style = v.s(STYLE)
+        val anime = when (v.s(MOUVEMENT)) {
+            "toujours" -> true
+            "jamais" -> false
+            else -> joue
+        }
+        if (!anime) return Modele(ID, "Égaliseur", Modele.Type.STATIQUE, listOf(Modele.Image(dessiner(REPOS, style, 0, cretesFixes = true).frame(), 1000)))
+        val images = (0 until 24).map { Modele.Image(dessiner(hasard(it * 100L), style, 0, cretesFixes = true).frame(), 100) }
+        return Modele(ID, "Égaliseur", Modele.Type.ANIME, images)
+    }
+
     /** Crêtes : hauteur et heure du dernier maximum, par barre (un seul égaliseur affiché à la fois). */
     private val cretes = FloatArray(6)
     private val cretesA = LongArray(6)
 
     fun entree(icones: (String) -> Modele?): EntreeCatalogue {
         val ancien = icones(ID)
-        val v1 = VersionModele("v1", "V1", "Animation d'origine (ne suit pas le son).", emptyList()) {
-            ancien ?: Modele(ID, "Égaliseur", Modele.Type.STATIQUE, listOf(Modele.Image(Grille().frame(), 1000)))
+        val v1 = VersionModele("v1", "V1", "Animation d'origine (ne suit pas le son).", listOf(MOUVEMENT)) { v ->
+            val base = ancien ?: Modele(ID, "Égaliseur", Modele.Type.STATIQUE, listOf(Modele.Image(Grille().frame(), 1000)))
+            val repos = dessiner(REPOS, "barres", 0, cretesFixes = true).frame()
+            val mode = v.s(MOUVEMENT)
+            Modele(
+                id = ID, nom = base.nom, type = Modele.Type.STATIQUE,
+                images = listOf(Modele.Image(base.apercu, 1000)),
+                dynamique = Modele.Dynamique.HORLOGE,
+                rendu = { _ ->
+                    val anime = mode == "toujours" || (mode == "son" && Musique.joue.value)
+                    if (anime) Live.imageA(base, System.currentTimeMillis()) else repos
+                },
+                periodeMs = 100,
+            )
         }
         val v2 = VersionModele(
             "v2", "V2",
             "Suit le vrai son du téléphone (autorisation Micro). Sans mesure possible : l'animation V1.",
-            listOf(STYLE),
+            listOf(MOUVEMENT, STYLE),
         ) { v ->
             val style = v.s(STYLE)
+            val mode = v.s(MOUVEMENT)
             val rendu: (LocalTime) -> MatrixFrame = { _ ->
+                val ms = System.currentTimeMillis()
+                val joue = Musique.joue.value
                 val n = Spectre.niveaux()
-                if (n == null) ancien?.let { Live.imageA(it, System.currentTimeMillis()) } ?: Grille().frame()
-                else dessiner(n, style, System.currentTimeMillis()).frame()
+                when {
+                    mode == "jamais" || (mode == "son" && !joue) -> dessiner(REPOS, style, ms, cretesFixes = true).frame()
+                    mode == "toujours" -> dessiner(hasard(ms), style, ms).frame()
+                    // Au son : la vraie mesure ; sans mesure (autorisation, Android qui coupe), des barres inventées.
+                    n == null || n.all { it <= 0f } -> dessiner(hasard(ms), style, ms).frame()
+                    else -> dessiner(n, style, ms).frame()
+                }
             }
-            val exemple = FloatArray(Spectre.BANDES) { listOf(0.55f, 0.9f, 0.7f, 0.45f, 0.8f, 0.6f, 0.35f, 0.5f, 0.3f)[it] }
+            val exemple = REPOS
             Modele(
                 id = ID,
                 nom = "Égaliseur",
@@ -275,7 +336,7 @@ object EgaliseurLive {
     private fun dessiner(niv: FloatArray, style: String, ms: Long, cretesFixes: Boolean = false): Grille {
         val g = Grille()
         val barres = colonnes(style)
-        val n = Spectre.regrouper(niv, barres.size)
+        val n = regrouper(niv, barres.size)
         val centre = style == "centre"
         // Bas de la zone : ligne 10 ; haut : ligne 2 (9 lignes, comme l'original).
         val bas = 10

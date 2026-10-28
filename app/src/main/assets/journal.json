@@ -1,7 +1,38 @@
 [
   {
-    "pr": 45,
+    "pr": 46,
     "version": null,
+    "date": "2026-10-28",
+    "titre": "🎚️ Égaliseur : fixe sans musique, animé avec",
+    "sert": "Le widget égaliseur ne bouge que quand un son joue, et tu choisis son mouvement.",
+    "essentiel": [
+      "⏸ Immobile sans musique",
+      "🎵 Anime quand ça joue",
+      "⚙️ Réglage Mouvement : Au son / Toujours / Jamais"
+    ],
+    "sections": [
+      {
+        "titre": "Mouvement",
+        "points": [
+          "🎵 Au son (défaut) : fixe sans musique, bouge avec",
+          "🔀 Toujours : bouge tout le temps, au hasard",
+          "⏹️ Jamais : ne bouge jamais",
+          "🎨 Le style (grosses, fines, centre) vaut aussi pour le widget",
+          "🔁 Le widget se redessine quand la musique démarre ou s'arrête"
+        ]
+      },
+      {
+        "titre": "Au dos",
+        "points": [
+          "📱 Même réglage sur la matrice (V1 et V2)",
+          "🎤 Sans mesure du son : barres inventées plutôt qu'un égaliseur à plat"
+        ]
+      }
+    ]
+  },
+  {
+    "pr": 45,
+    "version": "0.1.98",
     "date": "2026-10-28",
     "titre": "⏱️ Chrono Glyph + MAJ 5× plus légères",
     "sert": "Un vrai chrono au dos et en widget, et des mises à jour bien plus rapides à télécharger.",

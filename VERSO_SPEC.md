@@ -322,6 +322,9 @@ Entrées (raccourcis, rien n'y est caché qui ne soit aussi sur l'écran) : Accu
 ### 3.12 Chrono Glyph (28/10)
 Nico : « Nothing le propose déjà mais c'est sous-coté ». `rapide/Chrono` (état en heure murale dans `verso_chrono` : survit au processus et au redémarrage) + modèle **Chrono** (`chrono`, rayon Live, `generateur/ChronoLive`) : MM en haut / SS en bas (HH / MM après 1 h), point qui fait le tour du bord en 1 min (réglage), chiffres qui clignotent en pause. ▶ = démarre et affiche Chrono au dos (choix à la main ; le modèle d'avant est retenu) ; ⏸ = pause ; ↺ = zéro et retour au modèle d'avant. Commandes : widget de la galerie **Chrono** (`Type.CHRONO` = `Chronometer` des RemoteViews, le lanceur fait tourner le temps ; `Type.BOUTONS_CHRONO` = ▶/⏸, ↺ via `WidgetActions.CHRONO / CHRONO_ZERO`), et la fiche du modèle.
 
+### 3.14 Égaliseur : réglage « Mouvement » (28/10)
+Nico : « fixe sans musique, animé avec, personnalisable ». Réglage `mouvement` (V1 et V2) : **Au son** (défaut) = barres au repos sans musique, animées avec ; **Toujours** = barres inventées en continu ; **Jamais** = repos. « Musique en cours » = `Musique.joue` (session média ou `AudioManager.isMusicActive`, retombe après 1,2 s). Widgets : `EgaliseurLive.pourWidget` = 1 image ou boucle de 24 images (2,4 s), redessinée quand `Musique.joue` change (signature des widgets). Le widget ne suit pas le rythme exact (le lanceur ne fait que boucler des images) ; au dos, la vraie mesure ([[Spectre]]) ou, sans mesure, des barres inventées.
+
 ### 3.13 Taille de l'APK (28/10)
 Les MAJ étaient de plus en plus longues : APK 22 Mo (Compose non réduit). **R8** activé (`isMinifyEnabled`, `isShrinkResources`) → ~4 Mo ; `proguard-rules.pro` garde tout `fr.niakimbo.verso.**`, le SDK Glyph (`com.nothing.**`) et Backdrop, sans obscurcir (journaux lisibles). Téléchargement : barre de progression rafraîchie au plus 1 fois par %, `Accept-Encoding: identity`.
 

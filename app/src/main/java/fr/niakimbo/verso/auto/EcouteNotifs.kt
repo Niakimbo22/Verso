@@ -139,6 +139,32 @@ object Musique {
     /** La musique la plus intéressante en ce moment : celle qui joue, sinon la dernière en pause. */
     val etat: StateFlow<EtatMusique?> = _etat
 
+    private var audioActif = false
+    private val _joue = MutableStateFlow(false)
+
+    /**
+     * Un son de musique joue en ce moment (une session média, ou n'importe quelle app via AudioManager).
+     * Passe à « vrai » tout de suite, à « faux » après 1,2 s (pas de clignotement entre deux pistes).
+     */
+    val joue: StateFlow<Boolean> = _joue
+    private val arret = Runnable { _joue.value = false }
+
+    /** [actif] : AudioManager.isMusicActive, relevé par le moteur de règles. */
+    fun signalerAudio(actif: Boolean) {
+        audioActif = actif
+        principal.post { majJoue() }
+    }
+
+    private fun majJoue() {
+        if (lecteurs.isNotEmpty() || audioActif) {
+            principal.removeCallbacks(arret)
+            _joue.value = true
+        } else if (_joue.value) {
+            principal.removeCallbacks(arret)
+            principal.postDelayed(arret, 1200)
+        }
+    }
+
     /** Paquets des apps qui jouent en ce moment. */
     @Volatile
     var lecteurs: List<String> = emptyList()
@@ -205,6 +231,7 @@ object Musique {
         }
         lecteurs = etats.filter { it.enLecture }.map { it.pkg }.distinct()
         _etat.value = etats.firstOrNull { it.enLecture } ?: etats.firstOrNull { it.titre != null }
+        majJoue()
         if (lecteurs != derniersLecteurs) {
             derniersLecteurs = lecteurs
             (appli as? VersoApp)?.moteurRegles?.evaluer("musique")
