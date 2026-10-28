@@ -1,7 +1,38 @@
 [
   {
-    "pr": 43,
+    "pr": 44,
     "version": null,
+    "date": "2026-10-28",
+    "titre": "🎚️ Égaliseur qui respire",
+    "sert": "L'égaliseur ne reste plus collé en haut, et il bouge dans les widgets.",
+    "essentiel": [
+      "🎚️ Son normal ≈ mi-hauteur, les coups font monter",
+      "▣ Widgets : égaliseur animé (plus figé)"
+    ],
+    "sections": [
+      {
+        "titre": "Au dos",
+        "points": [
+          "📊 Chaque barre comparée à sa moyenne des 1,5 dernières s",
+          "🥁 Basse, batterie → la barre saute",
+          "🔉 Jamais tout à fond en continu"
+        ]
+      },
+      {
+        "titre": "Widgets",
+        "points": [
+          "▣ Le lanceur ne peut pas suivre le son en direct : animation de l'égaliseur d'origine à la place"
+        ]
+      }
+    ],
+    "tester": [
+      "Deezer : les 4 barres bougent autour du milieu ?",
+      "Widget : l'égaliseur s'anime ?"
+    ]
+  },
+  {
+    "pr": 43,
+    "version": "0.1.94",
     "date": "2026-10-28",
     "titre": "🔔 La demande d'accès aux notifs",
     "sert": "Verso te demande lui-même l'accès aux notifications quand une règle en a besoin.",

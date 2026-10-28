@@ -32,7 +32,7 @@ object WidgetMaj {
         }
 
         val id = app.store.modeleActif
-        val modele = id?.let { app.catalogue.resoudre(it) }
+        val modele = id?.let { app.catalogue.resoudreWidget(it) }
         val minute = if (modele?.dynamique != null) LocalTime.now().truncatedTo(ChronoUnit.MINUTES).toString() else ""
         val revision = "${app.reglages.revision.value}.${app.mesModeles.revision.value}"
 
@@ -53,7 +53,7 @@ object WidgetMaj {
             for ((w, taille) in persos) {
                 val reglage = app.widgetsPerso.pour(w, taille)
                 // Modèle épinglé : ce widget montre toujours le même, quel que soit celui au dos.
-                val m = reglage.modele?.let { e -> epingles.getOrPut(e) { app.catalogue.resoudre(e) } } ?: modele
+                val m = reglage.modele?.let { e -> epingles.getOrPut(e) { app.catalogue.resoudreWidget(e) } } ?: modele
                 if (m?.dynamique != null && reglage.modele != null) horlogeEpinglee = true
                 val min = if (m?.dynamique != null) LocalTime.now().truncatedTo(ChronoUnit.MINUTES).toString() else ""
                 val signature = "galerie|${reglage.versJson()}|$id|$revision|$min|${etat.batterie}|${etat.enCharge}|${etat.regleAuto}|${etat.glyphEteint}|${etat.toyLie}"
@@ -94,7 +94,7 @@ object WidgetMaj {
         val cle = "${fr.niakimbo.verso.BuildConfig.VERSION_CODE}"
         val maintenant = System.currentTimeMillis()
         if (prefs.getString("apercus_version", null) == cle && maintenant - prefs.getLong("apercus_quand", 0) < 24 * 3600_000L) return
-        val modele = app.store.modeleActif?.let { app.catalogue.resoudre(it) }
+        val modele = app.store.modeleActif?.let { app.catalogue.resoudreWidget(it) }
             ?: app.catalogue.contenu().entrees.firstOrNull { !it.cache }?.let(app.catalogue::resoudre)
         val etat = etatPerso(app, modele)
         val manager = AppWidgetManager.getInstance(app)
