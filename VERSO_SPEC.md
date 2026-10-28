@@ -201,6 +201,8 @@ Déclencheurs (22, aucun menu caché : chaque réglage est un bouton) :
 
 **Idées « App ouverte »** : l'app est cherchée sur le téléphone (nom contenant météo / weather ; Spotify, YouTube Music, Deezer… ; appareil photo par défaut) ; pas trouvée = l'éditeur s'ouvre directement sur le choix des apps.
 
+**Demande d'accès aux notifications** (`auto/DemandeAcces.kt`, 28/10) : fenêtre à l'ouverture de Verso (écran principal et Automatique) tant qu'une règle active en a besoin (Notification, Musique, App ouverte, ou modèle de son) et que l'accès manque ; bouton = interrupteur de Verso directement ; disparaît au retour si accordé ; « Plus tard » = jusqu'au prochain lancement. Android n'offre pas de fenêtre système pour cet accès. Sans l'accès, un son qui joue (« ? ») compte pour les apps de musique d'une règle App ouverte (`Evaluation.estAppMusique`).
+
 **Choix des apps** (`auto/ChoixApps.kt`) : apps du lanceur (`<queries>` MAIN/LAUNCHER), icône + nom, recherche sans accents, cochées en haut ; rien de coché = toutes. Carte d'autorisation avec bouton direct (`ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS`) et rappel « 🔒 Grisé ? Fiche de Verso › ⋮ › Autoriser les paramètres restreints » (app hors Play Store) ; elle disparaît dès que c'est accordé.
 
 Actions : **Modèle** ; **Hasard** (un favori au hasard, ou toute la bibliothèque sans favori) ; **Défiler** (les favoris dans l'ordre ★ toutes les 5-60 min, tant que la règle dure, par alarme) ; **Éteindre**.

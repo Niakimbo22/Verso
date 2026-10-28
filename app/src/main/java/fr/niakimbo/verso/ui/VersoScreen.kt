@@ -358,6 +358,8 @@ fun VersoScreen(
         }
     }
 
+    fr.niakimbo.verso.auto.DemandeNotifs(app)
+
     fiche?.let { entree ->
         FicheModele(
             entree = entree,

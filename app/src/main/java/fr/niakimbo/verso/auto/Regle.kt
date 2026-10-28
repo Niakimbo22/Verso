@@ -292,6 +292,12 @@ object Evaluation {
         return vraies.firstOrNull { estSon(it) } ?: vraies.firstOrNull()
     }
 
+    /** Apps de musique connues (pour un son dont on ne connaît pas l'app). */
+    fun estAppMusique(pkg: String): Boolean {
+        val p = pkg.lowercase()
+        return listOf("music", "deezer", "spotify", "soundcloud", "tidal", "qobuz", "podcast", "radio").any { it in p }
+    }
+
     /** Modèles qui suivent le son : une règle qui les affiche est une règle « son ». */
     val MODELES_SON = setOf("egaliseur", "musique-live")
 
@@ -353,7 +359,11 @@ object Evaluation {
         is Declencheur.Notification -> false // un évènement, pas un état
         is Declencheur.Musique -> if (d.apps.isEmpty()) ctx.musique.isNotEmpty() else d.apps.any { it.pkg in ctx.musique }
         // Une app qui joue du son compte comme ouverte, même en arrière-plan (Deezer qui joue, écran sur une autre app).
-        is Declencheur.AppOuverte -> d.apps.any { it.pkg == ctx.app || it.pkg in ctx.musique }
+        is Declencheur.AppOuverte -> d.apps.any {
+            it.pkg == ctx.app || it.pkg in ctx.musique ||
+                // Un son joue sans qu'on sache quelle app (pas d'accès aux notifs) : ça compte pour une app de musique.
+                ("?" in ctx.musique && estAppMusique(it.pkg))
+        }
         is Declencheur.Meteo -> ctx.ciel != null && ctx.ciel in d.ciels
     }
 

@@ -1,7 +1,38 @@
 [
   {
-    "pr": 42,
+    "pr": 43,
     "version": null,
+    "date": "2026-10-28",
+    "titre": "🔔 La demande d'accès aux notifs",
+    "sert": "Verso te demande lui-même l'accès aux notifications quand une règle en a besoin.",
+    "essentiel": [
+      "🔔 Fenêtre à l'ouverture de Verso",
+      "↪️ Bouton direct vers l'interrupteur",
+      "🎵 Son sans accès : compte pour Deezer & co"
+    ],
+    "sections": [
+      {
+        "titre": "Demande",
+        "points": [
+          "🔔 S'ouvre si une règle 🎵 / 🔔 / 📱 en a besoin",
+          "✅ Disparaît toute seule une fois accordé",
+          "⏳ « Plus tard » : revient au prochain lancement"
+        ]
+      },
+      {
+        "titre": "Son",
+        "points": [
+          "🎵 Un son qui joue compte pour une app de musique, même sans l'accès"
+        ]
+      }
+    ],
+    "tester": [
+      "Ouvrir Verso → la fenêtre → Ouvrir → activer → revenir"
+    ]
+  },
+  {
+    "pr": 42,
+    "version": "0.1.92",
     "date": "2026-10-28",
     "titre": "🎵 Le son en TOP 1",
     "sert": "Dès que ta musique joue, sa règle passe devant tout, et l'égaliseur a enfin de la gueule.",
