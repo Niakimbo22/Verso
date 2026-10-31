@@ -1,5 +1,17 @@
 [
   {
+    "pr": 50,
+    "version": null,
+    "date": "2026-10-31",
+    "titre": "🔕 Plus de cloche aux notifs",
+    "sert": "Le réglage Glyph du téléphone s'en charge déjà.",
+    "essentiel": [
+      "🔕 Idée « Une notif, la cloche » retirée",
+      "🧹 Règle enlevée si tu l'avais ajoutée"
+    ],
+    "sections": []
+  },
+  {
     "pr": 49,
     "version": null,
     "date": "2026-10-28",

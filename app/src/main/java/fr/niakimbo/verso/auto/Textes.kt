@@ -502,7 +502,6 @@ object Recettes {
         app("🌦️ App météo ouverte, la vraie météo", "App météo", GenreApps.METEO, Action.Afficher("meteo-live")),
         app("🎧 Spotify ouvert, la musique en direct", "App musique", GenreApps.MUSIQUE, Action.Afficher("musique-live")),
         app("📸 Appareil photo ouvert, un sourire au dos", "Selfie", GenreApps.PHOTO, Action.Afficher("smiley")),
-        r("🔔 Une notif, la cloche 5 s", "Notif", Declencheur.Notification(), action = Action.Afficher("notification")),
         r("🎵 Musique en cours, la musique en direct", "Musique", Declencheur.Musique(), action = Action.Afficher("musique-live")),
         r("🌧️ Il pleut, la pluie", "Pluie", Declencheur.Meteo(setOf(Meteo.PLUIE)), action = Action.Afficher("pluie")),
         r("La nuit, une lune", "Nuit", Declencheur.Soleil(nuit = true), action = Action.Afficher("lune")),

@@ -103,10 +103,17 @@ class RegleStore(context: Context) {
 
     private fun lire(): List<Regle> = try {
         val a = JSONArray(prefs.getString(CLE_REGLES, null) ?: "[]")
-        (0 until a.length()).mapNotNull { depuisJson(a.getJSONObject(it)) }
+        val toutes = (0 until a.length()).mapNotNull { depuisJson(a.getJSONObject(it)) }
+        // Idée « 🔔 Une notif, la cloche » retirée (le réglage Glyph du système s'en charge) : on l'enlève aussi si elle était ajoutée.
+        val gardees = toutes.filterNot(::estClocheNotif)
+        if (gardees.size != toutes.size) prefs.edit().putString(CLE_REGLES, JSONArray(gardees.map(::versJson)).toString()).apply()
+        gardees
     } catch (_: Exception) {
         emptyList()
     }
+
+    private fun estClocheNotif(r: Regle) =
+        r.action == Action.Afficher("notification") && r.conditions.isNotEmpty() && r.conditions.all { it is Declencheur.Notification }
 
     private fun lireLieu(): Lieu? = try {
         prefs.getString(CLE_LIEU, null)?.let { JSONObject(it) }?.let { Lieu(it.getString("nom"), it.getDouble("lat"), it.getDouble("lon")) }
