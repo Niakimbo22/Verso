@@ -1,5 +1,27 @@
 [
   {
+    "pr": 51,
+    "version": null,
+    "date": "2026-11-22",
+    "titre": "✨ Nouveau modèle : NC MODS V2",
+    "sert": "Ton animation de démarrage NC MODS, au dos.",
+    "essentiel": [
+      "✨ NC qui brille → anneau → « MODS » qui défile",
+      "🌅 Fondu d'entrée réglable",
+      "⏸️ Pause avant de rejouer réglable"
+    ],
+    "sections": [
+      {
+        "titre": "Détail",
+        "points": [
+          "🔍 Rayon Formes",
+          "🌅 Fondu : 0 à 2 s (0,6 s par défaut)",
+          "⏸️ Pause : 0 à 30 s (3 s par défaut)"
+        ]
+      }
+    ]
+  },
+  {
     "pr": 50,
     "version": null,
     "date": "2026-10-31",
