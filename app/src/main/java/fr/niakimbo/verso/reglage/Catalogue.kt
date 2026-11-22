@@ -10,6 +10,7 @@ import fr.niakimbo.verso.generateur.EgaliseurLive
 import fr.niakimbo.verso.generateur.Live
 import fr.niakimbo.verso.generateur.MeteoLive
 import fr.niakimbo.verso.generateur.MusiqueLive
+import fr.niakimbo.verso.generateur.NcModsV2
 import fr.niakimbo.verso.generateur.Onde
 import fr.niakimbo.verso.generateur.Pluie
 import fr.niakimbo.verso.modele.Modele
@@ -86,7 +87,7 @@ class Catalogue(
 
     private suspend fun chargerIntegres(): Contenu {
         val biblio = repository.bibliotheque()
-        val calcules = listOf(HorlogeReglable.entree, Coeur.entree, Onde.entree, Pluie.entree, Chargement.entree, Compteur.entree)
+        val calcules = listOf(HorlogeReglable.entree, Coeur.entree, Onde.entree, Pluie.entree, Chargement.entree, Compteur.entree, NcModsV2.entree)
             .associateBy { it.id }
         // Modèles live (météo, musique) : ils reprennent les icônes de la bibliothèque. Rayon « Live », en tête.
         val pluie = Pluie.entree.versions.first().construire(Valeurs())
