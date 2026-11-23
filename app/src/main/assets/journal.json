@@ -1,5 +1,27 @@
 [
   {
+    "pr": 53,
+    "version": null,
+    "date": "2026-11-23",
+    "titre": "🐙 Nouveau modèle : Poulpe",
+    "sert": "Un petit poulpe (clin d'œil à Claude) qui vit sa vie au dos.",
+    "essentiel": [
+      "🌊 Ondule, 👋 fait coucou, 👀 regarde",
+      "⬆️ Se propulse, 💨 crache de l'encre, 🫧 fait des bulles",
+      "🎚️ Scène, Mouvements, clignement des yeux"
+    ],
+    "sections": [
+      {
+        "titre": "Détail",
+        "points": [
+          "🔍 Rayon Formes",
+          "🐙 « Il vit sa vie » enchaîne tout (~20 s)",
+          "😴 Tranquille → 🤸 Excité"
+        ]
+      }
+    ]
+  },
+  {
     "pr": 52,
     "version": null,
     "date": "2026-11-23",
