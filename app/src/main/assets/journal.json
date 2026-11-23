@@ -1,5 +1,27 @@
 [
   {
+    "pr": 52,
+    "version": null,
+    "date": "2026-11-23",
+    "titre": "💊 Nouveau modèle : Pharmacie",
+    "sert": "La croix de pharmacie qui part en vrille, au dos 😂",
+    "essentiel": [
+      "🎪 10 effets : tourne, rebondit, explose, clignote…",
+      "🤪 Réglage Folie : calme → perchée",
+      "🎲 Show dans le désordre ou un seul effet"
+    ],
+    "sections": [
+      {
+        "titre": "Détail",
+        "points": [
+          "🔍 Rayon Formes",
+          "⚡ Clignote · 🌀 Tourne · 🏓 Rebondit · 🔍 Zoom · 💥 Explose",
+          "🌊 Vagues · 🔄 Contour · 📡 Balayage · ✨ Scintille · 🫨 Secoué"
+        ]
+      }
+    ]
+  },
+  {
     "pr": 51,
     "version": null,
     "date": "2026-11-22",
