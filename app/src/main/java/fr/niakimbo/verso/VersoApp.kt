@@ -128,6 +128,7 @@ class VersoApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        fr.niakimbo.verso.matrix.Luminosite.init(this)
         Capteurs.init(this)
         fr.niakimbo.verso.auto.Meteo.init(this)
         fr.niakimbo.verso.auto.AppPremierPlan.init(this)

@@ -231,7 +231,7 @@ private class GlyphMatrixController(
             return
         }
         try {
-            val couleurs = frame.toGlyphColors()
+            val couleurs = Luminosite.versGlyph(frame, _canal.value)
             // Canal Toy : setMatrixFrame (prioritaire, tient app fermée).
             // Canal app : setAppMatrixFrame (recommandé par Nothing hors Toy).
             if (_canal.value == Canal.TOY) {
