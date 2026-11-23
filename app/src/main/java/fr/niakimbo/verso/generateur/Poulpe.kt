@@ -84,8 +84,8 @@ object Poulpe {
         },
     )
 
-    /** Demi-largeur de chaque ligne de la tête : bloc carré de 7 LED × 6 lignes, dessus plat. */
-    private val DEMI = intArrayOf(3, 3, 3, 3, 3, 3)
+    /** Demi-largeur de chaque ligne de la tête : rectangle de 9 LED × 6 lignes, dessus plat. */
+    private val DEMI = intArrayOf(4, 4, 4, 4, 4, 4)
 
     private fun rendre(p: Pose): MatrixFrame {
         val t = Toile()
@@ -124,14 +124,14 @@ object Poulpe {
                 val prog = (j + 1) / n.toFloat()
                 val dx = amp * sin(p.phase - i * 1.5f - j * 0.7f) * prog
                 val x = (C + offsets[i] + dx).roundToInt()
-                t.poser(x, top + 6 + j, (if (j == n - 1) 0.6f else 1f) * p.lum)
+                t.poser(x, top + DEMI.size + j, (if (j == n - 1) 0.6f else 1f) * p.lum)
             }
         }
         if (bras) {
             // Bras articulé depuis l'épaule : angle 0 = vers le bas, ~2,2 rad = levé vers l'extérieur.
             val a = p.bras * 2.2f + sin(p.brasPhase) * 0.4f * p.bras
-            val sx = (C + 3).toFloat()
-            val sy = (top + 5).toFloat()
+            val sx = (C + 4).toFloat()
+            val sy = (top + DEMI.size - 1).toFloat()
             for (j in 1..4) {
                 val x = (sx + sin(a) * j).roundToInt()
                 val y = (sy + cos(a) * j).roundToInt()

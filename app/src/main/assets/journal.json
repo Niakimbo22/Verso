@@ -1,5 +1,24 @@
 [
   {
+    "pr": 55,
+    "version": null,
+    "date": "2026-11-23",
+    "titre": "🟥 Poulpe rectangulaire",
+    "sert": "Tête du poulpe plus large : rectangle 9×6.",
+    "essentiel": [
+      "🟥 Tête 9 LED × 6, dessus plat",
+      "👀 Yeux et tentacules à la même place"
+    ],
+    "sections": [
+      {
+        "titre": "Détail",
+        "points": [
+          "🐙 Mêmes scènes et réglages qu'avant"
+        ]
+      }
+    ]
+  },
+  {
     "pr": 54,
     "version": null,
     "date": "2026-11-23",
