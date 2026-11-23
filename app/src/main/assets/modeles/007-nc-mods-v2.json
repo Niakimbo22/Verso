@@ -1,6 +1,6 @@
 {
-  "id": "nc",
-  "nom": "Logo NC",
+  "id": "nc-mods-v2",
+  "nom": "NC MODS V2",
   "categorie": "Formes",
   "type": "statique",
   "frames": [
@@ -22,5 +22,6 @@
       ],
       "dureeMs": 1000
     }
-  ]
+  ],
+  "_note": "Place réservée dans le rayon Formes : le vrai modèle animé est calculé (generateur/NcModsV2.kt)."
 }

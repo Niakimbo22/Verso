@@ -1,5 +1,28 @@
 [
   {
+    "pr": 57,
+    "version": null,
+    "date": "2026-11-23",
+    "titre": "🌙 Phase de Lune + NC corrigé",
+    "sert": "La Lune du jour au dos, et un NC MODS V2 propre.",
+    "essentiel": [
+      "🌙 Phase de Lune en direct (rayon Live)",
+      "🔲 NC MODS V2 : cadran complet, reflet net",
+      "🗑️ Logo NC fixe retiré, NC MODS V2 à sa place"
+    ],
+    "sections": [
+      {
+        "titre": "Détail",
+        "points": [
+          "🌒 8 phases : nouvelle, croissants, quartiers, gibbeuses, pleine",
+          "🌕 Mers et cratères dessinés",
+          "🎯 Option : éclairage exact du jour",
+          "🌑 Face sombre, 🌍 hémisphère, ✨ étoiles"
+        ]
+      }
+    ]
+  },
+  {
     "pr": 56,
     "version": null,
     "date": "2026-11-23",
