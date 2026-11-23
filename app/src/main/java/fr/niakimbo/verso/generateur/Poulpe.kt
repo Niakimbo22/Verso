@@ -84,8 +84,8 @@ object Poulpe {
         },
     )
 
-    /** Demi-largeur de chaque ligne de la tête (dôme de 7 LED au plus large). */
-    private val DEMI = intArrayOf(1, 2, 3, 3, 3, 3)
+    /** Demi-largeur de chaque ligne de la tête : bloc carré de 7 LED × 6 lignes, dessus plat. */
+    private val DEMI = intArrayOf(3, 3, 3, 3, 3, 3)
 
     private fun rendre(p: Pose): MatrixFrame {
         val t = Toile()
@@ -104,10 +104,12 @@ object Poulpe {
 
         // Tête.
         for (r in DEMI.indices) for (dx in -DEMI[r]..DEMI[r]) t.poser(C + dx, top + r, p.lum)
-        // Yeux : LED éteintes, sauf pendant un clignement (la tête reste pleine).
+        // Yeux : deux fentes verticales de 2 LED éteintes, sauf pendant un clignement (la tête reste pleine).
         if (!p.clos) {
-            t.poser(C - 2 + p.pupille, top + 3, 0f)
-            t.poser(C + 2 + p.pupille, top + 3, 0f)
+            for (dy in 2..3) {
+                t.poser(C - 2 + p.pupille, top + dy, 0f)
+                t.poser(C + 2 + p.pupille, top + dy, 0f)
+            }
         }
 
         // Tentacules fines qui ondulent, de plus en plus vers le bout.

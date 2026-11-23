@@ -1,5 +1,24 @@
 [
   {
+    "pr": 54,
+    "version": null,
+    "date": "2026-11-23",
+    "titre": "🟥 Poulpe plus carré",
+    "sert": "Le poulpe passe en style pixel bien carré.",
+    "essentiel": [
+      "🟥 Tête en bloc 7×6, dessus plat",
+      "👀 Yeux en fentes de 2 LED"
+    ],
+    "sections": [
+      {
+        "titre": "Détail",
+        "points": [
+          "🐙 Mêmes scènes et réglages qu'avant"
+        ]
+      }
+    ]
+  },
+  {
     "pr": 53,
     "version": null,
     "date": "2026-11-23",
