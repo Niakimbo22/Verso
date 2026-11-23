@@ -25,14 +25,10 @@ class MatrixFrame(pixels: IntArray) {
         return MatrixFrame(IntArray(SIZE) { (pixels[it] * k).toInt() })
     }
 
-    /** Conversion vers le format du SDK Glyph : luminosité 0-4095. */
-    fun toGlyphColors(): IntArray = IntArray(SIZE) { pixels[it] * GLYPH_MAX / MAX }
-
     companion object {
         const val SIDE = 13
         const val SIZE = SIDE * SIDE
         const val MAX = 255
-        const val GLYPH_MAX = 4095
 
         /**
          * La matrice est ronde : les coins de la grille 13×13 n'ont pas de LED.

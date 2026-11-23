@@ -181,10 +181,29 @@ internal fun Options(app: VersoApp, allume: Boolean, resteVeille: Int, onFermer:
     val scope = rememberCoroutineScope()
     val actifId by app.player.actif.collectAsStateWithLifecycle()
     var lum by remember(actifId?.id) { mutableFloatStateOf(ActionsRapides.luminositeActuelle(app)) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var generale by remember { mutableFloatStateOf(fr.niakimbo.verso.matrix.Luminosite.generale.value.toFloat()) }
     PanneauVerre(Modifier.fillMaxWidth(), forme = RoundedCornerShape(28.dp)) {
         Column(Modifier.padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("LUMINOSITÉ", color = Discret, fontSize = 11.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp, modifier = Modifier.weight(1f))
+                Text("LUMINOSITÉ GÉNÉRALE", color = Discret, fontSize = 11.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp, modifier = Modifier.weight(1f))
+                Text("${generale.toInt()} %", color = Color.White, fontSize = 13.sp, fontFamily = FontFamily.Monospace)
+            }
+            Slider(
+                value = generale,
+                onValueChange = { generale = it },
+                onValueChangeFinished = {
+                    fr.niakimbo.verso.matrix.Luminosite.regler(context, generale.toInt())
+                    // Renvoie la dernière image pour voir l'effet tout de suite.
+                    app.matrix.lastFrame.value?.let { app.matrix.show(it, false) }
+                },
+                valueRange = fr.niakimbo.verso.matrix.Luminosite.MIN.toFloat()..fr.niakimbo.verso.matrix.Luminosite.MAX.toFloat(),
+                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Rouge, inactiveTrackColor = Color.White.copy(alpha = 0.15f)),
+            )
+            Text("Pour tous les modèles.", color = Discret, fontSize = 11.sp)
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("LUMINOSITÉ DU MODÈLE", color = Discret, fontSize = 11.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp, modifier = Modifier.weight(1f))
                 Text("${lum.toInt()} %", color = Color.White, fontSize = 13.sp, fontFamily = FontFamily.Monospace)
             }
             Slider(

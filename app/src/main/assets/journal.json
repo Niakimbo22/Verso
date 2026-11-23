@@ -1,5 +1,27 @@
 [
   {
+    "pr": 56,
+    "version": null,
+    "date": "2026-11-23",
+    "titre": "🔆 Luminosité corrigée",
+    "sert": "La matrice n'éblouit plus, sur tous les modèles.",
+    "essentiel": [
+      "🔆 Lumière réglée comme l'œil la voit",
+      "🎚️ Nouveau : Luminosité générale (Options)",
+      "📱 App ouverte ou Toy : même intensité"
+    ],
+    "sections": [
+      {
+        "titre": "Détail",
+        "points": [
+          "◐ Options › Luminosité générale : 5-100 %, 50 % par défaut",
+          "🎚️ Luminosité du modèle toujours là, en plus",
+          "🌗 Les demi-teintes sont enfin des demi-teintes"
+        ]
+      }
+    ]
+  },
+  {
     "pr": 55,
     "version": null,
     "date": "2026-11-23",
