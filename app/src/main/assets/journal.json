@@ -1,5 +1,26 @@
 [
   {
+    "pr": 58,
+    "version": null,
+    "date": "2026-11-24",
+    "titre": "🧊 Matrice figée corrigée + NC net",
+    "sert": "Plus d'animation bloquée au dos quand le Toy est coupé.",
+    "essentiel": [
+      "🧊 Toy coupé + app fermée : plus d'image figée",
+      "🔲 NC MODS V2 : cadran uniforme, fondu complet"
+    ],
+    "sections": [
+      {
+        "titre": "Détail",
+        "points": [
+          "🔋 Le Toy coupé par l'économie de batterie laissait une image collée",
+          "↩️ Le modèle revient tout seul en rouvrant Verso ou à la reliaison du Toy",
+          "🎚️ NC MODS V2 en 256 niveaux"
+        ]
+      }
+    ]
+  },
+  {
     "pr": 57,
     "version": null,
     "date": "2026-11-23",

@@ -273,10 +273,17 @@ class ModelePlayer(
     private fun doitTourner() = appVisible || toyLie
 
     private fun actualiserBoucle() {
+        if (!doitTourner()) {
+            arreterBoucle()
+            // App quittée et Toy pas lié (ex. coupé par le système en économie de batterie) :
+            // Verso dessinait dans la couche app, qui passe devant tout et garde sa dernière
+            // image tant qu'on ne la ferme pas → animation « en pause » au dos (24/11, §3.3).
+            // On la ferme ; reprendre() réaffiche le modèle au retour dans l'app ou à la reliaison du Toy.
+            if (_actif.value != null) controller.clear()
+            return
+        }
         val modele = _actif.value ?: return
-        if (!modele.estVivant) return
-        if (doitTourner() && boucle?.isActive != true) lancerBoucle(modele)
-        if (!doitTourner()) arreterBoucle()
+        if (modele.estVivant && boucle?.isActive != true) lancerBoucle(modele)
     }
 
     private fun lancerBoucle(modele: Modele) {
