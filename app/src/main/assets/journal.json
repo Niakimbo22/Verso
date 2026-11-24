@@ -1,5 +1,25 @@
 [
   {
+    "pr": 59,
+    "version": null,
+    "date": "2026-11-24",
+    "titre": "✨ NC MODS V2 : le reflet dévoile",
+    "sert": "La 1re vague dévoile le NC, le reflet dévoile le cadran.",
+    "essentiel": [
+      "🌊 Le NC apparaît au passage de la 1re vague",
+      "⭕ Le cadran apparaît au passage du reflet",
+      "🎞️ Plus d'à-coups au début"
+    ],
+    "sections": [
+      {
+        "titre": "Détail",
+        "points": [
+          "🌅 Le fondu d'entrée accompagne la vague au lieu de la retarder"
+        ]
+      }
+    ]
+  },
+  {
     "pr": 58,
     "version": null,
     "date": "2026-11-24",
