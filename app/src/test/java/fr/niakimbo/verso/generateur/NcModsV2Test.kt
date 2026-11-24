@@ -12,7 +12,7 @@ class NcModsV2Test {
     @Test
     fun animationComplete() {
         val m = modele("v1.fondu" to 0f, "v1.pause" to 0f)
-        assertEquals(87, m.images.size)
+        assertEquals(89, m.images.size)
         assertTrue(m.images.sumOf { it.dureeMs } in 6000L..7000L)
     }
 
@@ -20,7 +20,7 @@ class NcModsV2Test {
     fun fonduEtPause() {
         val m = modele("v1.fondu" to 1f, "v1.pause" to 5f)
         // 1 s de fondu = 20 pas de 50 ms, qui montent en luminosité.
-        assertEquals(87 + 20 + 1, m.images.size)
+        assertEquals(89 + 20 + 1, m.images.size)
         val lum = m.images.take(20).map { it.frame.pixels.max() }
         assertTrue(lum.zipWithNext().all { (a, b) -> a <= b })
         assertEquals(5000L, m.images.last().dureeMs)
